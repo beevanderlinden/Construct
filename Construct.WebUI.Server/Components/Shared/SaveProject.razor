@@ -1,0 +1,48 @@
+﻿@using Construct.Application.Interfaces
+@inject IFileService FileService
+@inject IAppSettingService AppSettingService
+@inject IProjectStateService ProjectState
+@inject IToastService ToastService
+
+<FluentButton OnClick="SaveProjectAsync">Project opslaan</FluentButton>
+
+<dl><dt>Directory</dt><dd>@defaultSavePath</dd></dl>
+
+@code {
+
+    string? defaultSavePath;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            defaultSavePath = await AppSettingService.GetDefaultSavePathAsync();
+            StateHasChanged(); // handmatig her-renderen omdat we async werken
+
+
+
+
+        }
+    }
+
+
+    private async Task SaveProjectAsync()
+    {
+        if (ProjectState.CurrentProject != null)
+        {
+            var path = "C:/TEMP"; 
+
+            if (defaultSavePath != null)
+            {
+                path = Path.Combine(defaultSavePath, $"{ProjectState.CurrentProject.ProjectInfo.Nummer}.cprj");
+
+                await FileService.SaveAsync(path, ProjectState.CurrentProject);
+
+                ToastService.ShowToast(ToastIntent.Success, $"Project opgeslagen \r\n{path} ");
+
+            }
+
+           
+        }
+    }
+}

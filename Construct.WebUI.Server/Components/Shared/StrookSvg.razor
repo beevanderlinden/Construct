@@ -1,0 +1,248 @@
+﻿@page "/strook-svg"
+@using Construct.Application.Services
+@using System.Globalization
+@using static Construct.WebUI.Server.Components.Shared.AssemblageSvg
+@inject IJSRuntime JS
+
+
+@if (Strook != null)
+{
+    <div id="@_containerId">
+        <svg xmlns="http://www.w3.org/2000/svg"
+             @ref="svgRef"
+             viewBox="@CurrentViewBox"
+             width="100%" height="100%">
+            @((MarkupString)SvgXml)
+        </svg>
+    </div>
+
+    <div id="@_containerId1">
+
+        <svg xmlns="http://www.w3.org/2000/svg"
+             @ref="svgRef1"
+             viewBox="@CurrentViewBox1"
+             width="100%" height="100%">
+            @((MarkupString)SvgXml1)
+        </svg>
+    </div>
+
+    @if (!Strook.Beam.IsDirty)
+    {
+        <div id="@_containerId2">
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 @ref="svgRef2"
+                 viewBox="@CurrentViewBox2"
+                 width="100%" height="100%">
+                @((MarkupString)SvgXml2)
+            </svg>
+        </div>
+
+        <div id="@_containerId3">
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 @ref="svgRef3"
+                 viewBox="@CurrentViewBox3"
+                 width="100%" height="100%">
+                @((MarkupString)SvgXml3)
+            </svg>
+        </div>
+    }
+    
+
+   
+}
+
+
+
+
+
+
+
+@code {
+    [Parameter, EditorRequired] public StrookEntity Strook { get; set; }
+    [Parameter] public EventCallback<StrookEntity> StrookChanged { get; set; }
+    [Parameter] public string Style { get; set; } = "";
+
+
+    // Ik wil alleen 1 figuur tekenen, de mogelijke opties zijn:
+    // A) Alleen geometrie
+    // B) Geometrie + belastingen uit 1 belastinggeval
+    // C) Grafiek (Vz of My, w) per (Belastinggeval, Combinatie, of Combinaties)
+    
+    
+    
+    //[Parameter] public Eurocode.Belastingen.BelastingCombinatieTypeEnum? CombinatieType { get; set; }
+    //[Parameter] public Eurocode.Belastingen.BelastingGeval? Geval{ get; set; }
+    //[Parameter] public Eurocode.Belastingen.BelastingCombinatie? Combinatie{ get; set; }
+
+    
+
+
+    private string SvgXml = "";
+    private string SvgXml1 = "";
+    private string SvgXml2 = "";
+    private string SvgXml3 = "";
+    //private string SvgXml = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100%\" height=\"100%\"><text x=\"10\" y=\"20\" fill=\"red\">Onbekend model type voor SVG generatie.</text></svg>";
+    private readonly string _containerId = $"svgContainerX_{Guid.NewGuid():N}"; // unieke id voor container div
+    private readonly string _containerId1 = $"svgContainerX_{Guid.NewGuid():N}"; // unieke id voor container div
+    private readonly string _containerId2 = $"svgContainerX_{Guid.NewGuid():N}"; // unieke id voor container div
+    private readonly string _containerId3 = $"svgContainerX_{Guid.NewGuid():N}"; // unieke id voor container div
+
+
+    private BoundingBox boundingBox { get; set; } = new();
+    private string CurrentViewBox { get; set; } = "0 0 100 100";
+    private string CurrentViewBox1 { get; set; } = "0 0 1 1";
+    private string CurrentViewBox2 { get; set; } = "0 0 1 1";
+    private string CurrentViewBox3 { get; set; } = "0 0 1 1";
+
+    // voor groote van de container
+    private double widthPx { get; set; }
+    private double heightPx { get; set; }
+    private int maxPixels => (int)Math.Max(widthPx, heightPx);
+
+    private DotNetObjectReference<StrookSvg>? objRef;
+    private ElementReference svgRef;
+    private ElementReference svgRef1;
+    private ElementReference svgRef2;
+    private ElementReference svgRef3;
+
+
+
+    public string SetViewBoxOpt(double x, double y, double w, double h)
+    {
+        string viewBox = $"{x.ToString(CultureInfo.InvariantCulture)} " +
+                  $"{y.ToString(CultureInfo.InvariantCulture)} " +
+                  $"{w.ToString(CultureInfo.InvariantCulture)} " +
+                  $"{h.ToString(CultureInfo.InvariantCulture)}";
+
+        //StateHasChanged();   // update viewBox attribuut
+        return viewBox;
+    }
+
+    public void SetViewBox(double x, double y, double w, double h)
+    {
+        CurrentViewBox = $"{x.ToString(CultureInfo.InvariantCulture)} " +
+                         $"{y.ToString(CultureInfo.InvariantCulture)} " +
+                         $"{w.ToString(CultureInfo.InvariantCulture)} " +
+                         $"{h.ToString(CultureInfo.InvariantCulture)}";
+
+        StateHasChanged();   // update viewBox attribuut
+    }
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            objRef = DotNetObjectReference.Create(this);
+            
+
+            // eerste keer render
+            await UpdateSvgAsync();
+
+            // registreer dynamische resize callback
+            await JS.InvokeVoidAsync("svgHelpers.registerResizeCallback", _containerId, objRef);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnContainerResize(double width, double height)
+    {
+        widthPx = width;
+        heightPx = height;
+        await UpdateSvgAsync(width, height);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+        await UpdateSvgAsync();
+    }
+
+    private async Task UpdateSvgAsync(double? width = null, double? height = null)
+    {
+        if (width == null || height == null)
+        {
+            var size = await JS.InvokeAsync<DomRect>("svgHelpers.getBoundingClientRect", _containerId);
+            if (size == null) return;
+            width = size.Width;
+            height = size.Height;
+        }
+
+        boundingBox.Reset();
+        SvgXml = SvgGenerator.GenerateStrookSvgXml(
+            Strook, boundingBox, width ?? 500.0, height?? 300, Style, 
+            toonDwarskrachtenlijn: !true, toonMomentenlijn:!true, toonFiguren: true, loadCase: Strook?.Beam?.LoadContext?.BelastingGevallen?.FirstOrDefault());
+        CurrentViewBox = SetViewBoxOpt(boundingBox.MinX, boundingBox.MinY, boundingBox.Width, boundingBox.Height);
+
+
+        boundingBox.Reset();
+        SvgXml1 = SvgGenerator.GenerateStrookSvgXml(Strook, boundingBox, width ?? 500.0, height ?? 300, Style,
+            toonDwarskrachtenlijn: !true, toonMomentenlijn: !true, toonFiguren: true, loadCase: Strook?.Beam?.LoadContext?.BelastingGevallen?.LastOrDefault());
+        CurrentViewBox1 = SetViewBoxOpt(boundingBox.MinX, boundingBox.MinY, boundingBox.Width, boundingBox.Height);
+
+
+        boundingBox.Reset();
+        SvgXml2 = SvgGenerator.GenerateStrookSvgXml(Strook, boundingBox, width ?? 500.0, height ?? 300, Style, toonDwarskrachtenlijn: true, toonMomentenlijn: !true, toonFiguren: false);
+        CurrentViewBox2 = SetViewBoxOpt(boundingBox.MinX, boundingBox.MinY, boundingBox.Width, boundingBox.Height);
+
+
+
+        boundingBox.Reset();
+        SvgXml3 = SvgGenerator.GenerateStrookSvgXml(Strook, boundingBox, width ?? 500.0, height ?? 300, Style, toonDwarskrachtenlijn: !true, toonMomentenlijn: true, toonFiguren: false);
+        CurrentViewBox3 = SetViewBoxOpt(boundingBox.MinX, boundingBox.MinY, boundingBox.Width, boundingBox.Height);
+
+
+
+        StateHasChanged();
+    }
+
+    public enum StrookSvgViewType
+    {
+        Geometry,
+        GeometryWithLoadCase,
+        Diagram
+    }
+
+    public sealed class StrookSvgOptions
+    {
+        public StrookSvgViewType ViewType { get; init; }
+
+        // Alleen gebruikt als ViewType == Diagram
+        public DiagramContext? Diagram { get; init; }
+
+        // Alleen gebruikt bij Geometry + LoadCase
+        public Eurocode.Belastingen.BelastingGeval? LoadCase { get; init; }
+    }
+
+    public sealed class DiagramContext
+    {
+        public DiagramType DiagramType { get; init; }
+
+        public DiagramSourceType SourceType { get; init; }
+
+        public Eurocode.Belastingen.BelastingGeval? LoadCase { get; init; }
+
+        public Eurocode.Belastingen.BelastingCombinatie? LoadCombination { get; init; }
+
+        public Eurocode.Belastingen.BelastingCombinatieTypeEnum? LoadCombinationType { get; init; }
+    }
+
+    public enum DiagramType
+    {
+        ShearForceVz,
+        BendingMomentMy,
+        DeflectionW
+    }
+
+    public enum DiagramSourceType
+    {
+        LoadCase,
+        LoadCombination,
+        LoadCombinationType
+    }
+
+    
+
+
+
+}

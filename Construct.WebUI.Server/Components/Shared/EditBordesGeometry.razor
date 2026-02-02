@@ -1,0 +1,552 @@
+﻿@using System.Globalization
+@inject IProjectStateService ProjectState
+
+@if (Model != null)
+{
+    <KaskonInputContainer Label="breedte [mm]">
+        <FluentNumberField TValue="double" 
+            @bind-Value="Model.Breedte" 
+            @bind-Value:after="OnModelChanged"
+            Step="100" Min="1000" Max="3000"></FluentNumberField>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="lengte [mm]">
+        <FluentNumberField TValue="double" 
+            @bind-Value="Model.Lengte" 
+            @bind-Value:after="OnModelChanged"
+            Step="100" Min="2000" Max="5000"></FluentNumberField>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="dikte [mm]">
+        <FluentNumberField TValue="double" 
+            @bind-Value="Model.Dikte" 
+            Step="10" Min="180" Max="400"></FluentNumberField>
+    </KaskonInputContainer>
+
+
+    <KaskonInputContainer Label="breedte v.s. [mm]">
+        <FluentNumberField TValue="double" 
+                           @bind-Value="Model.BreedteVersterkteStrook"
+                           @bind-Value:after="OnModelChanged"
+                           Step="50" Min="200" Max="500"></FluentNumberField>
+    </KaskonInputContainer>
+
+
+    <br/>
+   
+    <KaskonInputContainer Label="trap links">
+       <FluentSelect TOption="AssemblageKeuze"
+                      Items="_keuzes"
+                      Multiple="false"
+                      @bind-SelectedOption="SelectedKeuze1"
+                      @bind-SelectedOption:after="OnModelChanged">
+            <OptionTemplate>
+                @context.Label
+            </OptionTemplate>
+        </FluentSelect> 
+    </KaskonInputContainer>
+
+
+    if(Model.Trap1?.AansluitendElement != null)
+    {
+        <KaskonInputContainer Label="afstand links [mm]">
+            <FluentNumberField TValue="double" 
+                @bind-Value="Model.Trap1.Randafstand" 
+                @bind-Value:after="OnModelChanged"
+                Step="10" Min="0" Max="500"></FluentNumberField>
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="trap.breedte">
+            <FluentNumberField TValue="double" 
+                @bind-Value="Model.Trap1.AansluitendElement.Breedte" 
+                @bind-Value:after="OnModelChanged"
+                Step="100" Min="800" Max="3000"></FluentNumberField>
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="reactie">
+            <FluentTextField Value="@_reactie1" Disabled="true">
+
+            </FluentTextField>
+        </KaskonInputContainer>
+
+    }
+
+    <KaskonInputContainer Label="trap rechts">
+        <FluentSelect TOption="AssemblageKeuze"
+                      Items="_keuzes"
+                      Multiple="false"
+                      @bind-SelectedOption="SelectedKeuze2"
+                      @bind-SelectedOption:after="OnModelChanged">
+            <OptionTemplate>
+                @context.Label
+            </OptionTemplate>
+        </FluentSelect>
+    </KaskonInputContainer>
+   
+
+    if (Model.Trap2?.AansluitendElement != null)
+    {
+        
+        
+        <KaskonInputContainer Label="afstand rechts [mm]">
+            <FluentNumberField TValue="double" 
+                               @bind-Value="Model.Trap2.Randafstand"
+                               @bind-Value:after="OnModelChanged"
+                               Step="10" Min="0" Max="500"></FluentNumberField>
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="trap.breedte">
+            <FluentNumberField TValue="double"
+                               @bind-Value="Model.Trap2.AansluitendElement.Breedte"
+                               @bind-Value:after="OnModelChanged"
+                               Step="100" Min="800" Max="3000"></FluentNumberField>
+        </KaskonInputContainer>
+    }
+
+    
+
+    
+
+    
+
+    // tijdelijk fixed Moment
+    
+    
+    
+    
+    <KaskonInputContainer Label="basisstrook profiel">
+        <FluentTextField Disabled="true" Value="@Model.BasisStrook?.Profiel?.ToString()" />
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="basisstrook <i>M</i><sub>Ed</sub>">
+        <FluentTextField Disabled="true" Value="@(Model.BasisStrook?.Moment.ToString("0.0 kNm", CultureInfo.InvariantCulture))" />
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="basisstrook <i>A</i><sub>s,req</sub>">
+        <FluentTextField Disabled="true" Value="@(Model.BasisStrook != null ? Model.BasisStrook.AsRequired.ToString("0 mm²", CultureInfo.InvariantCulture) : string.Empty)" />
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="basisstrook <i>A</i><sub>s,prov</sub>">
+        <FluentTextField Disabled="true" Value="@(Model.BasisStrook != null && Model.BasisStrook.Wapening != null ? Model.BasisStrook.Wapening.As.ToString("0 mm²", CultureInfo.InvariantCulture) : string.Empty)" />
+
+
+    </KaskonInputContainer>
+    @if (Model.BasisStrook != null && Model.BasisStrook.Wapening != null && Model.BasisStrook.AsRequired > Model.BasisStrook.Wapening.As)
+    {
+        <p class="warning">Onvoldoende wapening.</p>
+    }
+    @if (Model.BasisStrook == null || double.IsNaN(Model.BasisStrook.AsRequired))
+    {
+        <p class="warning">Error! geen wapening gevonden.</p>
+    }
+
+
+    
+
+    
+
+    
+    @if (Model.PlaatWapening != null)
+    {
+        <h3>WAPENING PLAAT (overzicht):</h3>
+        <PlaatWapeningComponent @bind-Model="Model.PlaatWapening" />
+        <PlaatWapeningTabelPosComponent Model="Model.PlaatWapening" OnChanged="OnModelChanged" />
+    }
+
+    <KaskonInputContainer Label="breedte [mm]">
+        <FluentNumberField TValue="double" 
+            @bind-Value="Model.Breedte" 
+            @bind-Value:after="OnModelChanged"
+            Step="100" Min="1000" Max="3000"></FluentNumberField>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="lengte [mm]">
+        <FluentNumberField TValue="double" 
+            @bind-Value="Model.Lengte" 
+            @bind-Value:after="OnModelChanged"
+            Step="100" Min="2000" Max="5000"></FluentNumberField>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="dikte [mm]">
+        <FluentNumberField TValue="double" 
+            @bind-Value="Model.Dikte" 
+            Step="10" Min="180" Max="400"></FluentNumberField>
+    </KaskonInputContainer>
+
+
+    <KaskonInputContainer Label="breedte v.s. [mm]">
+        <FluentNumberField TValue="double" 
+                           @bind-Value="Model.BreedteVersterkteStrook"
+                           @bind-Value:after="OnModelChanged"
+                           Step="50" Min="200" Max="500"></FluentNumberField>
+    </KaskonInputContainer>
+
+
+    <br/>
+   
+    <KaskonInputContainer Label="trap links">
+       <FluentSelect TOption="AssemblageKeuze"
+                      Items="_keuzes"
+                      Multiple="false"
+                      @bind-SelectedOption="SelectedKeuze1"
+                      @bind-SelectedOption:after="OnModelChanged">
+            <OptionTemplate>
+                @context.Label
+            </OptionTemplate>
+        </FluentSelect> 
+    </KaskonInputContainer>
+
+
+    if(Model.Trap1?.AansluitendElement != null)
+    {
+        <KaskonInputContainer Label="afstand links [mm]">
+            <FluentNumberField TValue="double" 
+                @bind-Value="Model.Trap1.Randafstand" 
+                @bind-Value:after="OnModelChanged"
+                Step="10" Min="0" Max="500"></FluentNumberField>
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="trap.breedte">
+            <FluentNumberField TValue="double" 
+                @bind-Value="Model.Trap1.AansluitendElement.Breedte" 
+                @bind-Value:after="OnModelChanged"
+                Step="100" Min="800" Max="3000"></FluentNumberField>
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="reactie">
+            <FluentTextField Value="@_reactie1" Disabled="true">
+
+            </FluentTextField>
+        </KaskonInputContainer>
+
+    }
+
+    <KaskonInputContainer Label="trap rechts">
+        <FluentSelect TOption="AssemblageKeuze"
+                      Items="_keuzes"
+                      Multiple="false"
+                      @bind-SelectedOption="SelectedKeuze2"
+                      @bind-SelectedOption:after="OnModelChanged">
+            <OptionTemplate>
+                @context.Label
+            </OptionTemplate>
+        </FluentSelect>
+    </KaskonInputContainer>
+   
+
+    if (Model.Trap2?.AansluitendElement != null)
+    {
+        
+
+        <KaskonInputContainer Label="afstand rechts [mm]">
+            <FluentNumberField TValue="double" 
+                               @bind-Value="Model.Trap2.Randafstand"
+                               @bind-Value:after="OnModelChanged"
+                               Step="10" Min="0" Max="500"></FluentNumberField>
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="trap.breedte">
+            <FluentNumberField TValue="double"
+                               @bind-Value="Model.Trap2.AansluitendElement.Breedte"
+                               @bind-Value:after="OnModelChanged"
+                               Step="100" Min="800" Max="3000"></FluentNumberField>
+        </KaskonInputContainer>
+    }
+
+
+
+
+    
+
+
+
+    // tijdelijk fixed Moment
+    
+
+
+
+    <KaskonInputContainer Label="basisstrook profiel">
+        <FluentTextField Disabled="true" Value="@Model.BasisStrook?.Profiel?.ToString()" />
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="basisstrook <i>M</i><sub>Ed</sub>">
+        <FluentTextField Disabled="true" Value="@(Model.BasisStrook?.Moment.ToString("0.0 kNm", CultureInfo.InvariantCulture))" />
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="basisstrook <i>A</i><sub>s,req</sub>">
+        <FluentTextField Disabled="true" Value="@(Model.BasisStrook != null ? Model.BasisStrook.AsRequired.ToString("0 mm²", CultureInfo.InvariantCulture) : string.Empty)" />
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="basisstrook <i>A</i><sub>s,prov</sub>">
+        <FluentTextField Disabled="true" Value="@(Model.BasisStrook != null && Model.BasisStrook.Wapening != null ? Model.BasisStrook.Wapening.As.ToString("0 mm²", CultureInfo.InvariantCulture) : string.Empty)" />
+
+
+    </KaskonInputContainer>
+    @if (Model.BasisStrook != null && Model.BasisStrook.Wapening != null && Model.BasisStrook.AsRequired > Model.BasisStrook.Wapening.As)
+    {
+        <p class="warning">Onvoldoende wapening.</p>
+    }
+    @if (Model.BasisStrook == null || double.IsNaN(Model.BasisStrook.AsRequired))
+    {
+        <p class="warning">Error! geen wapening gevonden.</p>
+    }
+
+
+
+   
+
+
+   
+
+
+    @if (Model.PlaatWapening != null)
+    {
+        <h6>Plaatwapening</h6>
+        <PlaatWapeningComponent @bind-Model="Model.PlaatWapening" />
+    }
+    else
+    {
+        <p>GEEN PLAATWAPENNG??!</p>
+    }
+
+
+
+
+}
+
+
+
+@code {
+    [Parameter] public BordesEntity? Model{ get; set; }
+    [Parameter] public EventCallback<BordesEntity> ModelChanged{ get; set; }
+    [CascadingParameter] public Action? RequestParentRefresh { get; set; }
+
+    void OnModelChanged() => RequestParentRefresh?.Invoke();
+
+    private string _reactie1
+    {
+        get
+        {
+            string reactie = "Rg=onbekend";
+            if (Model?.Trap1?.AansluitendElement is SteekTrapEntity trap)
+            {
+                reactie = $"R={trap.ReactieG:0.0} ({trap.ReactieQ:0.0}) kN/m¹";
+            }
+            return reactie;
+        }
+    }
+
+
+
+    private List<AssemblageEntity?> _keuzeAansluitendeElementen = new();
+
+
+
+
+    // Wrapper voor de keuze (zodat we ook NULL kunnen doorgeven!);
+    public class AssemblageKeuze
+    {
+        public string Label { get; set; } = "";
+        public AssemblageEntity? Value { get; set; }
+    }
+
+    private List<AssemblageKeuze> _keuzes = new();
+
+    protected override void OnParametersSet()
+    {
+        if (_keuzes.Count == 0)
+        {
+            _keuzes.Add(new AssemblageKeuze
+        {
+                Label = "(geen aansluiting)",
+                Value = null
+            });
+
+            _keuzes.AddRange(
+                ProjectState.CurrentProject.Assemblages
+                    .OfType<SteekTrapEntity>()
+                    .Select(a => new AssemblageKeuze
+                    {
+                        Label = $"{a.Merk} ({a.Naam})",
+                        Value = a
+                    }));
+        }
+    }
+
+    // koppel de keuze aan het model, zodat we ook null kunnen ondersteunen.
+    private AssemblageKeuze? _selectedKeuze1;
+    private AssemblageKeuze? SelectedKeuze1
+    {
+        get => _selectedKeuze1;
+        set
+        {
+            _selectedKeuze1 = value;
+
+            // Veiligheids-checks tegen null tijdens eerste render
+            if (Model?.Trap1 is not null)
+            {
+                Model.Trap1.AansluitendElement = value?.Value;
+            }
+        }
+    }
+    private AssemblageKeuze? _selectedKeuze2;
+    private AssemblageKeuze? SelectedKeuze2
+    {
+        get => _selectedKeuze2;
+        set
+        {
+            _selectedKeuze2 = value;
+
+            // Veiligheids-checks tegen null tijdens eerste render
+            if (Model?.Trap2 is not null)
+            {
+                Model.Trap2.AansluitendElement = value?.Value;
+            }
+        }
+    }
+
+    // tekst voor universele regel
+    private string universeleTekst { get; set; } = string.Empty;
+
+    void SetTekst(PlaatWapeningGroep? groep, int laag, string tekst)
+    {
+        if (groep == null) return;
+        var isHoofd = groep.LaagHoofdwapening == laag;
+        if (isHoofd)
+        {
+            if (groep.BasisWapening == null)
+                groep.BasisWapening = new WapeningContext();
+            groep.BasisWapening.Tekst = tekst;
+            groep.BasisWapening.SetZRef();
+        }
+        else
+        {
+            if (groep.VerdeelWapening == null)
+                groep.VerdeelWapening = new WapeningContext();
+            groep.VerdeelWapening.Tekst = tekst;
+            groep.VerdeelWapening.SetZRef();
+        }
+        OnModelChanged();
+    }
+
+    void SetLaagHoofd(PlaatWapeningGroep groep, int laag)
+    {
+        if (groep == null) return;
+        groep.LaagHoofdwapening = laag;
+        // UpdateReferentieDekkingen will be triggered by setter in domain
+        OnModelChanged();
+    }
+
+    void ApplyUniverseleTekst()
+    {
+        var pw = Model?.PlaatWapening;
+        if (pw == null) return;
+
+        void ApplyToGroup(PlaatWapeningGroep? g)
+        {
+            if (g == null) return;
+            if (g.BasisWapening == null) g.BasisWapening = new WapeningContext();
+            if (g.VerdeelWapening == null) g.VerdeelWapening = new WapeningContext();
+
+            g.BasisWapening.Tekst = universeleTekst;
+            g.VerdeelWapening.Tekst = universeleTekst;
+            g.BasisWapening.SetZRef();
+            g.VerdeelWapening.SetZRef();
+        }
+
+        ApplyToGroup(pw.Boven);
+        ApplyToGroup(pw.Onder);
+        OnModelChanged();
+    }
+
+
+
+
+    private IEnumerable<PlaatWapeningGroep?> GetPlaatWapRows()
+    {
+        var pw = Model?.PlaatWapening;
+
+        var rows = new List<PlaatWapeningGroep?>();
+
+        if (pw == null) return rows;
+
+
+        var b = pw.Boven;
+
+        rows.Add(b);
+
+        var o = pw.Onder;
+        rows.Add(o);
+
+        return rows;
+    }
+
+
+    private IEnumerable<(string Vlak, int Laag, string Type, WapeningContext? Ctx, double? Dekking)> GetPlaatWapeningRows()
+    {
+        var pw = Model?.PlaatWapening;
+        var rows = new List<(string Vlak, int Laag, string Type, WapeningContext? Ctx, double? Dekking)>();
+
+        void AddRow(string vlak, object? gObj, int laag)
+        {
+            if (gObj == null)
+            {
+                rows.Add((vlak, laag, string.Empty, null, null));
+                return;
+            }
+
+            var typeG = gObj.GetType();
+            int laagHoofd = 1;
+            var propLaag = typeG.GetProperty("LaagHoofdwapening");
+            if (propLaag != null)
+            {
+                try { laagHoofd = (int)(propLaag.GetValue(gObj) ?? 1); } catch { laagHoofd = 1; }
+            }
+
+            WapeningContext? basis = null;
+            var propBasis = typeG.GetProperty("BasisWapening");
+            if (propBasis != null)
+            {
+                basis = propBasis.GetValue(gObj) as WapeningContext;
+            }
+
+            WapeningContext? verdeel = null;
+            var propVerdeel = typeG.GetProperty("VerdeelWapening");
+            if (propVerdeel != null)
+            {
+                verdeel = propVerdeel.GetValue(gObj) as WapeningContext;
+            }
+
+            bool isHoofd = laagHoofd == laag;
+            var ctx = isHoofd ? basis : verdeel;
+            string type = ctx == null ? string.Empty : (isHoofd ? "hoofdwapening" : "verdeel");
+
+            double? dek = null;
+            var propDekking = typeG.GetProperty("DekkingBuitensteLaag") ?? typeG.GetProperty("Dekking");
+            if (propDekking != null)
+            {
+                var dekObj = propDekking.GetValue(gObj);
+                if (dekObj != null)
+                {
+                    var propDekkingToe = dekObj.GetType().GetProperty("DekkingToe");
+                    if (propDekkingToe != null)
+                    {
+                        try { dek = (double?)propDekkingToe.GetValue(dekObj); } catch { dek = null; }
+                    }
+                }
+            }
+
+            rows.Add((vlak, laag, type, ctx, dek));
+        }
+
+        AddRow("Boven", pw?.Boven, 1);
+        AddRow("Boven", pw?.Boven, 2);
+        AddRow("Onder", pw?.Onder, 2);
+        AddRow("Onder", pw?.Onder, 1);
+
+        return rows;
+    }
+
+    //private List<AssemblageEntity> KeuzeAansluitendeElementen => ProjectState.CurrentProject.Assemblages.Where(a => a.GetType() == typeof(SteekTrapEntity)).ToList();
+}
+

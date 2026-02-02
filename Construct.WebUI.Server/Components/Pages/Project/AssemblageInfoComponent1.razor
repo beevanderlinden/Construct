@@ -1,0 +1,213 @@
+﻿@using CommonLibrary.Interfaces
+@using CommonLibrary.Models
+@using Construct.WebUI.Server.Components.Beam
+@using Eurocode.HoutConstructies
+@using Eurocode.StaalConstructies
+@inject IProjectStateService PS
+
+
+@if(Model == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div>
+        @* <div style="margin-left:3.5px; font-style:italic;">element/assemblage</div> *@
+
+        <KaskonInputContainer Label="merk">
+            <FluentTextField @bind-Value="@Model.Merk" style="width: 100%" /> 
+        </KaskonInputContainer>
+
+        @if (PS.CurrentProject != null && PS.CurrentProject.Assemblages.FirstOrDefault(asbly =>
+            asbly.Guid != Model.Guid &&
+            Normalize(asbly.Merk) == Normalize(Model.Merk)) is not null)
+        {
+            <p class="warning">Merknaam bestaat al, gebruik een andere naam.</p>
+        }
+
+
+        <KaskonInputContainer Label="naam">
+            <FluentTextField @bind-Value="@Model.Naam" style="width: 100%" />
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="type">
+            <FluentSelectEnum LabelPosition="LabelPosition.Top"
+                              TEnum="AssemblageEntity.AssemblageTypeEnum"
+                              ReadOnly="true"
+                              @bind-EnumSelectedValue="Model.AssemblageType">
+            </FluentSelectEnum>
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="materiaal">
+            <FluentTextField Disabled="true" Value="@Model.Materiaal.Type.ToString()"></FluentTextField>
+        </KaskonInputContainer>
+
+
+        @if(Model.Materiaal is BetonContext beton)
+        {
+            <KaskonInputContainer Label="betonkwaliteit">
+                <FluentSelect TOption="BetonContext"
+                              Items="@GetBeschikbareBeton()"
+                              OptionText="@(m => m.UserFriendlyName)"
+                              OptionValue="@(m => m.Id.ToString())"
+                              @bind-SelectedOption="@SelectedBeton"
+                              @bind-SelectedOption:after="@OnBetonChanged"
+                              Style="width: 100%;">
+                </FluentSelect>
+            </KaskonInputContainer>
+        }
+
+
+        @if(Model.Materiaal is StaalContext staal)
+        {
+            <KaskonInputContainer Label="staalkwaliteit">
+                <FluentSelect TOption="StaalContext"
+                              Items="@GetBeschikbareStaal()"
+                              OptionText="@(m => m.UserFriendlyName)"
+                              OptionValue="@(m => m.Id.ToString())"
+                              @bind-SelectedOption="@SelectedStaal"
+                              @bind-SelectedOption:after="@OnStaalChanged"
+                              Style="width: 100%;">
+                </FluentSelect>
+            </KaskonInputContainer>
+        }
+
+        @if(Model.Materiaal is HoutContext hout)
+        {
+            <KaskonInputContainer Label="houtkwaliteit">
+                <FluentSelect TOption="HoutContext"
+                              Items="@GetBeschikbareHout()"
+                              OptionText="@(m => m.UserFriendlyName)"
+                              OptionValue="@(m => m.Id.ToString())"
+                              @bind-SelectedOption="@SelectedHout"
+                              @bind-SelectedOption:after="@OnHoutChanged"
+                              Style="width: 100%;">
+                </FluentSelect>
+            </KaskonInputContainer>
+        }
+
+
+       @*  <KaskonInputContainer Label="materiaal">
+            <FluentSelectEnum LabelPosition="LabelPosition.Top"
+                              TEnum="Eurocode.StaalConstructies.BetonsterkteklasseEnum"
+                              @bind-EnumSelectedValue="Model.Materiaal.Betonsterkteklasse"></FluentSelectEnum>
+        </KaskonInputContainer> *@
+
+
+
+        <KaskonInputContainer Label="gebruiksklasse">
+            <FluentSelectEnum LabelPosition="LabelPosition.Top"
+                TEnum="Eurocode.Belastingen.GebruiksklasseEnum"
+                              @bind-EnumSelectedValue="Model.Gebruiksklasse"></FluentSelectEnum>
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="categorie">
+            <FluentTextField Value="@Model.EngineeringCategorie" Disabled=true Style="width:100%;"/> 
+        </KaskonInputContainer>
+
+        
+
+
+        
+
+
+
+    </div>
+   
+}
+
+
+
+@code {
+[Parameter, EditorRequired] public AssemblageEntity Model{ get; set; }
+[Parameter] public EventCallback<AssemblageEntity> ModelChanged { get; set; }
+
+// Geselecteerde materialen
+private BetonContext? SelectedBeton { get; set; }
+private StaalContext? SelectedStaal { get; set; }
+private HoutContext? SelectedHout { get; set; }
+
+protected override void OnParametersSet()
+{
+    // Initialiseer geselecteerde materialen op basis van huidig assemblage materiaal
+    if (Model?.Materiaal != null)
+    {
+        SelectedBeton = Model.Materiaal as BetonContext;
+        SelectedStaal = Model.Materiaal as StaalContext;
+        SelectedHout = Model.Materiaal as HoutContext;
+    }
+}
+    
+private string Normalize(string? value)
+    => new string((value ?? "")
+        .Where(c => !char.IsWhiteSpace(c))   // verwijdert spaties, tabs, etc.
+        .ToArray())
+        .ToLower();                          // optioneel maar handig
+
+// Haal beschikbare materialen op uit project.materialen
+private IEnumerable<BetonContext> GetBeschikbareBeton()
+    => PS?.CurrentProject?.Materialen.Values
+        .OfType<BetonContext>() 
+        ?? Enumerable.Empty<BetonContext>();
+
+private IEnumerable<StaalContext> GetBeschikbareStaal()
+    => PS?.CurrentProject?.Materialen.Values
+        .OfType<StaalContext>() 
+        ?? Enumerable.Empty<StaalContext>();
+
+private IEnumerable<HoutContext> GetBeschikbareHout()
+    => PS?.CurrentProject?.Materialen.Values
+        .OfType<HoutContext>() 
+        ?? Enumerable.Empty<HoutContext>();
+
+// Event handlers voor materiaalwijziging
+private void OnBetonChanged()
+{
+    if (SelectedBeton != null && Model != null)
+    {
+        Model.Materiaal = SelectedBeton;
+        ModelChanged.InvokeAsync(Model);
+        StateHasChanged();
+    }
+}
+
+private void OnStaalChanged()
+{
+    if (SelectedStaal != null && Model != null)
+    {
+        Model.Materiaal = SelectedStaal;
+        ModelChanged.InvokeAsync(Model);
+        StateHasChanged();
+    }
+}
+
+private void OnHoutChanged()
+{
+    if (SelectedHout != null && Model != null)
+    {
+        Model.Materiaal = SelectedHout;
+        ModelChanged.InvokeAsync(Model);
+        StateHasChanged();
+    }
+}
+
+// verwijderen na test
+//LiggerEntity ligger => (LiggerEntity)Model;
+    
+    List<IEnumerable<IProfiel>> profielenPerType = [
+        Profielen.Staal.Doorsneden.HEA,
+        Profielen.Staal.Doorsneden.HEB,
+        Profielen.Staal.Doorsneden.HEM,
+        Profielen.Staal.Doorsneden.IPE,
+        //Profielen.Staal.Doorsneden.Koker,
+        Profielen.Staal.Doorsneden.SHS,
+        Profielen.Staal.Doorsneden.CHS,
+        
+
+
+
+    ];
+
+
+}

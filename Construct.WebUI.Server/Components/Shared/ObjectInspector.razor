@@ -1,0 +1,106 @@
+﻿@using System.Reflection
+@using System.Globalization
+
+@if (Model is null)
+{
+    <span>-</span>
+}
+else
+{
+    <dl class="object-inspector">
+        @foreach (var prop in GetProperties())
+        {
+            <dt>@prop.Name</dt>
+            <dd>
+                @RenderValue(prop)
+            </dd>
+        }
+    </dl>
+}
+
+@code {
+    [Parameter]
+    public object? Model { get; set; }
+
+    [Parameter]
+    public HashSet<object> Visited { get; set; } = new();
+
+    IEnumerable<PropertyInfo> GetProperties()
+    {
+        if (Model == null)
+            return Enumerable.Empty<PropertyInfo>();
+
+        try
+        {
+            return Model.GetType()
+                .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                .Where(p => p.GetIndexParameters().Length == 0);
+        }
+        catch
+        {
+            return Enumerable.Empty<PropertyInfo>();
+        }
+    }
+
+    RenderFragment RenderValue(PropertyInfo prop) => builder =>
+    {
+        object? value;
+
+        try
+        {
+            value = prop.GetValue(Model);
+        }
+        catch
+        {
+            builder.AddContent(0, "(error)");
+            return;
+        }
+
+        if (value is null)
+        {
+            builder.AddContent(1, "-");
+            return;
+        }
+
+        var type = value.GetType();
+
+        // circular reference guard
+        if (!type.IsValueType)
+        {
+            if (!Visited.Add(value))
+            {
+                builder.AddContent(2, "(↻)");
+                return;
+            }
+        }
+
+        if (IsSimple(type))
+        {
+            builder.AddContent(3, Format(value));
+        }
+        else
+        {
+            builder.OpenComponent<ObjectInspector>(4);
+            builder.AddAttribute(5, "Model", value);
+            builder.AddAttribute(6, "Visited", Visited);
+            builder.CloseComponent();
+        }
+    };
+
+    static bool IsSimple(Type type) =>
+        type.IsPrimitive
+        || type.IsEnum
+        || type == typeof(string)
+        || type == typeof(decimal)
+        || type == typeof(DateTime)
+        || type == typeof(Guid);
+
+    static string Format(object value) =>
+        value switch
+        {
+            double d => d.ToString("N", CultureInfo.CurrentCulture),
+            float f => f.ToString("N", CultureInfo.CurrentCulture),
+            decimal m => m.ToString("N", CultureInfo.CurrentCulture),
+            _ => value.ToString() ?? "-"
+        };
+}

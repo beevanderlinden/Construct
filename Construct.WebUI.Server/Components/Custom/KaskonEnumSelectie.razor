@@ -1,0 +1,51 @@
+﻿@using Microsoft.FluentUI.AspNetCore.Components
+@typeparam TEnum where TEnum : struct, Enum
+
+<FluentSelect TOption="Option<int>"
+              Items="_enumOptions"
+              Label="@Label"
+              OptionText="@(i => i.Text)"
+              OptionValue="@(i => i.Value.ToString())"
+              @bind-Value="_selectedValue"
+              Disabled="@Disabled"
+              ReadOnly="@ReadOnly" />
+
+@code {
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public TEnum Value { get; set; }
+    [Parameter] public EventCallback<TEnum> ValueChanged { get; set; }
+    [Parameter] public TEnum[] ExcludeEnumItems { get; set; } = [];
+    [Parameter] public TEnum[] DisabledEnumItems { get; set; } = [];
+    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public bool ReadOnly { get; set; } = false;
+
+    private string? _selectedValue;
+    private List<Option<int>> _enumOptions = new();
+
+    protected override void OnParametersSet()
+    {
+        _enumOptions = Enum.GetValues(typeof(TEnum))
+            .Cast<TEnum>()
+            .Where(e => !ExcludeEnumItems.Contains(e))
+            .Select(e => new Option<int>
+            {
+                Value = Convert.ToInt32(e),
+                Text = e.ToString(),
+                Disabled = DisabledEnumItems.Contains(e),
+                Selected = e.Equals(Value)
+            })
+            .ToList();
+
+        _selectedValue = Convert.ToInt32(Value).ToString();
+    }
+
+    private async Task OnValueChanged(string? newValue)
+    {
+        if (!string.IsNullOrEmpty(newValue) && int.TryParse(newValue, out int intValue))
+        {
+            var enumValue = (TEnum)(object)intValue;
+            Value = enumValue;
+            await ValueChanged.InvokeAsync(enumValue);
+        }
+    }
+}

@@ -1,0 +1,19 @@
+﻿@using Construct.Application.Interfaces
+@inject IFileService FileService
+
+<button @onclick="SaveProject">Save</button>
+<button @onclick="LoadProject">Load</button>
+
+@code {
+    private void SaveProject()
+    {
+        var project = new { Name = "Test Project", Version = "1.0" };
+        FileService.Save("project.json.gz", project);
+    }
+
+    private void LoadProject()
+    {
+        var project = FileService.Load<object>("project.json.gz");
+        Console.WriteLine(project);
+    }
+}

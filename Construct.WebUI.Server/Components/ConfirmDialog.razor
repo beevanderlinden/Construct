@@ -1,0 +1,55 @@
+﻿@* @implements IDialogContentComponent<bool> *@
+
+
+<!-- Header -->
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.WindowApps())" />
+        <FluentLabel Typo="Typography.PaneHeader">
+            @Dialog.Instance.Parameters.Title
+        </FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+
+
+<!-- Body -->
+<FluentDialogBody>
+    @Bericht
+</FluentDialogBody>
+
+
+<!-- Footer -->
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Accent"
+                  OnClick="@ConfirmAsync">
+        Ja
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Neutral"
+                  OnClick="@CancelAsync">
+        Nee
+    </FluentButton>
+</FluentDialogFooter>
+
+@code 
+{
+    [CascadingParameter] 
+    public FluentDialog Dialog { get; set; } = default!;
+
+    [Parameter]
+    public string Bericht { get; set; } = "Weet u dit zeker?";
+
+
+
+    private async Task ConfirmAsync()
+    {
+        await Dialog.CloseAsync(true);
+    }
+
+    private async Task CancelAsync()
+    {
+        await Dialog.CancelAsync(false);
+    }
+
+
+}

@@ -1,0 +1,130 @@
+﻿@page "/File/newBAK"
+@using Construct.Application.Interfaces
+@using Construct.WebUI.Server.Components.Pages.Project
+@inject IFileService FileService
+@inject NavigationManager NavigationManager
+
+
+
+@if(showSaveCurrentProject)
+{
+    <dl><dt>huidig project</dt><dd>@ProjectEntity?.ProjectInfo.ToString()</dd></dl>
+    <p>Wilt u eerst uw huidige project opslaan?</p>
+    <FluentButton OnClick="SaveCurrentProject" >Ja, huidig project eerst opslaan</FluentButton>
+    <FluentButton OnClick="SaveCurrentProject">Nee, doorgaan zonder opslaan</FluentButton>
+    <FluentButton OnClick="NavigateHome">Afbreken</FluentButton>
+
+
+ 
+}
+else
+{
+
+
+
+    if (ProjectState == null)
+    {
+        throw new ArgumentNullException(nameof(ProjectState));
+    }
+    else
+    {
+
+        <p>Nieuw project aangemaakt, vul de details in.</p>
+
+        <ProjectInfo Model="@ViewModel" ModelChanged="BijwerkenProjectInfo"></ProjectInfo>
+
+        <SaveAs></SaveAs>
+
+    }
+
+}
+
+
+@code {
+
+    [CascadingParameter] public ProjectEntity? ProjectEntity { get; set; }
+    [CascadingParameter] public IProjectStateService? ProjectState { get; set; }
+
+    private ProjectInfoViewModel ViewModel = new();
+
+    private bool showSaveCurrentProject;
+
+    protected override void OnInitialized()
+    {
+        if (ProjectState?.CurrentProject != null)
+        {
+            showSaveCurrentProject = true;
+        }
+        else
+        {
+            CreateNewProject();
+        }
+
+    }
+
+    private void CreateNewProject()
+    {
+        ProjectEntity = new ProjectEntity
+            {
+                ProjectInfo = new ProjectInfoEntity
+                {
+                    Naam = ViewModel.Naam,
+                    Nummer = ViewModel.Nummer,
+                    Plaatsnaam = ViewModel.Plaatsnaam,
+                    Grondslagen = ViewModel.Grondslagen
+                }
+            };
+        ProjectState?.SetProject(ProjectEntity);
+
+        // Save
+       
+
+
+
+    }
+
+    private void SaveCurrentProject()
+    {
+        if (ProjectState?.CurrentProject is not null)
+        {
+            // Simpel pad voor nu (later instelbaar via settings)
+            var path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), 
+                $"Demo.cprj");
+
+            FileService.Save(path, ProjectState.CurrentProject);
+        }
+
+        // Daarna nieuw project aanmaken
+        CreateNewProject();
+        showSaveCurrentProject = false;
+    }
+
+    private void DiscardCurrentProject()
+    {
+        CreateNewProject();
+        showSaveCurrentProject = false;
+
+    }
+
+    private void BijwerkenProjectInfo()
+    {
+        if (ProjectEntity == null) return;
+       
+        if (ViewModel != null)
+        {
+            ProjectEntity.ProjectInfo.Nummer = ViewModel.Nummer;
+            ProjectEntity.ProjectInfo.Naam = ViewModel.Naam;
+            ProjectEntity.ProjectInfo.Plaatsnaam = ViewModel.Plaatsnaam;
+            ProjectEntity.ProjectInfo.Grondslagen = ViewModel.Grondslagen;
+            ProjectState?.SetProject(ProjectEntity);
+            //StateHasChanged();
+        }
+    }
+
+    private void NavigateHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+}

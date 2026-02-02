@@ -1,0 +1,33 @@
+﻿@using Construct.Application.Interfaces
+@inject IAppSettingService AppSettingService
+@inject IJSRuntime JS
+
+<FluentTextField Label="Standaard opslagmap"
+                 @bind-Value="_directory"
+                 Placeholder="Bijv. C:\Gebruikers\Documenten\Projecten" />
+
+<FluentButton OnClick="SaveDirectory">Opslaan</FluentButton>
+
+@if (saved)
+{
+    <p style="color:green;">Instelling opgeslagen!</p>
+}
+
+@code {
+    private string? _directory;
+    private bool saved;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _directory = await AppSettingService.GetDefaultSavePathAsync();
+    }
+
+    private async Task SaveDirectory()
+    {
+        if (!string.IsNullOrWhiteSpace(_directory))
+        {
+            await AppSettingService.SetDefaultSavePathAsync(_directory!);
+            saved = true;
+        }
+    }
+}

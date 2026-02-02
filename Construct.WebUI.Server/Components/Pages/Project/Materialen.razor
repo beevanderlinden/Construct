@@ -1,0 +1,26 @@
+@page "/Project/materialen"
+@using Construct.Application.Interfaces
+@using Construct.Domain.Entities
+@inject IProjectStateService ProjectState
+
+<PageTitle>Materialen - Construct</PageTitle>
+
+@if (ProjectState?.CurrentProject == null)
+{
+    <p><em>Geen project geladen.</em></p>
+}
+else
+{
+    <FluentStack Orientation="Orientation.Vertical" VerticalGap="20">
+        <FluentLabel Typo="Typography.H3">
+            <FluentIcon Value="@(new Icons.Regular.Size24.BuildingFactory())" Color="Color.Accent" />
+            Materialen
+        </FluentLabel>
+
+        <ProjectMaterialen Project="@ProjectState.CurrentProject" />
+    </FluentStack>
+}
+
+@code {
+    
+}

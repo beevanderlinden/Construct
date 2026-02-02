@@ -1,0 +1,52 @@
+﻿<InputFile OnChange="OnFileSelected" accept="@Accept" />
+
+@if (ProgressPercent > 0)
+{
+    <div>
+        <progress value="@ProgressPercent" max="100"></progress>
+        <span>@ProgressPercent%</span>
+    </div>
+}
+
+@code {
+    [Parameter] public string Accept { get; set; } = "*/*"; // bijv. ".cprj, .json, .csf"
+    [Parameter] public EventCallback<byte[]> OnFileUploaded { get; set; }
+    [Parameter] public EventCallback<string> OnFileNameUploaded { get; set; }
+    [Parameter] public long MaxFileSize { get; set; } = 1024 * 1024 * 100; // 100MB standaard
+
+    public int ProgressPercent { get; set; }
+    
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        if (file == null)
+            return;
+
+        if (file.Size > MaxFileSize)
+        {
+            throw new InvalidOperationException($"Bestand te groot. Max: {MaxFileSize / 1024 / 1024} MB");
+        }
+
+        // buffer
+        var buffer = new byte[file.Size];
+        long totalRead = 0;
+
+        using var stream = file.OpenReadStream(MaxFileSize);
+        int read;
+        while ((read = await stream.ReadAsync(buffer.AsMemory((int)totalRead, (int)(buffer.Length - totalRead)))) > 0)
+        {
+            totalRead += read;
+            ProgressPercent = (int)((totalRead * 100) / file.Size);
+            StateHasChanged();
+        }
+
+        // callbacks aanroepen
+        if (OnFileUploaded.HasDelegate)
+            await OnFileUploaded.InvokeAsync(buffer);
+
+        if (OnFileNameUploaded.HasDelegate)
+            await OnFileNameUploaded.InvokeAsync(file.Name);
+    }
+}

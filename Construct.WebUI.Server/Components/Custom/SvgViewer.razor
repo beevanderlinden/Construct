@@ -1,0 +1,82 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg"
+     preserveAspectRatio="xMidYMid meet"
+     viewBox="@ViewBox"
+     style="@Style">
+
+    <defs>
+        <!-- Marker: cirkel met kruis -->
+        <marker id="circle-cross" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <circle cx="5" cy="5" r="300" stroke="black" stroke-width="1" fill="black" />
+            <line x1="1" y1="5" x2="9" y2="5" stroke="black" stroke-width="1" />
+            <line x1="5" y1="1" x2="5" y2="9" stroke="black" stroke-width="1" />
+        </marker>
+    </defs>
+
+    @foreach (var path in Paths)
+    {
+        <path d="@path.D"
+              stroke="@path.Stroke"
+              stroke-width="@path.StrokeWidth"
+              fill="@path.Fill"
+              opacity="@path.Opacity"
+              fill-opacity="@path.FillOpacity"
+              stroke-dasharray="@path.StrokeDashArray"
+              stroke-linejoin="@path.StrokeLineJoin"
+              stroke-linecap="@path.StrokeLineCap"
+              fill-rule="@path.FillRule" />
+    }
+
+
+
+    @foreach (var d in DimLines)
+    {
+        <!-- Lijn met marker -->
+        <line x1="@d.X1" y1="@d.Y1" x2="@d.X2" y2="@d.Y2"
+              stroke="@d.StrokeColor"
+              stroke-width="@d.StrokeWidth"
+              marker-start="url(#circle-cross)"
+              marker-end="url(#circle-cross)" />
+
+        <!-- Input in SVG -->
+       @*  <foreignObject x="@((d.X1 + d.X2) / 2 - 30)" y="@((d.Y1 + d.Y2) / 2 - 25)" width="120" height="20">
+           <FluentNumberField @bind-Value="d.Value"/>
+            
+            
+           
+        </foreignObject> *@
+
+         <!-- Waarde als tekst -->
+        //@((MarkupString)$"<text x='{d.MidX:0}' y='{d.MidY:0}' text-anchor='middle' font-size='{TextSize:0}' font-family='Arial' transform='rotate({(int)d.Angle:0},{(int)d.MidX:0},{(int)d.MidY:0})'>{d.Text}</text>")
+
+
+    }
+
+
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public IEnumerable<SvgPath> Paths { get; set; } = [];
+    [Parameter] public IEnumerable<SvgDimLine> DimLines { get; set; } = [];
+    [Parameter] public double WidthMM { get; set; } = 8 * 220;
+
+
+
+    [Parameter] public string ViewBox { get; set; } = "-200 -2200 2400 2400";
+    [Parameter] public string Style { get; set; } = "width:100%; height:600px; border:2px solid red;";
+
+    private double TextSize => WidthMM * 0.02;
+
+
+    private async Task OnValueChanged(SvgDimLine dim, string value)
+    {
+        if (double.TryParse(value, out var v))
+        {
+            //dim.Value = v;
+           
+            //await dim.ValueChanged.InvokeAsync(v);
+            //StateHasChanged(); // forceer update
+        }
+    }
+
+
+}

@@ -1,0 +1,58 @@
+﻿@namespace Giraffe
+@inject GraphServiceClient GraphClient
+
+<h3>Mijn OneDrive (GiraffeDrive)</h3>
+
+@if (driveItems == null)
+{
+    <p>Laden...</p>
+}
+else if (!driveItems.Any())
+{
+    <p>Geen bestanden gevonden.</p>
+}
+else
+{
+    <ul>
+        @foreach (var item in driveItems)
+        {
+            <li>
+                @if (item.Folder != null)
+                {
+                    <strong>📁 @item.Name</strong>
+                }
+                else
+                {
+                    <span>📄 @item.Name</span>
+                }
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private List<DriveItem>? driveItems;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Stap 1: Haal de huidige gebruiker’s Drive op
+            var drive = await GraphClient.Me.Drive.GetAsync();
+
+            // Stap 2: Haal bestanden/mappen in de root op via drive ID
+            var result = await GraphClient.Drives[drive!.Id].Items["root"].Children.GetAsync(request =>
+            {
+                request.QueryParameters.Select = new[] { "id", "name", "folder", "file" };
+                request.QueryParameters.Top = 50;
+            });
+
+            driveItems = result?.Value?.ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine("Fout bij ophalen OneDrive-bestanden: " + ex.Message);
+            driveItems = new List<DriveItem>();
+        }
+    }
+}

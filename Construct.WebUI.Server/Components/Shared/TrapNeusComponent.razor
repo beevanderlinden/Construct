@@ -1,0 +1,248 @@
+﻿@if (Model != null)
+{
+    Model.Bijwerken(); // netjes maken
+
+    @if (Model.TandGedrongen == false)
+    {
+        <tr><td>LET OP! Berekeningen met SLANKE TAND-OPLEGGINGEN vallen buiten deze trapberekening.</td></tr>
+    }
+
+    <table class="custom-data-table">
+        <tbody>
+
+            <tr>
+                <td><i>V</i><sub>Ed</sub></td>
+                <td>@Model.OplegReactie.ToString("0.# kN/m¹")</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><i>H</i><sub>Ed</sub></td>
+                <td>@Model.ReactieHorizontaal.ToString("0.# kN/m¹") </td>
+                <td>(@Model.PercentageHorizontaleBelasting.ToString("0%") × <i>V</i><sub>Ed</sub>)</td>
+            </tr>
+
+            <tr>
+                <td><i>a</i><sub>b</sub></td>
+                <td>@Model.LengteOplegmateriaal.ToString("0.# mm")</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><i>L</i></td>
+                <td>@Model.TandLengte.ToString("0.# mm")</td>
+                <td>lengte</td>
+            </tr>
+            <tr>
+                <td><i>h</i></td>
+                <td>@Model.TandHoogte.ToString("0.# mm")</td>
+                <td>hoogte</td>
+            </tr>
+
+            <tr>
+                <td><i>a</i></td>
+                <td>@Model.KleinsteWaardeVoorArm.ToString("0.# mm")</td>
+                <td><i>a</i> = kleinste (<i>a</i><sub>b</sub>/2, L/4, h/4)</td>
+            </tr>
+            <tr>
+                <td>hefboomsarm</td>
+                <td>@Model.ArmVoorTand.ToString("0.# mm")</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><i>l</i><sub>ov</sub></td>
+                <td>@Model.OverspanningVoorTand.ToString("0.# mm")</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><i>l</i><sub>ov</sub>/<i>h</i></td>
+                <td>@Model.OverspanningVoorTandGedeeldDoorHoogte.ToString("0.#")</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>gedrongen?</td>
+                <td>@(Model.TandGedrongen ? "ja" : "nee")</td>
+                <td></td>
+            </tr>
+
+            <tr><td colspan="3"><i>Momentwapening:</i></td></tr>
+            <tr>
+                <td><i>a</i></td>
+                <td>@Model.BuigingTand?.LengteMaatBijGedrongenLiggerInMM.ToString("0.# mm")</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><i>h</i></td>
+                <td>@Model.BuigingTand?.Hoogte.ToString("0.# mm")</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><i>z</i></td>
+                <td>@Model.BuigingTand?.Z.ToString("0 mm")</td>
+                <td> (<i>z</i> = 0,4 <i>a</i> + 0,4 <i>h</i> ≤ 1,6 <i>a</i>)</td>
+            </tr>
+            <tr>
+                <td><i>M</i><sub>Ed</sub></td>
+                <td>@Model.BuigingTand?.Moment.ToString("0.## kN/m¹")</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><i>A</i><sub>s,req</sub></td>
+                <td>@Model.BuigingTand?.AsRequired.ToString("0 mm²/m¹")</td>
+                <td></td>
+            </tr>
+
+            @if (Model.BuigingTand != null && Model.BuigingTand.IsValidated)
+            {
+                <tr>
+                    <td colspan="3"><div class="success">Momentwapening akkoord</div></td>
+                </tr>
+            }
+            else
+            {
+                <tr>
+                    <td colspan="3">
+                        <div class="error">
+                            Niet akkoord
+                            <EurocodeMeldingenComponent Meldingen="Model.BuigingTand.Meldingen" />
+                        </div>
+                    </td>
+                </tr>
+            }
+
+
+            <tr><td colspan="3"><i>Ophangwapening:</i></td></tr>
+            <tr>
+                <td><i>N</i><sub>Ed,oph</sub></td>
+                <td>@Model.OphangKracht.ToString("0.# kN/m¹") </td>
+                <td>(@Model.FactorOphangKracht.ToString("0.#")x oplegreactie)</td>
+            </tr>
+            <tr>
+                <td><i>A</i><sub>s,req,oph</sub></td>
+                <td>@Model.OphangWapeningHalsBenodigd.ToString("0 mm²/m¹")</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><i>A</i><sub>s,req,totaal</sub></td>
+                <td>@Model.TotaleWapeningBenodigd.ToString("0 mm²/m¹") </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><i>A</i><sub>s,prov</sub></td>
+                <td>@Model.WapeningAlgemeen.GetUserFriendlyText("mm²/m¹", true)</td>
+                <td></td>
+            </tr>
+
+
+            <tr>
+                <td>wapening</td>
+                <td>
+                    <FluentTextField @bind-Value="Model.WapeningAlgemeen.Tekst"></FluentTextField>
+                </td>
+            </tr>
+       
+
+
+
+
+
+        @if (Model.WapeningAlgemeen.As > Model.TotaleWapeningBenodigd)
+        {
+            <tr>
+                <td colspan="3"><div class="success">Ophangwapening + momentwapening akkoord</div></td>
+            </tr>
+        }
+        else
+        {
+            <tr>
+                <td colspan="3"><div class="error">Onvoldoende wapening.</div></td>
+            </tr>
+        }
+
+
+
+        <tr><td colspan="3"><i>Controle dwarskracht:</i></td></tr>
+        <tr>
+            <td><i>F</i><sub>ck</sub></td>
+            <td>@Model.DwarskrachtTand.Beton.Fck.ToString("0 N/mm²")</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><i>d</i></td>
+            <td>@Model.DwarskrachtTand.NutHoogte.ToString("0 mm")</td>
+            <td>nuttige hoogte</td>
+        </tr>
+        <tr>
+            <td><i>k</i></td>
+            <td>@Model.DwarskrachtTand.FactorK.ToString("0.#")</td>
+            <td>factor</td>
+        </tr>
+        <tr>
+            <td><i>ρ</i><sub>l</sub></td>
+            <td>@Model.DwarskrachtTand.RhoLangs.ToString("0.#####")</td>
+            <td>wapeningspercentage langswapening</td>
+        </tr>
+        <tr>
+            <td><i>σ</i><sub>cp</sub></td>
+            <td>@Model.DwarskrachtTand.SigmaCp.ToString("0.##### N/mm²")</td>
+            <td>spanning agv horizontale belasting</td>
+        </tr>
+
+        <tr>
+            <td><i>ν</i><sub>Rd,c</sub></td>
+            <td>@Model.DwarskrachtTand.SchuifspanningWeerstandBeton.ToString("0.##### N/mm²")</td>
+            <td>schuifspanningsweerstand beton</td>
+        </tr>
+
+        <tr>
+            <td><i>V</i><sub>Rd,c</sub></td>
+            <td>@Model.DwarskrachtTand.DwarskrachtWeerstandBeton.ToString("0.##### kN")</td>
+            <td>dwarskrachtweerstand beton</td>
+        </tr>
+
+        @if (Model.DwarskrachtTand.DwarskrachtWeerstandBeton >= Model.OplegReactie)
+        {
+            <tr>
+                <td colspan="3">
+                    <div class="success">
+                        <i>V</i><sub>Ed</sub> is kleiner dan <i>V</i><sub>Rd,c</sub> dus er is geen dwarskracht wapening nodig.
+
+                    </div>
+                </td>
+            </tr>
+        }
+        else
+        {
+            <tr>
+
+                <td colspan="3">
+
+                    <div class="warning">Er is dwarskrachtwapening nodig, dit is niet akkoord voor trappen. Pas de dikte aan!</div>
+                </td>
+            </tr>
+        }
+
+        </tbody>
+
+    </table>
+
+
+
+
+
+
+
+}
+else
+{
+    <div>Niet van toepassing.</div>
+}
+
+
+
+
+@code {
+    [Parameter, EditorRequired] public TandOplegging Model { get; set; }
+    [Parameter] public EventCallback<TandOplegging> ModelChanged { get; set; }
+
+
+
+}

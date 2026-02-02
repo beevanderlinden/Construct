@@ -1,0 +1,38 @@
+@using System
+@using CommonLibrary.Models
+@using Construct.Domain.Entities
+@using Construct.WebUI.Server.Components.Beam
+@using Eurocode.HoutConstructies
+@using Eurocode.StaalConstructies
+@using Construct.Application.Services
+
+@if (Profiel == null)
+{
+    <p>Geen profiel</p>
+}
+else
+{
+    <span>[BaseProfiel] @Profiel.Naam</span>
+    var svgAxis = SvgGenerator.GetSvgAxis(-Profiel.B * 1.1, Profiel.B * 1.1, -Profiel.H * 1.1, Profiel.H * 1.1, "y", "z", 1);
+    <div style="height:@Profiel.H.ToString("0px");">
+        <svg viewBox="@Profiel.SvgViewBox" height="100%">
+            <path d="@Profiel.SvgPath" fill="darkblue" fill-rule="evenodd" stroke="black" />
+            @foreach (var t in svgAxis)
+            {
+                @((MarkupString)t.Render())
+            }
+        </svg>
+    </div>
+
+    var tblProfiel = BeamResultsHelper.GetTabelProfielEigenschappen(Profiel);
+
+    <TableContentRenderer Table="tblProfiel"
+                          Title="Profiel eigenschappen"
+                          TableCss="ec-table"
+                          TableStyle="border:solid 1px #eee;"
+                          ContainerStyle="margin: 15px 0;" />
+}
+
+@code {
+    [Parameter, EditorRequired] public BaseProfiel? Profiel { get; set; }
+}

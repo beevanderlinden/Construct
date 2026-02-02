@@ -1,0 +1,62 @@
+@using Eurocode.BetonConstructies
+@using Construct.Domain.Entities
+
+@if (Model == null)
+{
+    <p>Geen basiswapening</p>
+}
+else
+{
+    <div style="width:100%; overflow:hidden;">
+        <svg viewBox="@ViewBox" width="100%" height="60px" preserveAspectRatio="xMidYMid meet">
+            @foreach (var el in SvgElements)
+            {
+                @((MarkupString)el.Render())
+            }
+        </svg>
+    </div>
+}
+
+@code {
+    [Parameter] public WapeningContext? Model { get; set; }
+
+    // Build simple SVG showing the basiswapening as rect using ReferentieDekking and GemiddeldeDiameter
+    private List<BaseSvg> SvgElements => BuildSvg();
+
+    private string ViewBox
+    {
+        get
+        {
+            // wereld-ruimte passend maken: x from 0..breedte (use 0..100), y negative upwards
+            return "0 -50 100 50";
+        }
+    }
+
+    private List<BaseSvg> BuildSvg()
+    {
+        var list = new List<BaseSvg>();
+        if (Model == null) return list;
+
+        // map ReferentieDekking -> left offset, GemiddeldeDiameter -> height
+        double dek = double.IsNaN(Model.ReferentieDekking) ? 20 : Model.ReferentieDekking; // mm
+        double diam = double.IsNaN(Model.GemiddeldeDiameter) ? 10 : Model.GemiddeldeDiameter; // mm
+
+        // scale down to viewbox: assume Model widths expressed in mm, convert to 0..100 range
+        double scale = 0.1; // crude
+        double rectX = dek * scale;
+        double rectW = 100 - rectX - 5; // leave right margin
+        double rectH = diam * scale;
+        double rectY = -rectH / 2.0;
+
+        var rect = new SvgRect(rectX, rectY, rectW, rectH)
+        {
+            Fill = "#cfe8ff",
+            Stroke = "#1f6feb",
+            StrokeWidth = 0.5
+        };
+
+        list.Add(rect);
+
+        return list;
+    }
+}

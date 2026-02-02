@@ -1,0 +1,38 @@
+﻿@using Construct.WebUI.Server.Shared.ViewModels
+
+
+<Router AppAssembly="typeof(Program).Assembly">
+    <Found Context="routeData">
+        <!-- Authoriseer -->
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" >
+        @* <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" Policy="Policies.Administrator" /> *@ <!-- Voor admin pagina's, niet nodig voor nu. -->
+           
+            <NotAuthorized>
+                <RedirectToLogin /> <!-- Component voor als de gebruiker niet geautoriseerd is -->
+            </NotAuthorized>
+
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="routeData" Selector="h1" /> <!-- Focus on the first h1 element when navigating to a new page -->
+
+    </Found>
+
+
+    <NotFound>
+        <LayoutView Layout="@typeof(Layout.MainLayout)">
+            <div class="error-container">
+                <h1>404</h1>
+                <p>Oops! Deze pagina is niet gevonden.</p>
+                <a href="/" class="home-link">Terug naar de homepagina</a>
+            </div>
+        </LayoutView>
+    </NotFound>
+
+
+   
+</Router>
+
+@code
+{
+    [CascadingParameter]
+    public ProjectInfoViewModel? Model { get; set; }
+}

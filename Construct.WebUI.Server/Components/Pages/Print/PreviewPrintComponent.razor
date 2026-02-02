@@ -1,0 +1,83 @@
+﻿@using System.Globalization
+@inject IJSRuntime JS
+
+@* Button verplaatst naar PrintPageMenu *@
+
+<div id="print-preview">
+    <div class="preview-flex" style="--scale:@PreviewScale.ToString("0.0", CultureInfo.InvariantCulture)">
+        @((MarkupString)PreviewHtml)
+    </div>
+
+    @*hier wil ik een back to top button die altijd zichtbaar is*@
+
+</div>
+
+<script>
+    window.blazorPrintHtml = (htmlString, fileName) => {
+        
+        // Bewaar oude title
+        const oldTitle = document.title;
+        document.title = fileName || oldTitle;
+
+        // Maak tijdelijke print-container
+        const printEl = document.createElement('div');
+        printEl.id = 'print-container';
+        printEl.innerHTML = htmlString;
+        printEl.style.width = '210mm';
+        printEl.style.margin = '0 auto';
+        printEl.style.background = 'white';
+        document.body.appendChild(printEl);
+
+        // Verberg alles behalve printEl
+        const bodyChildren = Array.from(document.body.children);
+        const hidden = [];
+        bodyChildren.forEach(c => {
+            if (c !== printEl) {
+                hidden.push({el: c, display: c.style.display});
+                c.style.display = 'none';
+            }
+        });
+
+        // Forceer layout en print pas na next animation frame
+        requestAnimationFrame(() => {
+            window.print();
+
+            // Herstel originele state
+            hidden.forEach(h => h.el.style.display = h.display);
+            printEl.remove();
+            document.title = oldTitle; // herstel oude title
+        });
+    };
+</script>
+
+
+
+@code {
+    [Parameter] public string PreviewHtml { get; set; } = "";
+    [Parameter] public string FileName { get; set; } = "ber-01";
+    [Parameter] public EventCallback OnPrintRequested { get; set; }
+    
+    private double PreviewScalePercentage { get; set; } = 100;
+    private double PreviewScale => PreviewScalePercentage * 0.01;
+
+    
+
+    public async Task PrintAsync(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(PreviewHtml)) return;
+
+        // Roep JS functie aan en stuur HTML + fileName
+        await JS.InvokeVoidAsync("blazorPrintHtml", PreviewHtml, fileName);
+    }
+
+   
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initFormulaTooltips");
+        }
+    }
+
+}

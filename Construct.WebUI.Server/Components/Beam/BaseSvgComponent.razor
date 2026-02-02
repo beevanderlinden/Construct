@@ -1,0 +1,60 @@
+﻿@using Microsoft.AspNetCore.Components.Web
+
+@((MarkupString)Svg.Render())
+@* @RenderSvg *@
+
+@code {
+
+    /* ============================
+     * Parameters
+     * ============================ */
+
+    [Parameter, EditorRequired]
+    public BaseSvg Svg { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<PointerEventArgs> OnPointerDown { get; set; }
+
+    /* ============================
+     * Render
+     * ============================ */
+
+    private RenderFragment RenderSvg => builder =>
+    {
+        var attrs = Svg.GetRenderAttributes();
+
+        builder.OpenElement(0, Svg.SvgTag);
+
+        // 1️⃣ normale SVG attributen
+        foreach (var kv in attrs)
+        {
+            builder.AddAttribute(1, kv.Key, kv.Value);
+        }
+
+        // 2️⃣ interactieve hints (cursor, data-*, etc.)
+        foreach (var kv in Svg.InteractiveAttributes)
+        {
+            builder.AddAttribute(2, kv.Key, kv.Value);
+        }
+
+        // 3️⃣ Blazor events
+        if (OnPointerDown.HasDelegate)
+        {
+            builder.AddAttribute(
+                3,
+                "onpointerdown",
+                EventCallback.Factory.Create<PointerEventArgs>(
+                    this, OnPointerDown));
+        }
+
+        // 4️⃣ inner SVG content
+        if (Svg.Content.HasContent)
+        {
+            builder.AddMarkupContent(4, Svg.Content.Render());
+        }
+
+        builder.CloseElement();
+    };
+
+    
+}

@@ -1,0 +1,20 @@
+﻿@namespace Giraffe
+@code {
+    [Parameter]
+    public string SelectedSource { get; set; } = "appfolder";
+
+    [Parameter]
+    public EventCallback<string> SelectedSourceChanged { get; set; }
+
+    private async Task OnSourceChanged(ChangeEventArgs e)
+    {
+        SelectedSource = e.Value?.ToString() ?? "appfolder";
+        await SelectedSourceChanged.InvokeAsync(SelectedSource);
+    }
+}
+
+<select @onchange="OnSourceChanged" class="form-select">
+    <option value="mydrive" selected="@("mydrive" == SelectedSource)">📁 Mijn Drive</option>
+    <option value="shared" selected="@("shared" == SelectedSource)">🤝 Gedeeld met mij</option>
+    <option value="appfolder" selected="@("appfolder" == SelectedSource)">🔒 AppFolder</option>
+</select>

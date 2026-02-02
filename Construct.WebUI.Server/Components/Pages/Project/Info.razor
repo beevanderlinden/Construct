@@ -1,0 +1,84 @@
+﻿@page "/Project/info"
+
+@using Construct.Application.Interfaces
+@inject IDialogService DialogService
+@inject IToastService ToastService
+
+@rendermode InteractiveServer
+
+<PageTitle>Project Info</PageTitle>
+
+@if(ProjectEntity != null)
+{
+    <FluentCard AreaRestricted="false">
+        <h1>Projectinfo</h1>
+        <ProjectInfo Model="@projectInfoViewModel" ModelChanged="BijwerkenProjectInfo"></ProjectInfo>
+
+    </FluentCard>
+
+}
+
+
+@code {
+    //[CascadingParameter]e gaan het project (entity) 
+    private ProjectInfoViewModel? projectInfoViewModel { get; set; } = new();
+
+    [CascadingParameter] public ProjectEntity? ProjectEntity { get; set; }
+    [CascadingParameter] public IProjectStateService? ProjectState { get; set; }
+
+
+    protected override void OnInitialized()
+    {
+        // mapper gebruiken?
+        // nee, doen we lekker zelf.
+        @if (ProjectEntity != null)
+        {
+            //projectInfoViewModel = ProjectEntity.ProjectInfo.MapProjectInfoToViewModel();
+            projectInfoViewModel = new ProjectInfoViewModel()
+                {
+                    Nummer = ProjectEntity.ProjectInfo.Nummer,
+                    Naam = ProjectEntity.ProjectInfo.Naam,
+                    Plaatsnaam = ProjectEntity.ProjectInfo.Plaatsnaam,
+                    Grondslagen = ProjectEntity.ProjectInfo.Grondslagen
+                };
+        }
+    }
+
+
+    private void BijwerkenProjectInfo()
+    {
+        if (ProjectEntity == null) return;
+        // GEEN IDEE HOE WE DIT ASYNC KUNNEN MAKEN.
+        // probleem: IProjectService heeft geen toegang tot de viewmodels
+        // zodat ik niet MapToDto daar kan doen
+        // en volgens mij moet de Service in 
+
+        if (projectInfoViewModel != null)
+        {
+            //await DialogService.ShowInfoAsync(message: $"We gaan het project (entity) aanpassen vanuit ({projectInfoViewModel.ToString()})", title: "Project bijwerken");
+
+            ProjectEntity.ProjectInfo.Nummer = projectInfoViewModel.Nummer;
+            ProjectEntity.ProjectInfo.Naam = projectInfoViewModel.Naam;
+            ProjectEntity.ProjectInfo.Plaatsnaam = projectInfoViewModel.Plaatsnaam;
+
+            ProjectEntity.ProjectInfo.Grondslagen = projectInfoViewModel.Grondslagen;
+
+            //ProjectEntity.ProjectInfo = projectInfoViewModel.MapProjectInfoToDto();
+
+            ProjectState?.SetProject(ProjectEntity);
+
+            ToastService.ShowSuccess("Projectinfo bijgewerkt");
+
+            StateHasChanged();
+        }
+
+
+       
+
+
+    }
+
+
+
+    
+}

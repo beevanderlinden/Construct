@@ -1,0 +1,125 @@
+﻿@using System.Globalization
+@using Mechanica.SimpleBeam
+@if (LoadCase == null || Beam == null)
+{
+    <em>Geen belastinggeval of Ligger geselecteerd</em>
+}
+else
+{
+    <h3>@LoadCase.Naam</h3>
+
+    @* ───────────── Lijnlasten ───────────── *@
+    
+
+    @if (Beam.Loads
+            .Where(l => l.LoadCase == LoadCase)
+            .OfType<Mechanica.SimpleBeam.DistributedLoad>()
+            .Any())
+    {
+        <h4>Lijnlasten</h4>
+        <table class="ec-table">
+            <thead>
+                <tr class="ec-table-row">
+                    <th class="ec-th">Naam</th>
+                    <th class="ec-th">Start [m]</th>
+                    <th class="ec-th">Eind [m]</th>
+                    <th class="ec-th">Waarde 1</th>
+                    <th class="ec-th">Waarde 2</th>
+                    <th class="ec-th">Uniform</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var l in Beam.Loads
+                        .Where(l => l.LoadCase == LoadCase)
+                        .OfType<Mechanica.SimpleBeam.DistributedLoad>()
+                        )
+                {
+                    <tr class="fluent-data-grid-row">
+                        <td class="ec-td" style="min-width:2cm;">
+                            <FluentTextField @bind-Value="l.Name" />
+                        </td>
+                        <td class="ec-td" style="min-width:2cm;">
+                            <FluentNumberField @bind-Value="l.StartPosition" 
+                            Step="0.1"
+                            Min="0"
+                            Max="@l.MaxStartPosition.ToString("0.000", CultureInfo.InvariantCulture)" />
+                        </td>
+                        <td class="ec-td" style="min-width:2cm;">
+                            <FluentNumberField @bind-Value="l.EndPosition"
+                                               Step="0.1"
+                                               Min="@l.MinEndPostion.ToString("0.000", CultureInfo.InvariantCulture)"
+                                               Max="@(Beam.Length.ToString("0.000", CultureInfo.InvariantCulture))" />
+                        </td>
+                        <td class="ec-td" style="min-width:2cm;">
+                            <FluentNumberField @bind-Value="l.StartMagnitude"
+                                               Step="1" 
+                                               Min="@l.MinStartMagnitude.ToString("0.000", CultureInfo.InvariantCulture)"
+                                               Max="@l.MaxStartMagnitude.ToString("0.000", CultureInfo.InvariantCulture)" />
+                        </td>
+                        <td class="ec-td" style="min-width:2cm;">
+                            <FluentNumberField @bind-Value="l.EndMagnitude"
+                                                ReadOnly="@l.KeepUniform"
+                                                Step="1"
+                                                Min="@l.MinEndMagnitude.ToString("0.000", CultureInfo.InvariantCulture)"
+                                                Max="@l.MaxEndMagnitude.ToString("0.000", CultureInfo.InvariantCulture)" />
+                        </td>
+                        <td class="ec-td" style="min-width:2cm;">
+                            <FluentCheckbox  @bind-Value="l.KeepUniform" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @* --- add --- *@
+    <FluentButton OnClick="AddDistLoad">Lijnlast toevoegen</FluentButton>
+
+
+    @* ───────────── Puntlasten ───────────── *@
+
+    @if (Beam.Loads
+        .Where(l=> l.LoadCase == LoadCase)
+        .OfType<Mechanica.SimpleBeam.PointLoad>()
+        .Any())
+    {
+        <h4>Puntlasten</h4>
+        <table class="ec-table">
+            <thead>
+                <tr class="ec-table-row">
+                    <th class="ec-th">Naam</th>
+                    <th class="ec-th">Positie [m]</th>
+                    <th class="ec-th">Waarde</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Beam.Loads.Where(l=> l.LoadCase == LoadCase).OfType<Mechanica.SimpleBeam.PointLoad>())
+                {
+                    <tr class="ec-table-row">
+                        <td class="ec-td">@p.Name</td>
+                        <td class="ec-td">@p.Range.Start.ToString("0.000")</td>
+                        <td class="ec-td">@p.Magnitude.ToString("0.#")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+
+@code {
+    [Parameter, EditorRequired] public Mechanica.SimpleBeam.SBLigger? Beam { get; set; }
+    [Parameter] public EventCallback<Mechanica.SimpleBeam.SBLigger> BeamChanged { get; set; }
+    [Parameter, EditorRequired] public Eurocode.Belastingen.BelastingGeval? LoadCase { get; set; }
+    [Parameter] public EventCallback<Eurocode.Belastingen.BelastingGeval> LoadCaseChanged{ get; set; }
+
+
+    private void AddDistLoad()
+    {
+        DistributedLoad distLoad = new(LoadCase, "?", 0, Beam.Length, -10);
+
+        Beam.Loads.Add(distLoad);
+
+    }
+
+}

@@ -1,0 +1,74 @@
+﻿@inject IJSRuntime JS
+
+
+@if (Visible)
+{
+    <span>
+        <button @onclick="DownloadSvgPng">PNG</button>
+        <button @onclick="DownloadSvg">SVG</button>
+        <button @onclick="DownloadSvgWmf">WMF</button>
+    </span>
+}
+
+
+
+
+
+@code {
+    [Parameter] public string SvgXml { get; set; } = @"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>
+            <circle cx='100' cy='100' r='80' fill='lightblue' stroke='black' stroke-width='4'/>
+            <text x='100' y='110' text-anchor='middle' font-size='24' font-family='Arial'>Hallo!</text>
+        </svg>";
+
+    [Parameter] public int MaxPixels { get; set; } = 400;
+    [Parameter] public string FileName { get; set; } = "test-aspect.png";
+    [Parameter] public bool Visible { get; set; } = false;
+
+
+    private async Task DownloadSvgWmf()
+    {
+        try
+        {
+            var fileName = FileName.ToLower();
+            if (!fileName.EndsWith("wmf"))
+            {
+                fileName += ".wmf";
+            }
+
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"Error downloading WMF: {ex.Message}");
+        }
+
+    }
+
+    private async Task DownloadSvgPng()
+    {
+        try
+        {
+            var fileName = FileName.ToLower();
+            if (!fileName.EndsWith("png"))
+            {
+                fileName += ".png";
+            }
+            // Geeft geen return, download gebeurt volledig in browser
+            await JS.InvokeVoidAsync("svgHelpers.downloadSvgAsPng", SvgXml, MaxPixels, FileName);
+        }
+        catch (JSException ex)
+        {
+            Console.WriteLine($"JS interop error: {ex.Message}");
+        }
+    }
+
+    private async Task DownloadSvg()
+    {
+        var fileName = FileName.ToLower();
+       if (!fileName.EndsWith("svg"))
+        {
+            fileName += ".svg";
+        }
+        await JS.InvokeVoidAsync("svgHelpers.downloadSvgAsSvg", SvgXml, fileName);
+    }
+
+}

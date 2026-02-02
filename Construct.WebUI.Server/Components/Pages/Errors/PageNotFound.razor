@@ -1,0 +1,15 @@
+﻿@page "/PageNotFound"
+@using Construct.WebUI.Server.Shared.ViewModels
+
+<div class="error-container">
+    <h1>404</h1>
+</div>
+
+<!-- Deze pagina wordt getoond voordat de html in de <NotFound> uit de routes wordt weergegeven-->
+<!-- Maar zonder deze pagina werkt het niet??? Nog niet gevonden-->
+<!-- TODO: Zeker weten dat dit een goede oplossing is door gebruik van cascading parameter-->
+@code
+{
+    [CascadingParameter]
+    public ProjectInfoViewModel? Model { get; set; }
+}

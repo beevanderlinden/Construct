@@ -1,0 +1,41 @@
+﻿@page "/Lab/protected-admin"
+@attribute [Authorize(Roles = "Admin")]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h3>Beveiligde pagina</h3>
+
+@if (authState == null)
+{
+    <p>Even geduld...</p>
+}
+else
+{
+    <p>Welkom, @user?.Identity?.Name</p>
+    <p>Is admin: @isAdmin</p>
+    <p>Heeft vrije licentie: @hasLicentie</p>
+
+
+
+    foreach (var claim in user?.Claims)
+    {
+        Console.WriteLine($"{claim.Type} = {claim.Value}");
+    }
+
+
+}
+
+@code {
+    private ClaimsPrincipal? user;
+    private AuthenticationState? authState;
+    private bool isAdmin = false;
+    private bool hasLicentie = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        user = authState.User;
+
+        isAdmin = user.IsInRole("Admin");
+        hasLicentie = user.HasClaim("Licentie", "Vrij");
+    }
+}

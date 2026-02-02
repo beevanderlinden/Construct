@@ -1,0 +1,88 @@
+﻿@using Microsoft.FluentUI.AspNetCore.Components.Extensions
+@typeparam TEnum where TEnum : struct, Enum
+<FluentSelect TOption="Option<int>"
+              Items="_enumOptions"
+              Label="@Label"
+              OptionText="@(i => i.Text)"
+              OptionValue="@(i => i.Value.ToString())"
+              OptionSelected="@(i => i.Selected)"
+              @bind-Value="_selectedValue"
+              @bind-SelectedOption=_selectedIntOption
+              Placeholder="@Placeholder"
+              AdditionalAttributes="@AdditionalAttributes"
+              Disabled ="@Disabled"
+              Width = "@Width"
+              Multiple ="@Multiple"/>
+@code {
+    [Parameter] public TEnum? EnumSelectedValue { get; set; }
+    [Parameter] public EventCallback<TEnum?> EnumSelectedValueChanged { get; set; }
+    [Parameter] public TEnum[] ExcludeEnumItems { get; set; } = [];
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object> AdditionalAttributes { get; set; } = new();
+    [Parameter] public bool ShowDescription { get; set; } = true;
+    private bool Multiple = false; // geen multiple mogelijk
+    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public string? Width { get; set; } = null;
+
+
+    private Option<int> _selectedIntOption { get; set; } = new();
+    private List<Option<int>> _enumOptions = [];
+    private string? _selectedValue
+    {
+        get { return _enumOptions.FirstOrDefault(e => e.Value.Equals(GetEnumInt(EnumSelectedValue)))?.Value.ToString(); }
+        set
+        {
+            if (value is null || !Enum.TryParse<TEnum>(value, out var result)) return;
+            EnumSelectedValue = result;
+            EnumSelectedValueChanged.InvokeAsync(result);
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        if (!typeof(TEnum).IsEnum)
+        {
+            throw new InvalidOperationException($"{typeof(TEnum).Name} is not an enum type");
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (ShowDescription)
+        {
+            _enumOptions = Enum.GetValues(typeof(TEnum))
+           .Cast<TEnum>()
+           .Where(e => !ExcludeEnumItems.Contains(e))
+           .Select(e => new Option<int>
+               {
+                   Value = GetEnumInt(e).GetValueOrDefault(),
+                   Text = e.GetDescription(false),
+                   Selected = e.Equals(EnumSelectedValue)
+               })
+           .ToList();
+        }
+        else
+        {
+            _enumOptions = Enum.GetValues(typeof(TEnum))
+          .Cast<TEnum>()
+          .Where(e => !ExcludeEnumItems.Contains(e))
+          .Select(e => new Option<int>
+              {
+                  Value = GetEnumInt(e).GetValueOrDefault(),
+                  Text = e.ToString(),
+                  Selected = e.Equals(EnumSelectedValue)
+              })
+          .ToList();
+        }
+
+    }
+
+    private static int? GetEnumInt(TEnum? value)
+    {
+        if (!typeof(TEnum).IsEnum || value is null)
+            return null;
+        return (int)Convert.ChangeType(value, typeof(TEnum));
+    }
+}

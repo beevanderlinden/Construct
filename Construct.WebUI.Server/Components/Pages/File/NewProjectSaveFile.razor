@@ -1,0 +1,201 @@
+﻿@page "/File/newProjectSaveFile"
+@inject IProjectStateService ProjectStateService
+@inject IProjectService ProjectService
+@inject IToastService ToastService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+@using Construct.Application.Interfaces
+@using Construct.WebUI.Server.Components.Pages.Project
+@using Construct.WebUI.Server.Helpers
+
+
+
+<FluentCard AreaRestricted="false">
+    <h1>Projectinfo</h1>
+    <ProjectInfo Model="@ViewModel" ModelChanged="BijwerkenProjectInfo"></ProjectInfo>
+
+</FluentCard>
+
+
+
+
+
+
+
+@if (toonSaveButton)
+{
+    if(ProjectStateService != null && ProjectStateService.CurrentProject != null)
+    {
+        
+            
+            <FluentCard 
+                AreaRestricted="false">
+                <h1>Grondslagen (EC0)</h1>
+                <Grondslagen Model="@ProjectStateService.CurrentProject.ProjectInfo.Grondslagen" />
+            </FluentCard>
+    }
+
+ 
+    <br />
+    <FluentButton Appearance="Appearance.Accent"
+                  OnClick="() => NavigateTo(urlAssemblages)">
+
+        Naar berekeningen
+    </FluentButton>
+
+@*     <FluentTextField Label="File name"
+                     Value="@FileName"
+                     ValueChanged="@((string value) => FileName = value)"
+                     Placeholder="Enter file name"
+                     Required="true" />
+
+
+    <FluentButton Appearance="Appearance.Accent"
+                  OnClick="SaveProject">
+        Save project
+    </FluentButton> *@
+
+    @* <DriveTest 
+        @bind-MapNaam="@FolderName"
+        @bind-Bytes="@bytes"
+        @bind-BestandNaam="@FileName" /> *@
+
+
+
+}
+
+
+
+
+@code {
+
+    private string urlGrondslagen = "/Project/grondslagen";
+    private string urlAssemblages = "/Project/assemblages";
+
+    public string FileName { get; set; } = "project.cprj";
+    public string FolderName { get; set; } = "Mijn Projecten";
+    private bool toonSaveButton { get; set; } = false;
+    private byte[] bytes { get; set; } = [];
+    public ProjectInfoViewModel ViewModel { get; set; } = new ProjectInfoViewModel();
+
+    protected override void OnInitialized()
+    {
+        // Maak een nieuw project aan (model)
+        ProjectStateService.SetProject(new()); // nieuw project
+        // ProjectFile info (voor opslag)
+        ProjectStateService.SetProjectFileInfo(new()); // nieuw project-file-info
+        
+        // Standaard materiaal
+        ProjectStateService.CurrentProject?.VoegMateriaalToe(new BetonContext() { Betonsterkteklasse = BetonsterkteklasseEnum.C45_55});
+
+
+
+        // Vul alvast in voor de gebruiker
+        var authState = AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.Result.User;
+        var username = user.Identity?.Name ?? "Unknown";
+        var gecontroleerdDoor = "J.Smits";
+
+        if(ProjectStateService.CurrentProject != null)
+        {
+            ProjectStateService.CurrentProject.Documenten[0].Author = username;
+
+            var document = ProjectStateService.CurrentProject.Documenten[0];
+
+            if (document != null)
+            {
+                document.Author = username;
+
+                var documentLabels = document.DocumentLabels;
+
+                //DocumentHelper.SetDocumentLabel(documentLabels, "documentnummer", "ber-02");
+                DocumentHelper.SetDocumentLabel(documentLabels, "opgesteld door", username);
+                DocumentHelper.SetDocumentLabel(documentLabels, "gecontroleerd door", gecontroleerdDoor);
+
+
+            }
+
+
+
+
+        }
+
+        
+
+    }
+
+
+
+    public void NavigateTo(string url)
+    {
+        Navigation.NavigateTo(url);
+    }
+
+    public void SaveProject()
+    {
+        // Implement the logic to save the project here
+        // For example, you can use FileService to save the project
+        // FileService.SaveProject(ProjectEntity, FileName);
+
+        // maak het 
+
+
+        //<SaveAs></SaveAs>
+
+
+
+    }
+
+    private async void BijwerkenProjectInfo()
+    {
+        if (ProjectStateService == null) return;
+
+        if (ViewModel != null && ProjectStateService.CurrentProject != null)
+        {
+            ProjectStateService.CurrentProject.ProjectInfo.Nummer = ViewModel.Nummer;
+            ProjectStateService.CurrentProject.ProjectInfo.Naam = ViewModel.Naam;
+            ProjectStateService.CurrentProject.ProjectInfo.Plaatsnaam = ViewModel.Plaatsnaam;
+            ProjectStateService.CurrentProject.ProjectInfo.Grondslagen = ViewModel.Grondslagen;
+            ProjectStateService.SetProject(ProjectStateService.CurrentProject);
+
+            // kijken of dit mooier kan.
+            if (ProjectStateService.ProjectFileInfo != null)
+            {
+                ProjectStateService.ProjectFileInfo.Info = ProjectStateService.CurrentProject.ProjectInfo;
+            }
+
+            
+            ProjectStateService.SetProjectFileInfo(ProjectStateService.ProjectFileInfo); 
+
+
+
+            // nu mag je opslaan
+            FileName = ViewModel.Nummer + ".cprj";
+            bytes = await ProjectService.GetGzippedBytes(ProjectStateService.CurrentProject);
+            
+            toonSaveButton = true;
+
+
+            //StateHasChanged();
+        }
+        else
+        {
+            if (ViewModel == null)
+            {
+                ToastService.ShowError("ProjectInfoViewModel is null");
+            }  
+            if (ProjectStateService.CurrentProject == null)
+            {
+                ToastService.ShowError("ProjectStateService.CurrentProject is null");
+                // maak een nieuw project aan
+            }
+            if (ProjectStateService.ProjectFileInfo == null)
+            {
+                ToastService.ShowError("ProjectStateService.ProjectFileInfo is null");
+                // maak een nieuwe project-file aan
+            }
+        }
+    }
+
+}

@@ -1,0 +1,141 @@
+﻿@using Construct.Application.Interfaces
+@rendermode InteractiveServer
+@inject IProjectStateService ProjectState
+@inject IProjectService ProjectService
+@inject IGraphDriveService GraphDriveService
+@inject IFileDownloadService FileDownloadService
+@inject IDialogService DialogService
+@inject IToastService ToastService
+@inject ILogService Log
+
+@implements IDisposable
+
+<div class="navmenu">
+    <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
+    <label for="navmenu-toggle" class="navmenu-icon"><FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" /></label>
+    <nav class="sitenav" aria-labelledby="main-menu">
+        <FluentNavMenu Id="main-menu" Collapsible="true" Width="250" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
+
+             @* Automatisch inloggen via component *@
+             @* <LogInOrOut />  *@
+
+             <AuthorizeView>
+
+                <FluentNavLink Href="/" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size28.Home())" IconColor="Color.Accent">Home</FluentNavLink>
+
+                <FluentNavGroup Title="File" Icon="@(new Icons.Regular.Size28.Folder())">
+
+                    @* <FluentNavLink Href="/File/new" Icon="@(new Icons.Regular.Size20.New())">New</FluentNavLink> *@
+                    <FluentNavLink Href="/File/newProjectSaveFile" Icon="@(new Icons.Regular.Size20.New())">Nieuw</FluentNavLink>
+                    <FluentNavLink Href="/File/open" Icon="@(new Icons.Regular.Size20.Open())">Open</FluentNavLink>
+                
+                   
+
+                    <FluentNavLink Disabled=@(!projectLoaded) OnClick="OnSaveClicked" Icon="@(new Icons.Regular.Size20.Save())">Save</FluentNavLink>
+                    @* <FluentNavLink Disabled=@(!projectLoaded) Href="/File/save-as" Icon="@(new Icons.Regular.Size20.Save())">Save As</FluentNavLink> *@
+                </FluentNavGroup>
+
+
+                @if (showTestLab)
+                {
+                    <FluentNavGroup Title="TestLab" Icon="@(new Icons.Regular.Size32.Beaker())">
+                        <FluentNavLink Href="/Lab/protected" Icon="@(new Icons.Regular.Size20.EditLock())">Protected page (auth)</FluentNavLink>
+                        <FluentNavLink Href="/Lab/protected-admin" Icon="@(new Icons.Regular.Size20.EditLock())">Protected page (admin)</FluentNavLink>
+                        <FluentNavLink Href="/Lab/buiging" Icon="@(new Icons.Regular.Size20.News())">Buiging</FluentNavLink>
+
+                    </FluentNavGroup>
+                }
+     
+
+                @if (projectLoaded)
+                {
+                    <FluentNavGroup Title="Project"
+                    Icon="@(new Icons.Regular.Size28.ProjectionScreen())" 
+                    Tooltip="Project menu">
+                        <FluentNavLink Href="/Project/print" Icon="@(new Icons.Regular.Size20.Print())" IconColor="Color.Accent">Print</FluentNavLink>
+                        <FluentNavLink Href="/Project/info" Icon="@(new Icons.Regular.Size20.Info())" IconColor="Color.Accent">Info</FluentNavLink>
+                        <FluentNavLink Href="/Project/grondslagen" Icon="@(new Icons.Regular.Size20.FlagCheckered())" IconColor="Color.Accent">Grondslagen</FluentNavLink>
+                        <FluentNavLink Href="/Project/materialen" Icon="@(new Icons.Regular.Size20.TextBulletListTree())" IconColor="Color.Accent">Materialen</FluentNavLink>
+                        @* <FluentNavLink Href="/Project/uitgangspunten" Icon="@(new Icons.Regular.Size20.WrenchSettings())" IconColor="Color.Accent">Uitgangspunten</FluentNavLink> *@
+                        @* <FluentNavLink Href="/Project/assemblages" Icon="@(new Icons.Regular.Size20.Grid())" IconColor="Color.Accent">Berekeningen</FluentNavLink> *@
+                        @* <FluentNavLink Href="/Project/documenten" Icon="@(new Icons.Regular.Size20.Document())" IconColor="Color.Accent">Documenten</FluentNavLink> *@
+                        
+                        @* <FluentNavLink Disabled="true" Href="/Project/trappen" Icon="@(new Icons.Regular.Size20.Grid())" IconColor="Color.Accent">Trappen</FluentNavLink> *@
+                        @* <FluentNavLink Disabled="true" Href="/Project/bordessen" Icon="@(new Icons.Regular.Size20.Grid())" IconColor="Color.Accent">Bordessen</FluentNavLink> *@
+                    </FluentNavGroup>
+
+                    <FluentNavLink Href="/Project/assemblages" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size28.Grid())" IconColor="Color.Accent">Berekeningen</FluentNavLink>
+                    <FluentNavLink Href="/Project/documenten" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size28.DocumentFolder())" IconColor="Color.Accent">Documenten</FluentNavLink>
+                    <FluentNavLink Href="/Project/print" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size28.Print())" IconColor="Color.Accent">Preview</FluentNavLink>
+
+
+
+                   
+                   
+
+                }
+
+
+                @*  <FluentNavGroup Title="Voorbeelden" Icon="@(new Icons.Regular.Size20.ChatBubblesQuestion())" Tooltip="Voorbeelden voor ontwikkeling">
+                    <FluentNavLink Href="example-form" Icon="@(new Icons.Regular.Size20.LeafOne())" Tooltip="Tooltip voorbeeld">Formulier</FluentNavLink>
+                    <FluentNavLink Href="example-wizard" Icon="@(new Icons.Regular.Size20.StarEmphasis())" IconColor="Color.Accent">Wizard</FluentNavLink>
+                </FluentNavGroup> *@
+           
+            </AuthorizeView>
+
+        </FluentNavMenu>
+    </nav>
+</div>
+
+@code {
+    private bool expanded = !true;
+
+    private bool projectLoaded
+    {
+        get
+        {
+            return ProjectState.CurrentProject != null;
+        }
+    }
+
+    private bool showTestLab = false;
+
+
+    protected override void OnInitialized() => ProjectState.OnProjectChanged += StateHasChanged;
+    public void Dispose() => ProjectState.OnProjectChanged -= StateHasChanged;// ✅ Event netjes afmelden om geheugenlekken te voorkomen
+
+    private async Task OnSaveClicked()
+    {
+        // Jouw opslaan-logica
+
+        Log.StartBusy("Opslaan...");
+
+        if (ProjectState.CurrentProject == null)
+        {
+            Console.WriteLine("Geen project om op te slaan");
+            return;
+        }
+
+        // Autosave werkt als volgt, maar een byte[] met de ProjectService
+        var bytes = await ProjectService.GetGzippedBytes(ProjectState.CurrentProject);
+
+        // download
+        string fileName = $"{ProjectState.CurrentProject.ProjectInfo.Nummer}-prefab.cprj";
+        string contentType = "application/octet-stream";
+        await FileDownloadService.DownloadAsync(fileName, contentType, bytes);
+
+        // vervolgens autosave met GraphDriveService
+        //await GraphDriveService.AutoSave(ProjectState.ProjectFileInfo, bytes);
+
+
+        //DialogService.ShowSuccess("Project opgeslagen");
+        ToastService.ShowSuccess("Project opgeslagen");
+        Log.StopBusy("Project opgeslagen");
+
+        return;
+
+
+    }
+
+}
+

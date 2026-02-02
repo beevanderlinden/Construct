@@ -1,0 +1,87 @@
+﻿@inject IJSRuntime JS
+
+
+<FluentHeader>
+
+    @ProjectInfo.ToString()
+
+
+    <FluentSpacer></FluentSpacer>
+    <FluentIcon Value="@(new Icons.Regular.Size32.Save())"
+    Color="Color.Lightweight"
+    OnClick="@SaveSettingAsync"/>
+
+    <FluentIcon Value="@(new Icons.Regular.Size32.Open())"
+    Color="Color.Lightweight"
+    OnClick="@OpenProjectFromFile" />
+
+    @*  <FluentIcon Value="@(new Icons.Regular.Size32.ArrowDownload())"
+                Color="Color.Lightweight"
+                OnClick="@OpenProjectFromStorage" /> *@
+
+
+</FluentHeader>
+
+
+@* <FluentCard>
+    <FluentIcon Value="@(new Icons.Regular.Size32.Save())"
+                Color="Color.Neutral"
+                OnClick="@SaveSettingAsync" />
+    <FluentIcon Value="@(new Icons.Regular.Size32.Open())"
+                Color="Color.Neutral"
+                OnClick="@SaveSettingAsync" />
+</FluentCard> *@
+
+
+
+@code {
+    [Parameter]
+    public ProjectInfoViewModel ProjectInfo { get; set; } = new();
+
+
+
+
+    private async Task SaveSettingAsync()
+    {
+        var jsonObject = JsonConvert.SerializeObject(ProjectInfo);
+        await JS.InvokeVoidAsync("localStorage.setItem", "projectInfo", jsonObject);
+
+
+
+
+    }
+
+    [Parameter]
+    public EventCallback<ProjectInfoViewModel> OpenProjectClicked { get; set; }
+
+
+
+    private async Task OpenProjectFromStorage()
+    {
+
+        var localStorageProjectInfo = await JS.InvokeAsync<string>("localStorage.getItem", "projectInfo");
+        var projInfo = JsonConvert.DeserializeObject<ProjectInfoViewModel>(localStorageProjectInfo);
+        if (projInfo != null)
+            ProjectInfo = projInfo;
+
+
+        await OpenProjectClicked.InvokeAsync(ProjectInfo);
+
+
+
+    }
+
+    private async Task OpenProjectFromFile()
+    {
+        await Task.Delay(80);
+    }
+
+
+
+    
+
+
+
+    
+
+}

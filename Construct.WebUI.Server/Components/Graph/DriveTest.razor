@@ -1,0 +1,111 @@
+﻿@namespace Giraffe
+@using Microsoft.Graph.Models
+@using Microsoft.Graph.Drives.Item.Items.Item
+@using Microsoft.Graph
+@using Microsoft.Kiota.Abstractions
+@using System.Net.Http.Headers
+@using Microsoft.Kiota.Abstractions.Serialization
+
+@inject GraphServiceClient GraphClient
+
+
+
+<FluentTextField Label="folder" @bind-Value="@MapNaam" />
+<FluentTextField Label="bestandsnaam" @bind-Value="@BestandNaam" />
+
+<div>
+    <FluentButton OnClick="MaakMapEnBestandAsync" Appearance="Appearance.Accent">Opslaan</FluentButton>
+</div>
+
+
+<p>@Status</p>
+
+
+
+
+@code {
+    [Parameter] public string MapNaam { get; set; } = "1234 ROTTERDAM";
+    [Parameter] public EventCallback<string> MapNaamChanged{ get; set; }
+
+    [Parameter] public string BestandNaam { get; set; } = "1234 ROTTERDAM.cprj";
+    [Parameter] public EventCallback<string> BestandNaamChanged { get; set; }
+
+    [Parameter] public byte[] Bytes { get; set; } = [];
+    [Parameter] public EventCallback<byte[]> BytesChanged { get; set; }
+
+    private string Status = "";
+
+    private async Task MaakMapEnBestandAsync()
+    {
+        Status = "even geduld aub...";
+
+        try
+        {
+            var adapter = GraphClient.RequestAdapter;
+
+            // 1. Maak de map aan
+            var folderPayload = new DriveItem
+            {
+                Name = MapNaam,
+                Folder = new Folder(),
+                // note to self: AdditionalData niet meer ondersteund in v5. Gebruik UrlTemplate hieronder
+                //AdditionalData = new Dictionary<string, object>
+                //{
+               //     ["@microsoft.graph.confictBehavior"] = "replace"
+                //}
+            };
+
+            var folderRequest = new RequestInformation
+            {
+                HttpMethod = Method.POST,
+                UrlTemplate = "{+baseurl}/me/drive/special/approot/children?@microsoft.graph.conflictBehavior=replace",
+                PathParameters = new Dictionary<string, object>
+                {
+                    { "baseurl", "https://graph.microsoft.com/v1.0" }
+                }
+            };
+            folderRequest.Headers.Add("Accept", "application/json");
+            folderRequest.SetContentFromParsable(adapter, "application/json", folderPayload);
+
+            var mapItem = await adapter.SendAsync<DriveItem>(
+                folderRequest,
+                DriveItem.CreateFromDiscriminatorValue,
+                new Dictionary<string, ParsableFactory<IParsable>>()
+            );
+
+            if (mapItem == null)
+            {
+                Status = "❌ Map kon niet aangemaakt worden.";
+                return;
+            }
+
+            // 2. Upload bestand
+            //var bestandBytes = System.Text.Encoding.UTF8.GetBytes("Dit is een testbestand");
+            using var stream = new MemoryStream(Bytes);
+
+            var bestandRequest = new RequestInformation
+            {
+                HttpMethod = Method.PUT,
+                UrlTemplate = $"{{+baseurl}}/me/drive/special/approot:/{MapNaam}/{BestandNaam}:/content?@microsoft.graph.conflictBehavior=replace",
+                PathParameters = new Dictionary<string, object>
+                {
+                    { "baseurl", "https://graph.microsoft.com/v1.0" }
+                }
+            };
+            bestandRequest.SetStreamContent(stream);
+            bestandRequest.Headers.Add("Content-Type", "text/plain");
+
+            var uploadResult = await adapter.SendAsync<DriveItem>(
+                bestandRequest,
+                DriveItem.CreateFromDiscriminatorValue,
+                new Dictionary<string, ParsableFactory<IParsable>>()
+            );
+
+            Status = $"✅ Bestand geüpload: {uploadResult?.Name}";
+        }
+        catch (Exception ex)
+        {
+            Status = $"❌ Fout: {ex.Message}";
+        }
+    }
+}

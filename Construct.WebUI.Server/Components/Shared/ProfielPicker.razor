@@ -1,0 +1,104 @@
+﻿@using System.ComponentModel
+@using CommonLibrary.Interfaces
+@using CommonLibrary.Models
+
+<div class="profiel-picker">
+    <label>Profiel kiezen:</label>
+    <select class="fui-select" @onchange="OnProfielChanged">
+        <option value="">-- Kies profiel --</option>
+        @foreach (var p in Profielen)
+        {
+            <option value="@p.Naam"
+                    selected="@(p == Profiel)">
+                @p.Naam
+            </option>
+        }
+    </select>
+</div>
+
+@foreach (var profList in ProfielenPerType)
+{
+    <div class="profiel-picker">
+        <label>type: @profList.FirstOrDefault()?.GetType().Name</label>
+        <select class="fui-select" @onchange="OnProfielChanged">
+            <option value="">-- Kies profiel --</option>
+            @foreach (var p in profList)
+            {
+                <option value="@p.Naam"
+                        selected="@(p == Profiel)">
+                    @p.Naam
+                </option>
+            }
+        </select>
+    </div>
+}
+
+
+@code {
+    /// <summary>
+    /// De lijst met beschikbare staalprofielen
+    /// </summary>
+    [Parameter]
+    public List<IStaalProfiel> Profielen { get; set; } = new();
+
+    [Parameter]
+    public List<IEnumerable<IProfiel>> ProfielenPerType { get; set; } = new();
+
+
+    /// <summary>
+    /// Gebonden profiel (input/output)
+    /// </summary>
+    [Parameter]
+    public BaseProfiel? Profiel { get; set; }
+
+    [Parameter]
+    public EventCallback<BaseProfiel?> ProfielChanged { get; set; }
+
+    private async Task OnProfielChanged(ChangeEventArgs e)
+    {
+        var selectedDescription = e.Value?.ToString();
+        if (string.IsNullOrEmpty(selectedDescription))
+        {
+            Profiel = null;
+        }
+        else
+        {
+            // Zoek het geselecteerde profiel in de lijst
+
+
+
+            var match = Profielen.FirstOrDefault(p => p.Naam == selectedDescription);
+            if (match != null)
+            {
+                //var materiaal = Profiel?.Materiaal;
+                Profiel = (BaseProfiel)match;
+                //Profiel.Materiaal = materiaal;
+            }
+            else
+            {
+                var dict = ProfielenPerType
+                    .SelectMany(p => p)
+                    .ToDictionary(p => p.Naam);
+
+                dict.TryGetValue(selectedDescription, out var profiel);
+
+                if (profiel != null)
+                {
+                    // zet het materiaal op het gevonden profiel
+                    //profiel.Materiaal = Profiel?.Materiaal;
+                    Profiel = (BaseProfiel)profiel; 
+
+                }
+
+            }
+
+
+            
+            
+
+
+        }
+
+        await ProfielChanged.InvokeAsync(Profiel);
+    }
+}

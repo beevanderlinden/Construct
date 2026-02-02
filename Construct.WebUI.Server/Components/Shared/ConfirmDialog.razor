@@ -1,0 +1,37 @@
+﻿@using Microsoft.FluentUI.AspNetCore.Components
+
+<FluentDialog @bind-IsOpen="IsOpen" Style="z-index:1000;" Title="@Title">
+    
+        <p>@Message</p>
+    
+    
+        <FluentButton Appearance="Appearance.Neutral" OnClick="Cancel">Annuleer</FluentButton>
+        <FluentButton Appearance="Appearance.Accent" OnClick="Confirm">Bevestig</FluentButton>
+    
+</FluentDialog>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Bevestiging vereist";
+    [Parameter] public string Message { get; set; } = "Weet u zeker dat u wilt doorgaan?";
+    [Parameter] public EventCallback OnConfirmed { get; set; }
+    [Parameter] public EventCallback OnCancelled { get; set; }
+
+    private bool IsOpen { get; set; } = false;
+
+    public void Show()
+    {
+        IsOpen = true;
+    }
+
+    private async Task Confirm()
+    {
+        IsOpen = false;
+        await OnConfirmed.InvokeAsync();
+    }
+
+    private async Task Cancel()
+    {
+        IsOpen = false;
+        await OnCancelled.InvokeAsync();
+    }
+}

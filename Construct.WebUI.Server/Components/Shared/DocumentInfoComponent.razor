@@ -1,0 +1,288 @@
+﻿@using EurocodeRazorClassLibrary
+@using ExportFactory.MigraDocContentModels
+
+@if(DocumentEntity != null)
+{
+    <FluentTextField @bind-Value="DocumentEntity.DocumentNumber" Label="documentnummer" Style="width:100%;" Required />
+    <FluentTextField @bind-Value="DocumentEntity.Title" Label="titel" Style="width:100%;" Required  />
+    <FluentTextArea @bind-Value="DocumentEntity.Subtitle" Label="subtitel" Rows="4" Style="width:100%" />
+
+    <FluentStack Style="margin-bottom: 24px;" Orientation="Orientation.Vertical" VerticalGap="8">
+        <h3>document info</h3>
+        
+        @* Documentlabels (zonder documentnummer) *@
+        @{
+            var editableLabels = DocumentEntity.DocumentLabels.Where(l => l.Label != "documentnummer").ToList();
+        }
+        
+        @for (int i = 0; i < editableLabels.Count; i++)
+        {
+            var index = i; // Capture voor closure
+            var label = editableLabels[index];
+            
+            <FluentStack Orientation="Orientation.Horizontal" Style="gap: 4px; width: 100%;">
+                <FluentTextField @bind-Value="@label.Label" 
+                                Size="32" 
+                                Placeholder="Label naam" 
+                                Style="min-width: 200px;" />
+                <FluentTextField @bind-Value="@label.StringValue" 
+                                Style="flex: 1;" 
+                                Placeholder="Waarde" />
+                
+                @* Up/Down buttons voor volgorde *@
+                <FluentButton IconEnd="@(new Icons.Regular.Size20.ArrowUp())" 
+                              OnClick="@(() => MoveDocumentLabelUp(index))"
+                              Disabled="@(index == 0)"
+                              Appearance="Appearance.Lightweight"
+                              Title="Omhoog" />
+                <FluentButton IconEnd="@(new Icons.Regular.Size20.ArrowDown())" 
+                              OnClick="@(() => MoveDocumentLabelDown(index))"
+                              Disabled="@(index >= editableLabels.Count - 1)"
+                              Appearance="Appearance.Lightweight"
+                              Title="Omlaag" />
+                
+                @* Delete button *@
+                <FluentButton IconEnd="@(new Icons.Regular.Size20.Delete())" 
+                              OnClick="@(() => RemoveDocumentLabel(label))"
+                              Appearance="Appearance.Lightweight"
+                              Title="Verwijderen" />
+            </FluentStack>
+        }
+
+        @* Add new label button *@
+        <FluentStack Orientation="Orientation.Horizontal">
+            <FluentButton Title="Label toevoegen" 
+                          IconStart="@(new Icons.Regular.Size20.AddSquare())" 
+                          OnClick="@AddDocumentLabel"
+                          Appearance="Appearance.Neutral">
+                label toevoegen
+            </FluentButton>
+        </FluentStack>
+    </FluentStack>
+
+    <FluentStack Style="margin-bottom: 24px;" Orientation="Orientation.Vertical" VerticalGap="8">
+        <h3>revisie (versiebeheer)</h3>
+       
+        @* Revisies *@
+        @foreach (var revision in DocumentEntity.Revisions.OrderBy(r => r.Date))
+        {
+            <FluentStack Orientation="Orientation.Horizontal" Style="gap: 4px; width: 100%;">
+                <FluentTextField @bind-Value="@revision.Name" 
+                                Placeholder="Versie" 
+                                Style="width: 100px;" />
+                <FluentDatePicker @bind-Value="@revision.Date" 
+                                 Style="width: 150px;" />
+                <FluentTextField @bind-Value="@revision.Description" 
+                                Style="flex: 1;" 
+                                Placeholder="Beschrijving wijziging" />
+                <FluentButton IconEnd="@(new Icons.Regular.Size20.Delete())" 
+                              OnClick="@(() => RemoveRevision(revision))"
+                              Appearance="Appearance.Lightweight"
+                              Title="Verwijderen" />
+            </FluentStack>
+        }
+        
+        @* Add new revision button *@
+        <FluentStack Orientation="Orientation.Horizontal">
+            <FluentButton Title="Revisie toevoegen"
+                          IconStart="@(new Icons.Regular.Size20.AddSquare())"
+                          OnClick="@AddRevision"
+                          Appearance="Appearance.Neutral">
+                revisie toevoegen 
+            </FluentButton>
+        </FluentStack>
+    </FluentStack>
+
+    @* Sluitknop onderaan *@
+    <FluentDivider Style="margin: 24px 0;" />
+    <FluentStack Orientation="Orientation.Horizontal" 
+                 HorizontalAlignment="HorizontalAlignment.Center" 
+                 Style="margin-top: 16px;">
+        <FluentButton Appearance="Appearance.Accent"
+                      IconStart="@(new Icons.Regular.Size20.Checkmark())"
+                      OnClick="@CloseAndCleanup">
+            Opslaan en sluiten
+        </FluentButton>
+    </FluentStack>
+}
+
+@code {
+    [Parameter] public DocumentEntity? DocumentEntity { get; set; } = null;
+    [Parameter] public EventCallback<DocumentEntity> DocumentEntityChanged { get; set; }
+    [Parameter] public EventCallback<bool> OnClose { get; set; } // bool = hasChanges
+
+    private bool _hasChanges = false;
+    private string? _initialJson = null;
+
+    protected override void OnParametersSet()
+    {
+        if (DocumentEntity != null && _initialJson == null)
+        {
+            // Bewaar initiële state voor change detection
+            _initialJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                DocumentEntity.DocumentNumber,
+                DocumentEntity.Title,
+                DocumentEntity.Subtitle,
+                Labels = DocumentEntity.DocumentLabels.Select(l => new { l.Label, l.StringValue }).ToList(),
+                Revisions = DocumentEntity.Revisions.Select(r => new { r.Name, r.Date, r.Description }).ToList()
+            });
+        }
+    }
+
+    private void MarkAsChanged()
+    {
+        _hasChanges = true;
+    }
+
+    private void AddDocumentLabel()
+    {
+        DocumentEntity?.DocumentLabels.Add(new CommonLibrary.Models.LabelWithStringValue("", ""));
+        MarkAsChanged();
+    }
+
+    private void RemoveDocumentLabel(CommonLibrary.Models.LabelWithStringValue label)
+    {
+        DocumentEntity?.DocumentLabels.Remove(label);
+        MarkAsChanged();
+    }
+
+    private void MoveDocumentLabelUp(int index)
+    {
+        if (DocumentEntity == null) return;
+
+        // Get editable labels (without documentnummer)
+        var editableLabels = DocumentEntity.DocumentLabels.Where(l => l.Label != "documentnummer").ToList();
+        
+        if (index <= 0 || index >= editableLabels.Count) return;
+
+        var label = editableLabels[index];
+        var actualIndex = DocumentEntity.DocumentLabels.IndexOf(label);
+        
+        // Find previous editable label
+        var previousLabel = editableLabels[index - 1];
+        var previousIndex = DocumentEntity.DocumentLabels.IndexOf(previousLabel);
+
+        // Swap
+        DocumentEntity.DocumentLabels.RemoveAt(actualIndex);
+        DocumentEntity.DocumentLabels.Insert(previousIndex, label);
+        MarkAsChanged();
+    }
+
+    private void MoveDocumentLabelDown(int index)
+    {
+        if (DocumentEntity == null) return;
+
+        // Get editable labels (without documentnummer)
+        var editableLabels = DocumentEntity.DocumentLabels.Where(l => l.Label != "documentnummer").ToList();
+        
+        if (index < 0 || index >= editableLabels.Count - 1) return;
+
+        var label = editableLabels[index];
+        var actualIndex = DocumentEntity.DocumentLabels.IndexOf(label);
+        
+        // Find next editable label
+        var nextLabel = editableLabels[index + 1];
+        var nextIndex = DocumentEntity.DocumentLabels.IndexOf(nextLabel);
+
+        // Swap
+        DocumentEntity.DocumentLabels.RemoveAt(actualIndex);
+        DocumentEntity.DocumentLabels.Insert(nextIndex, label);
+        MarkAsChanged();
+    }
+
+    private void AddRevision()
+    {
+        if (DocumentEntity == null) return;
+        
+        DocumentEntity.Revisions.Add(new Revision
+        { 
+            Name = (DocumentEntity.Revisions.Count + 1).ToString(), 
+            Description = "",
+            Date = DateTime.Now
+        });
+        MarkAsChanged();
+    }
+
+    private void RemoveRevision(Revision revision)
+    {
+        DocumentEntity?.Revisions.Remove(revision);
+        MarkAsChanged();
+    }
+
+    private async Task CloseAndCleanup()
+    {
+        bool hadChanges = _hasChanges;
+
+        if (DocumentEntity != null)
+        {
+            // Verwijder lege documentlabels (behalve documentnummer)
+            var labelsToRemove = DocumentEntity.DocumentLabels
+                .Where(l => string.IsNullOrWhiteSpace(l.Label) && 
+                           string.IsNullOrWhiteSpace(l.StringValue) &&
+                           l.Label != "documentnummer")
+                .ToList();
+            
+            if (labelsToRemove.Any())
+            {
+                foreach (var label in labelsToRemove)
+                {
+                    DocumentEntity.DocumentLabels.Remove(label);
+                }
+                hadChanges = true;
+            }
+
+            // Verwijder lege revisions
+            var revisionsToRemove = DocumentEntity.Revisions
+                .Where(r => string.IsNullOrWhiteSpace(r.Name) && 
+                           string.IsNullOrWhiteSpace(r.Description))
+                .ToList();
+            
+            if (revisionsToRemove.Any())
+            {
+                foreach (var revision in revisionsToRemove)
+                {
+                    DocumentEntity.Revisions.Remove(revision);
+                }
+                hadChanges = true;
+            }
+
+            // Check ook voor wijzigingen in velden via JSON vergelijking
+            if (!hadChanges && _initialJson != null)
+            {
+                var currentJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    DocumentEntity.DocumentNumber,
+                    DocumentEntity.Title,
+                    DocumentEntity.Subtitle,
+                    Labels = DocumentEntity.DocumentLabels.Select(l => new { l.Label, l.StringValue }).ToList(),
+                    Revisions = DocumentEntity.Revisions.Select(r => new { r.Name, r.Date, r.Description }).ToList()
+                });
+                
+                hadChanges = currentJson != _initialJson;
+            }
+
+            if (hadChanges)
+            {
+                await DocumentEntityChanged.InvokeAsync(DocumentEntity);
+            }
+        }
+
+        // Reset state
+        _hasChanges = false;
+        _initialJson = null;
+
+        // Geef door of er wijzigingen waren
+        await OnClose.InvokeAsync(hadChanges);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (DocumentEntity != null)
+        {
+            await DocumentEntityChanged.InvokeAsync(DocumentEntity);
+        }
+    }
+}
+
+

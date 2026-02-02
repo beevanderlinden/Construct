@@ -1,0 +1,25 @@
+﻿<span>@currentTime</span>
+
+@code {
+    private string currentTime = DateTime.Now.ToString("HH:mm:ss.fff");
+    private Timer? timer;
+
+    protected override void OnInitialized()
+    {
+        // Start timer die elke 100ms tikt
+        timer = new Timer(UpdateTime, null, 0, 100);
+    }
+
+    private void UpdateTime(object? state)
+    {
+        currentTime = DateTime.Now.ToString("HH:mm:ss.fff");
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        timer?.Dispose();
+    }
+}
+
+

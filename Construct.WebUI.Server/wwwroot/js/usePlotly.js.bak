@@ -1,0 +1,497 @@
+﻿
+//import { createVerticalLine, createPZ, createTriangleShape, createHorizontalLine, createDiagonalLines, createForceArrowHead, createForceLine } from './shapes.js';
+
+
+window.updatePlotlyChart = (plotlyId, model, display) => {
+    const chartDiv = document.getElementById(plotlyId);
+
+    if (!chartDiv) {
+        console.error('Plotly chart element not found');
+        return;
+    }
+
+    const supportColor = 'green';
+    const supportSize = 18;
+    const memberColor = 'blue';
+    const memberWidth = 3;
+ 
+    // grafieken voor de onderdelen
+    //let nodesTrace = getNodes(xData, yData, nodeColor, nodeSize);
+
+    let data = [];
+    let nodesTrace = getNodesWithText(model);
+    let nodes3d = getNodes3d(model);
+
+    //let membersTraces = getMembers(model, memberColor, memberWidth);
+    let supportTrace = getSupportsWithText(model, supportColor, supportSize);
+    //let membersInfo = getMembersInfo(model);
+
+    // forces
+    //let nodalForces = getNodalForces(model);
+    let arrayNodalForces = createNodalForces(model.nodalForces);
+    let testLijnlasten = getLijnlasten(model, model.memberForces, 0.1);
+
+    // demo
+    //let myFirstShape = createVerticalLine(2.0, 1.5, 0.2);
+    //let mySecondShape = createPZ(1.0, 0.75, 0.4);
+
+    let memberShapes = getMemberShapes(model);
+
+
+    // Plotly layout
+    switch (display.displayType) {
+        case 0: data = [nodesTrace, supportTrace]; break;
+        case 1: data = [nodes3d]; break;
+    }
+
+    const shapes = [...arrayNodalForces, ...memberShapes, ...testLijnlasten];
+
+    let layout = getLayout(model, shapes, display);
+    var config = { responsive: true };
+
+    // Render Plotly chart
+    Plotly.newPlot(chartDiv, data, layout, config)
+        .catch(error => console.error('Plotly.newPlot failed:', error));
+};
+
+
+
+
+function createNodalForces(nodalForces) {
+
+
+    const newArray = nodalForces.map(createNodalForce);
+
+    return newArray;
+}
+
+
+function createMemberForce(memberForce) {
+    const points = getLijnlast(memberForce, 0.04);
+    const p1 = points[0];
+    const p2 = points[1];
+    const p3 = points[2];
+    const p4 = points[3];
+    let path = `M${p1[0]},${p1[1]} L${p2[0]},${p2[1]}  L${p3[0]},${p3[1]} L${p4[0]},${p4[1]}`;
+    const shape = {
+        type: 'path',
+        path: path,
+        fillcolor: 'rgba(44, 160, 101, 0.5)',
+        line: {
+            color: 'rgb(44, 160, 101)'
+        },
+        label: {
+            text: String(memberForce.magnitude),
+            font: { size: 10, color: 'black' },
+            textposition: 'inside',
+            //textangle: 90,
+        },
+    }
+
+
+    return shape;
+}
+
+function createNodalForce(nodalForce) {
+    const x = nodalForce.node.x;
+    const y = nodalForce.node.z; 
+
+    const length = nodalForce.magnitude * 0.1;
+    const tip = length * 0.1;
+
+
+    let dx = 0;
+    let dy = length;
+    let path = '';
+
+    let txt = String(Math.abs(nodalForce.magnitude));
+    let txtPos = 'top center'
+
+    switch (nodalForce.type) {
+        case 2: // PZ
+            dx = 0;
+            dy = length;
+            path = `
+            M${x - dx},${y - dy} 
+            L${x},${y} 
+            L${x - tip/2},${y - tip} 
+            L${x + tip/2},${y - tip} 
+            L${x},${y}`;
+
+            txt += " kN";
+
+            if (length > 0) { txtPos = 'bottom left' } else { txtPos = 'top left' }
+
+            
+
+
+            break;
+        case 1: // PX
+            dx = length;
+            dy = 0;
+            path = `
+            M${x - dx},${y - dy} 
+            L${x},${y} 
+            L${x - tip},${y - tip/2} 
+            L${x - tip},${y + tip/2} 
+            L${x},${y}`;
+
+            txt += " kN";
+
+            if (length > 0) { txtPos = 'inside' } else {txtPos = 'inside' }
+
+            break;
+        case 3: //MY
+            const rx = 1;
+            const ry = 1;
+            
+            //path = `M${x},${y} A${rx},${ry},0,0,0, ${x},${y} L${x},${y}`;
+            path = `M${x},${y} Q${x+rx},${y} ${x},${y-ry} ${x-rx},${y}`;
+
+
+            txt += " kNm";
+           
+
+
+            break;
+
+
+    }
+
+
+
+
+    const shape = {
+        type: 'path',
+        path: path,
+        fillcolor: 'rgba(44, 160, 101, 0.5)',
+        line: {
+            color: 'rgb(44, 160, 101)'
+        },
+        label: {
+            text: txt,
+            font: { size: 10, color: 'black' },
+            textposition: txtPos,
+            //textangle: 90,
+        },
+    }
+
+
+    return shape;
+
+
+}
+
+
+
+
+
+function getLayout(model, shapes, display) {
+    const layout = {
+        title: display.title,
+        xaxis: {
+            //title: 'X',
+            //range: [xMin - 1.5 * sizeFactor, xMax + sizeFactor],
+            automargin: true,
+            showgrid: true, // thin lines
+            showline: false,
+            zeroline: false, // 
+            visible: true, // number below
+            ticks: 'outside',
+            //nticks: 5,
+            tickvals: model.nodes.map(item => item.x),
+            tickformat: '.3f',
+            //tick0: 0,
+            //dtick: 0.5,
+            ticklen: 10,
+            tickcolor: 'red',
+            //
+            //domain: [0, 1],
+            //rangemode: 'nonnegative',
+            autorange: true,
+        },
+        yaxis: {
+            //title: 'Y',
+            //range: [yMin - 1.5 * sizeFactor, yMax + sizeFactor],
+            automargin: true,
+            scaleanchor: 'x',
+            scaleratio: 1,
+            showgrid: true,
+            showline: false,
+            zeroline: false,
+            visible: true,
+            ticks: 'outside',
+            ticklen: 20,
+            tickcolor: 'crimson',
+            tickvals: model.nodes.map(item => item.z),
+            tickformat: '.3f',
+            //tick0: 0,
+            //dtick: 0.5,
+            //nticks: 5,
+            //domain: [0, 1],
+            //rangemode: 'nonnegative',
+            //autorange: true,
+        },
+
+        margin: { t: 50, b: 50, l: 50, r: 50 },
+        autosize: true,
+        showlegend: false,
+
+        shapes: shapes,
+
+
+
+    };
+    return layout;
+}
+
+
+function getNodalForces(model) {
+    const trace = {
+        mode: 'markers+text',
+        x: model.nodalForces.map(item => item.node.x),
+        y: model.nodalForces.map(item => item.node.z),
+        text: model.nodalForces.map(item => item.nodalForceValue),
+        textposition: 'top',
+        
+    }
+    return trace;
+}
+
+
+
+function getNodesWithText(model) {
+    const trace = {
+        mode: 'markers+text',
+        type: 'scatter',
+        x: model.nodes.map(item => item.x),
+        y: model.nodes.map(item => item.z),
+        text: model.nodes.map(item => item.id),
+        textposition: 'bottom left',
+        marker: { size: 10 },
+       
+    }
+    return trace;
+}
+
+
+function getNodes3d(model) {
+    const trace = {
+        mode: 'markers',
+        type: 'scatter3d',
+        x: model.nodes.map(item => item.x),
+        y: model.nodes.map(item => item.y),
+        z: model.nodes.map(item => item.z),
+        marker: {size: 10},
+
+    }
+    return trace;
+}
+
+function getMembers(model, color, width) {
+    const membersTraces = model.members.map(member => ({
+        x: [member.startNode.x, member.endNode.x],
+        y: [member.startNode.z, member.endNode.z],
+        mode: 'lines',
+        line: { color: color, width: width },
+        type: 'scatter'
+    }));
+    return membersTraces;
+}
+
+
+function getMemberShapes(model) {
+    const memberShapes = model.members.map(member => ({
+        type: 'line',
+        x0: member.startNode.x,
+        y0: member.startNode.z,
+        x1: member.endNode.x,
+        y1: member.endNode.z,
+        line: { color: 'black', width: 1 },
+        label: {
+            text: String(member.id) + '(' + String(member.section.id) + ')',
+            font: { size: 10, color: 'black' },
+            textposition: 'top center',
+
+
+        }
+    }));
+    return memberShapes;
+}
+function getMembersInfo(model) {
+
+ 
+
+    const memberInfo = model.members.map(m => ({
+        x: [m.midPointF.x],
+        y: [m.midPointF.y],
+        mode: 'markers',
+        text: m.number + "." + m.section.number,
+        textangle: 180,
+        showarrow: false,
+        textposition: 'top',
+        type: 'scatter',
+       
+       
+
+
+    }));
+    return memberInfo;
+}
+
+
+function getSupportsWithText(model, color, size) {
+
+    const angles = model.supports.map(item => item.rotation);
+    const markerArray = model.supports.map(item => ({
+        angle: item.rotation,
+        symbol: item.symbol,
+        size: size,
+        color: color
+    }));
+    const trace = {
+        mode: 'markers+text',
+        type: 'scatter',
+        //marker: markerArray,
+        marker: {
+            color: color,
+            size: size,
+            symbol: model.supports.map(item => item.symbol),
+            angle: angles,
+        },
+        x: model.supports.map(item => item.node.x),
+        y: model.supports.map(item => item.node.z),
+        text: model.supports.map(item => item.id),
+
+    }
+    return trace;
+}
+
+
+
+function getLijnlast(memberForce, forceScale) {
+    // horizontale lijnlast op staaf van knoop i naar j
+    // begint op punt a en eindigt op punt L - b
+  
+    const a = memberForce.distanceA;
+
+    let L = memberForce.member.length;
+
+    switch (memberForce.type) {
+        case 101: L = memberForce.member.dz; break;
+        case 103: L = memberForce.member.dx; break;
+    }
+
+
+    const b = memberForce.distanceB;
+    const h1 = memberForce.startMagnitude * forceScale;
+    const h2 = memberForce.endMagnitude * forceScale;
+
+    const x0 = memberForce.member.startNode.x;
+    const y0 = memberForce.member.startNode.z;
+
+    const x1 = memberForce.member.endNode.x;
+    const y1 = memberForce.member.endNode.z;
+
+    const { mat2, vec2 } = glMatrix;
+    let p1 = vec2.fromValues(x0 + a, y0 + 0);
+    let p2 = vec2.fromValues(x0 + a, y0 + h1);
+    let p3 = vec2.fromValues(x0 + (L - b), y1 + h2);
+    let p4 = vec2.fromValues(x0 + (L - b), y1 + 0);
+
+    const points = [p1, p2, p3, p4];
+    return points;
+
+}
+
+
+
+
+function getLijnlasten(geometry, memberForces) {
+
+    // bepaal eerst de magnitude schaal voor ALLE lijnlasten
+    // maximale afmeting
+    //const maxX = geometry.nodes.max(n => n.x).x;
+    //const minX = geometry.nodes.min(n => n.x);
+    //const maxZ = geometry.nodes.max(n => n.z);
+    //const ninZ = geometry.nodes.min(n => n.z);
+
+    //const dx = maxX - minX;
+    //const dz = maxZ - minZ;
+
+    //const maxSize = max(dx, dz);
+
+    // maximale magnitude
+    //const maxStart = geometry.memberForces.max(n => n.startMagnitude);
+    //const maxEnd = geometry.memberForces.max(n => n.endMagnitude);
+
+    //const minStart = geometry.memberForces.min(n => n.startMagnitude);
+    //const minEnd = geometry.memberForces.min(n => n.endMagnitude);
+
+    //const max = max(abs(max(maxStart, maxEnd)), abs(min(minStart, minEnd)));
+
+    // het grootste figuur is 20mm
+    // uitgaande van een A4 breedte circa 200mm en figuren niet hoger dan 200mm
+    // stel een geometrie van 12m dan is schaal 200/12000 = 
+    
+
+    memberForces.map(createMemberForce);
+
+
+
+    const newArray = memberForces.map(createMemberForce);
+
+    return newArray;
+
+
+   
+
+
+}
+
+
+
+function getMemberForceTest(memberForce) {
+
+
+
+    const { mat2, vec2 } = glMatrix;
+
+    // verplaats eerst naar startNode
+
+
+    const theta = Math.PI / 2;
+    const rotationMatrix = mat2.fromRotation(mat2.create(), theta);
+    // Define the original point
+    const point = vec2.fromValues(1, 0);
+
+    // Create a vector to store the rotated point
+    const rotatedPoint = vec2.create();
+
+    // Apply the rotation matrix to the point
+    vec2.transformMat2(rotatedPoint, point, rotationMatrix);
+
+
+
+}
+
+//document.addEventListener("DOMContentLoaded", function () {
+//    const chartDiv = document.getElementById('plotlyChart');
+
+//    if (chartDiv) {
+//        Plotly.newPlot(chartDiv, [{
+//            x: [],
+//            y: [],
+//            mode: 'markers',
+//            marker: { color: 'red' },
+//        }], {
+//            title: 'Knopen',
+//            xaxis: { title: 'X', automargin: true },
+//            yaxis: { title: 'Y', automargin: true },
+//            margin: { t: 50, b: 50, l: 50, r: 50 },
+//            modebar: { orientation: "v" },
+//            autosize: true
+//        });
+//    }
+//});
+

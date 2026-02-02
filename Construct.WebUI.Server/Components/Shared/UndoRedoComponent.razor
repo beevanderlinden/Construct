@@ -1,0 +1,23 @@
+﻿@inject IProjectStateService ProjectState
+
+<div class="toolbar">
+    <button @onclick="Undo" disabled="@(!ProjectState.CanUndo)">Undo ⏮️</button>
+    <button @onclick="Redo" disabled="@(!ProjectState.CanRedo)">Redo ⏭️</button>
+
+    
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ProjectState.OnUndoRedoStateChanged += HandleStateChanged;
+    }
+    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
+    private void Undo() => ProjectState.Undo();
+    private void Redo() => ProjectState.Redo();
+
+    public void Dispose()
+    {
+        ProjectState.OnUndoRedoStateChanged -= HandleStateChanged;
+    }
+}

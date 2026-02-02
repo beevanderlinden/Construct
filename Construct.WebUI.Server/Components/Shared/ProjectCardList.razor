@@ -1,0 +1,67 @@
+﻿@using Microsoft.AspNetCore.Components
+@inject IToastService ToastService
+
+
+
+
+
+
+
+@if(ProjectFileInfos != null)
+{
+    <div class="project-grid">
+        @foreach(var file in ProjectFileInfos)
+        {
+            <ProjectFileCard File="file"
+            OnOpen="OnFileOpened"
+            OnSaveAs="OnFileSaveAs"
+            OnDelete="OnFileDeleted">
+            </ProjectFileCard>
+        }
+    </div>
+}
+
+
+
+@code {
+    [Parameter] public List<ProjectFileInfo>? ProjectFileInfos{ get; set; }
+    [Parameter] public ProjectFileInfo? SelectedProjectFileInfo { get; set; }
+    [Parameter] public EventCallback<ProjectFileInfo> OnSelectedProjectFileInfoChanged { get; set; }
+
+
+    private void ConfirmDelete(ProjectFileInfo projectFileInfo)
+    {
+        ToastService.ShowInfo($"ConfirmDelete clicked for {projectFileInfo.FilePath}");
+    }
+
+
+    private Task OnFileDeleted(ProjectFileInfo file)
+    {
+        ToastService.ShowInfo($"Verwijderd: {file.FilePath}");
+        //ProjectFiles.Remove(file);
+        return Task.CompletedTask;
+    }
+
+    private Task OnFileSaveAs(ProjectFileInfo file)
+    {
+        ToastService.ShowInfo($"Opgeslagen als: {file.FilePath}");
+        return Task.CompletedTask;
+    }
+
+    private async Task OnFileOpened(ProjectFileInfo file)
+    {
+        ToastService.ShowInfo($"Geopend: {file.FilePath}");
+
+        await OnSelectedProjectFileInfoChanged.InvokeAsync(file);
+        StateHasChanged();
+
+        //return Task.CompletedTask;
+    }
+
+    private void OnCreateNewProject()
+    {
+        Console.WriteLine("Nieuw project aanmaken...");
+        ToastService.ShowInfo("Nieuw project aanmaken..."); 
+        // Je navigatie of dialoog openen voor nieuw project.
+    }
+}

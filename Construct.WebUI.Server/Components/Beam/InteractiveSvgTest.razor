@@ -1,0 +1,28 @@
+﻿@page "/svg-test"
+
+<h3>SVG Pointer Test</h3>
+
+<svg width="300" height="120" style="border:1px solid black">
+
+   
+
+</svg>
+
+@code {
+
+    private IReadOnlyDictionary<string, object> _rectAttrs =
+        new Dictionary<string, object>
+        {
+            ["x"] = "40",
+            ["y"] = "30",
+            ["width"] = "140",
+            ["height"] = "50",
+            ["fill"] = "orange",
+            ["style"] = "cursor:pointer;user-select:none;"
+        };
+
+    private void OnRectPointerDown(PointerEventArgs e)
+    {
+        Console.WriteLine("✅ POINTER DOWN RECEIVED IN TEST");
+    }
+}

@@ -1,0 +1,123 @@
+﻿@using System.Collections.Generic
+@using CommonLibrary.Models
+@using Eurocode.HoutConstructies
+@using Eurocode.StaalConstructies
+@inject IToastService ToastService
+@inject IDialogService DialogService
+
+<h3>Projectmaterialen</h3>
+
+<div class="table-wrap">
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>type</th>
+                <th>kwaliteit</th>
+                <th>E-modulus</th>
+                <th>s.g.</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var materiaal in Project.Materialen.Values.OfType<BaseMateriaal>())
+            {
+                <tr>
+                    <td>
+                        @materiaal.Type.ToString()
+                    </td>
+                    <td>
+                        @materiaal.Naam
+                    </td>
+                    <td>
+                        @materiaal.E
+                    </td>
+                    <td>
+                        @materiaal.SoortelijkGewicht
+                    </td>
+                    <td>
+                        <button class="btn btn-danger"
+                                @onclick="() => VerwijderMateriaal(materiaal.Id)">
+                            Verwijder
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+
+</div>
+
+
+
+<button class="btn btn-primary" @onclick="VoegBetonToe">
+    + Beton toevoegen
+</button>
+
+@code{
+
+    [Parameter, EditorRequired] public ProjectEntity Project { get; set; } = default!;
+
+
+    private void VoegStaalToe()
+    {
+        Project.VoegMateriaalToe(new StaalContext()
+        {
+            StaalKwaliteit = StaalKwaliteitEnum.S235
+        });
+    }
+
+    private void VoegHoutToe()
+    {
+        Project.VoegMateriaalToe(new HoutContext()
+        {
+            Kwaliteit = Houtkwaliteit.D24
+        });
+
+    }
+
+    private void VoegBetonToe()
+    {
+        Project.VoegMateriaalToe(new BetonContext()
+        {
+            Betonsterkteklasse = BetonsterkteklasseEnum.C45_55
+        });
+    }
+
+    private async Task VerwijderMateriaal(Guid id)
+    {
+        // Zoek het materiaal op
+        if (!Project.Materialen.TryGetValue(id, out var materiaal))
+        {
+            ToastService.ShowError("Materiaal niet gevonden");
+            return;
+        }
+
+        // Check of materiaal in gebruik is
+        var assemblagesMetDitMateriaal = Project.Assemblages
+            .Where(a => a.Materiaal?.Id == id)
+            .ToList();
+
+        if (assemblagesMetDitMateriaal.Any())
+        {
+            // Toon waarschuwing met lijst van assemblages
+            var assemblageNamen = string.Join(", ", assemblagesMetDitMateriaal.Select(a => a.Merk));
+            
+            var dialog = await DialogService.ShowWarningAsync(
+                $"Dit materiaal ({materiaal.UserFriendlyName}) wordt gebruikt in {assemblagesMetDitMateriaal.Count} assemblage(s): {assemblageNamen}",
+                "Je kunt dit materiaal niet verwijderen"                
+            );
+
+            _ = await dialog.Result;
+            return;
+        }
+
+        // Verwijder materiaal
+        Project.VerwijderMateriaal(id);
+        ToastService.ShowSuccess($"Materiaal {materiaal.UserFriendlyName} verwijderd");
+        StateHasChanged();
+    }
+
+
+}

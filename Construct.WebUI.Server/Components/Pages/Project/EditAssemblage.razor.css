@@ -1,0 +1,39 @@
+﻿.two-column-container {
+    display: grid;
+    grid-template-columns: 1fr 600px;
+    height: calc(100vh - 102px); /* vult scherm */
+    width: 100%;
+    overflow: hidden; /* voorkomt dubbele scroll */
+}
+
+.left-column {
+    background: var(--neutral-layer-1);
+    border-right: 1px solid var(--neutral-stroke-1);
+    overflow-y: auto; /* laat scrollen als nodig */
+    min-width: 0;
+    padding: 1rem;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    /* ➤ maakt dit element meetbaar voor container queries */
+    container-type: inline-size;
+    container-name: leftcol;
+}
+
+.picture-column{
+    overflow-y: auto;
+}
+
+.right-column {
+    background: var(--neutral-layer-2);
+    width: 600px;
+    min-width: 600px;
+    padding: 0rem;
+    box-sizing: border-box;
+}
+
+.full-height{
+    height: calc(100vh - 70px);
+}

@@ -1,0 +1,51 @@
+﻿.assemblage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    justify-items: center;
+    align-items: start;
+    padding: 1rem 0rem;
+}
+
+.assemblage-card {
+    width: 200px;
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 0.5rem;
+    box-shadow: var(--neutral-shadow-rest);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+    .assemblage-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--neutral-shadow-hover);
+    }
+
+.assemblage-card-header {
+    font-weight: 600;
+    font-size: 1rem;
+    text-align: center;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid var(--neutral-stroke-rest);
+    background-color: var(--neutral-lighter);
+    color: var(--neutral-foreground-rest);
+    border-radius: 4px 4px 0 0;
+}
+
+
+
+.assemblage-svg-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.assemblage-card-footer {
+    display: flex;
+    justify-content: center;
+    padding-top: 0.5rem;
+}

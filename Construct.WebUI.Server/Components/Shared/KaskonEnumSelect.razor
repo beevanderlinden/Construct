@@ -1,0 +1,53 @@
+﻿@using Microsoft.FluentUI.AspNetCore.Components
+@typeparam TEnum where TEnum : struct, Enum
+
+<FluentSelect TOption="Option<string>"
+              Items="_enumOptions"
+              OptionText="@(i => i.Text)"
+              OptionValue="@(i => i.Value)"
+              OptionDisabled="@(i => i.Disabled)"
+              @bind-Value="_selectedValue"
+              Placeholder="@Placeholder"
+              Disabled="@DisabledOrReadOnly"
+              ReadOnly="@ReadOnly" />
+
+@code {
+    [Parameter] public TEnum EnumSelectedValue { get; set; }
+    [Parameter] public EventCallback<TEnum> EnumSelectedValueChanged { get; set; }
+    [Parameter] public TEnum[] ExcludeEnumItems { get; set; } = [];
+    [Parameter] public TEnum[] DisabledEnumItems { get; set; } = [];
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public bool ReadOnly { get; set; } = false;
+
+    private bool DisabledOrReadOnly => Disabled || ReadOnly;
+
+    private string? _selectedValue
+    {
+        get => EnumSelectedValue.ToString();
+        set
+        {
+            if (!string.IsNullOrEmpty(value))
+            {
+                EnumSelectedValue = (TEnum)Enum.Parse(typeof(TEnum), value);
+                EnumSelectedValueChanged.InvokeAsync(EnumSelectedValue);
+            }
+        }
+    }
+
+    private List<Option<string>> _enumOptions = new();
+
+    protected override void OnParametersSet()
+    {
+        _enumOptions = Enum.GetValues(typeof(TEnum))
+            .Cast<TEnum>()
+            .Where(e => !ExcludeEnumItems.Contains(e))
+            .Select(e => new Option<string>
+            {
+                Value = e.ToString(),
+                Text = e.ToString(),
+                Disabled = DisabledEnumItems.Contains(e)
+            })
+            .ToList();
+    }
+}

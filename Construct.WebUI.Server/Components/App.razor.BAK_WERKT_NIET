@@ -1,0 +1,52 @@
+﻿@using Construct.WebUI.Server.Components.Layout
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Routing
+
+<HeadContent>
+    <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="Construct.WebUI.Server.styles.css" />
+    @* <link rel="stylesheet" href="_content/Microsoft.FluentUI.AspNetCore.Components/fluentui.css" /> *@
+    <link rel="stylesheet" href="css/custom.css" />
+</HeadContent>
+
+<FluentBodyContent>
+    <CascadingAuthenticationState>
+        <Router AppAssembly="@typeof(App).Assembly">
+            <Found Context="routeData">
+                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                    <NotAuthorized>
+                        <LayoutView Layout="@typeof(MainLayout)">
+                            <p>Je bent niet gemachtigd deze pagina te bekijken.</p>
+                            <a href="Identity/Account/Login">Inloggen</a>
+                        </LayoutView>
+                    </NotAuthorized>
+                    <Authorizing>
+                        <LayoutView Layout="@typeof(MainLayout)">
+                            <p>Bezig met autoriseren...</p>
+                        </LayoutView>
+                    </Authorizing>
+                </AuthorizeRouteView>
+                <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+            </Found>
+            <NotFound>
+                <LayoutView Layout="@typeof(MainLayout)">
+                    <p>Sorry, pagina niet gevonden.</p>
+                </LayoutView>
+            </NotFound>
+        </Router>
+    </CascadingAuthenticationState>
+
+    <!-- Jouw scripts onderaan de body -->
+    <script src="_content/Microsoft.FluentUI.AspNetCore.Components/js/loading-theme.js"></script>
+
+    <script src="js/scripts.js?v=@DateTime.Now.Ticks"></script>
+    <script src="js/usePlotly.js?v=@DateTime.Now.Ticks"></script>
+    <script src="js/gl-matrix.js?v=@DateTime.Now.Ticks"></script>
+    <script src="js/filesystem.js?v=@DateTime.Now.Ticks"></script>
+    <script src="js/dirInterop.js?v=@DateTime.Now.Ticks"></script>
+    <script src="https://unpkg.com/idb@7/build/iife/index-min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/3.4.3/gl-matrix-min.js"></script>
+    <script src="_framework/blazor.web.js"></script>
+</FluentBodyContent>

@@ -1,0 +1,63 @@
+﻿@page "/cprjmanager"
+@inject IJSRuntime JS
+
+<h3>Cprj-bestanden beheren</h3>
+
+<button class="btn btn-primary" @onclick="SelecteerMap">📁 Selecteer map</button>
+
+@if (bestanden != null)
+{
+    <table class="table mt-3">
+        <thead>
+            <tr>
+                <th>Bestandsnaam</th>
+                <th>Grootte</th>
+                <th>Datum</th>
+                <th>Actie</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var bestand in bestanden)
+            {
+                <tr>
+                    <td>@bestand.Info.Naam</td>
+                    <td>@bestand.SizeInKB KB</td>
+                    <td>@bestand.LastModified.ToString("dd-MM-yyyy HH:mm")</td>
+                    <td>
+                        <button class="btn btn-sm btn-success" @onclick="() => AutoSaveBestand(bestand)">💾 Opslaan</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<ProjectFileInfo>? bestanden;
+
+    private async Task SelecteerMap()
+    {
+        try
+        {
+            bestanden = await JS.InvokeAsync<List<ProjectFileInfo>>("window.dirInterop.openDirectoryAndReadCprjFiles");
+            bestanden = bestanden.OrderByDescending(b => b.LastModified).ToList();
+        }
+        catch (JSException jsEx)
+        {
+            Console.WriteLine($"JS Error: {jsEx.Message}");
+        }
+    }
+
+    private async Task AutoSaveBestand(ProjectFileInfo bestand)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("window.dirInterop.autoSaveCprjFile", bestand.FilePath, bestand.Base64);
+        }
+        catch (JSException jsEx)
+        {
+            Console.WriteLine($"Fout bij opslaan: {jsEx.Message}");
+        }
+    }
+}
+

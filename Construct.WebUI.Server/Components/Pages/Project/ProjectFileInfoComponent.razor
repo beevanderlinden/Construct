@@ -1,0 +1,28 @@
+﻿<h3>ProjectFileInfo</h3>
+
+<!--
+    Dit component is er voor het opslaan van het bestand.
+ -->
+
+
+ @* <FluentTextField @bind-Value="ProjectState?.ProjectFileInfo?.FilePath"></FluentTextField> *@
+
+
+
+ <p>Bestandsnaam: @fileName</p>
+
+
+ <FluentButton OnClick="WriteToDisk">Bestand opslaan</FluentButton>
+
+
+@code {
+    [CascadingParameter] public IProjectStateService? ProjectState { get; set; }
+
+    private string fileName => ProjectState?.CurrentProject?.ProjectInfo.Nummer + ".cprj";
+
+    private void WriteToDisk()
+    {
+        Console.WriteLine("Sla het bestand op...");
+    }
+
+}

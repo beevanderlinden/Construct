@@ -1,0 +1,34 @@
+﻿<div class="kaskon-input-container @(LabelPosition == KaskonLabelPosition.Top ? "vertical" : "horizontal")">
+    <div class="kaskon-input-label">
+        @((MarkupString)Label)
+        @if (Required)
+        {
+            <span style="color:darkred"> *</span>
+        }
+    </div>
+    <div class="kaskon-input-content">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Breedte van het label (indien Left). Kan ook via CSS variabele in parent worden gezet.
+    /// </summary>
+    [Parameter] public string LabelWidth { get; set; } = "var(--label-width, 200px)";
+
+    /// <summary>
+    /// Positie van het label ten opzichte van de input.
+    /// Default is Left.
+    /// Maar kan ook Top zijn.
+    /// </summary>
+    [Parameter] public KaskonLabelPosition LabelPosition { get; set; } = KaskonLabelPosition.Left;
+
+    /// <summary>
+    /// De inhoud van de input container.
+    /// </summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool Required { get; set; }
+}

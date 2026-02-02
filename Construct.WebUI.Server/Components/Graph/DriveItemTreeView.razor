@@ -1,0 +1,296 @@
+﻿@using Construct.WebUI.Server.Adapters
+@using Microsoft.FluentUI.AspNetCore.Components
+@using Microsoft.Graph.Models
+@using System.Linq
+@using Construct.Application.GraphModels
+@inject IGraphDriveService GraphDriveService
+@inject IProjectFileService ProjectFileService
+@inject IProjectStateService ProjectStateService
+@inject IFileService FileService
+@inject IToastService ToastService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<h3>Treeview (test)</h3>
+
+<FluentButton OnClick="VerversTreeAsync" Appearance="Appearance.Stealth">
+    🔄 Vernieuw
+</FluentButton>
+
+
+
+<FluentTreeView Items="@treeViewItems"
+                @bind-SelectedItem="@selectedItem"
+                LazyLoadItems="true"
+                Style="max-height:600px;">
+    <ItemTemplate Context="node">
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+            <span>@node.Text</span>
+
+            @if (node is DriveItemTreeViewAdapter adapter && !adapter.SourceNode.IsFolder)
+            {
+                
+                <FluentButton Id="btnMore"
+                              Title="Open menu"
+                              Appearance="Appearance.Stealth"
+                              IconStart="new Icons.Regular.Size24.MoreVertical()"
+                              OnClick="@(() => node.Expanded = !node.Expanded)">
+                    
+                </FluentButton>
+
+                <FluentMenu UseMenuService="true"
+                            Anchor="btnMore"
+                            @bind-Open="node.Expanded"
+                            VerticalThreshold="170">
+
+                    <FluentMenuItem Disabled=false OnClick="@(() => OpenSourceNode(adapter.SourceNode))">
+                        
+                        <span slot="start">
+                            <FluentIcon Value="@(new Icons.Regular.Size24.Open())"
+                                        Color="Color.Neutral" Slot="start" />
+                        </span>
+                        Open
+
+                    </FluentMenuItem>
+
+                    <FluentMenuItem Disabled=true OnClick="@(() => OpenSourceNode(adapter.SourceNode))">
+                        <span slot="start">
+                            <FluentIcon Value="@(new Icons.Regular.Size24.Delete())"
+                                        Color="Color.Neutral" Slot="start" />
+                        </span>
+                        Verwijder
+
+                    </FluentMenuItem>
+
+                    <FluentMenuItem Disabled=true>
+                        <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.ClipboardPaste())" 
+                            Color="Color.Neutral" Slot="start" /></span>
+                        Kopieer
+                    </FluentMenuItem>
+
+                    <FluentMenuItem Disabled=true>
+                        <span slot="start">
+                            <FluentIcon Value="@(new Icons.Regular.Size24.Rename())"
+                                        Color="Color.Neutral" Slot="start" />
+                        </span>
+                        Hernoem
+                    </FluentMenuItem>
+
+
+                </FluentMenu>
+
+
+               @*  <FluentMenuButton 
+                    
+                    Text="Bewerken"
+                    IconStart="new Icons.Regular.Size20.MoreVertical()"
+                    ButtonAppearance="Appearance.Stealth"
+                    Style="margin-left: auto;">
+                    <FluentMenuItem Label="Open" OnClick="@(() => OnOpen(adapter))" />
+                    <FluentMenuItem Label="Hernoem" OnClick="@(() => OnRename(adapter))" />
+                    <FluentMenuItem Label="Verwijderen" OnClick="@(() => OnDelete(adapter))" />
+                    <FluentMenuItem Label="Kopiëren" OnClick="@(() => OnCopy(adapter))" />
+                </FluentMenuButton> *@
+            }
+        </div>
+    </ItemTemplate>
+</FluentTreeView>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@if (selectedItem != null)
+{
+    <div class="mt-2">
+        <b>Geselecteerd:</b> @selectedItem.Text
+    </div>
+}
+
+@code {
+
+    //private List<DriveItemNode> driveItemNodes = new();
+    private List<ITreeViewItem> treeViewItems = new();
+    private ITreeViewItem? selectedItem;
+
+    protected override void OnParametersSet()
+    {
+        SetTreeViewItems();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Hier vul je driveItemNodes via je GraphService
+        await LoadInitialDataAsync();
+        SetTreeViewItems();
+
+    }
+
+    private async Task LoadInitialDataAsync()
+    {
+        TreeData = await GraphDriveService.GetRootNodesAsyc(SelectedSource);
+    }
+
+    private void SetTreeViewItems()
+    {
+        treeViewItems = TreeData
+            .Select(node => new DriveItemTreeViewAdapter(node, LoadChildrenAsync))
+            .Cast<ITreeViewItem>()
+            .ToList();
+    }
+
+
+    private async Task LoadChildrenAsync(DriveItemNode node)
+    {
+        if (node.Item?.Id is null)
+            return;
+
+        var children = await GraphDriveService.GetChildrenAsync(node.Item.Id);
+
+        node.Children = children;
+        node.IsLoaded = true;
+
+        StateHasChanged(); // <--- belangrijk om UI te updaten
+    }
+
+
+
+    [Parameter] public string SelectedSource { get; set; } = "appfolder";
+    [Parameter] public EventCallback<string> SelectedSourceChanged { get; set; }
+
+
+    private string? _previousSource;
+    private List<DriveItemNode> TreeData { get; set; } = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SelectedSource != _previousSource)
+        {
+            _previousSource = SelectedSource;
+            TreeData = await GraphDriveService.GetRootNodesAsyc(SelectedSource);
+            SetTreeViewItems(); // of hoe je je boomstructuur opbouwt
+        }
+    }
+
+    private async Task VerversTreeAsync()
+    {
+        TreeData = await GraphDriveService.GetRootNodesAsyc(SelectedSource);
+        SetTreeViewItems();
+        StateHasChanged();
+    }
+
+    private async Task OpenSourceNode(DriveItemNode node)
+    {
+        Console.WriteLine($"Open: {node.Path}");
+        Console.WriteLine($"Path: {node.Path}");
+        // voorlopig
+        // als het een .cprj bestand is dan openen we 'm
+        if (node.Path.EndsWith(".cprj"))
+        {
+            try
+            {
+                await OpenCprj(node.Item);
+            }
+            catch
+            {
+
+            }
+            finally
+            {
+
+            }
+        }
+        else
+        {
+            // open de link
+            try
+            {
+                await OpenInNewTab(node.WebUrl);
+                //Navigation.NavigateTo(node.WebUrl);
+            }
+            catch
+            {
+
+            }
+            finally
+            {
+                
+            }
+        }
+
+       
+
+
+    }
+
+    private async Task OpenCprj(DriveItem driveItem)
+    {
+        Console.WriteLine($"Open: {driveItem.Name}");
+
+        // Hier kun je de logica toevoegen om het .cprj-bestand te openen
+        var projectFileInfo = await GraphDriveService.GetProjectFileInfoByDriveItem(driveItem);
+
+        //var projectFileInfo = await ProjectFileService.GetProjectFileInfoByDriveItem(GraphClient, driveItem);
+        if (projectFileInfo != null)
+        {
+            // laad het project uit de Base64 die in de ProjectFileInfo zit
+            ProjectEntity? project = FileService.LoadFromBase64<ProjectEntity>(projectFileInfo.Base64);
+            // cotroleer of het project niet null is
+            if (project == null)
+            {
+                ToastService.ShowError("Kan project niet laden.");
+                return;
+            }
+            ProjectStateService.SetProject(project); // stel het project in
+            ProjectStateService.SetProjectFileInfo(projectFileInfo); // en ook de ProjectFileInfo
+            //NavigationManager.NavigateTo("/Project/assemblages"); // navigeer naar de projectpagina
+        }
+        else
+        {
+            ToastService.ShowError("Kan project-bestand niet vinden.");
+        }
+
+
+
+    }
+
+    private async Task OpenInNewTab(string url)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", url);
+    }
+
+    private void OnOpen(DriveItemTreeViewAdapter adapter)
+    {
+        Console.WriteLine($"Openen: {adapter.SourceNode.Item?.Name}");
+    }
+
+    private void OnRename(DriveItemTreeViewAdapter adapter)
+    {
+        Console.WriteLine($"Hernoem: {adapter.SourceNode.Item?.Name}");
+    }
+
+    private void OnDelete(DriveItemTreeViewAdapter adapter)
+    {
+        Console.WriteLine($"Verwijder: {adapter.SourceNode.Item?.Name}");
+    }
+
+    private void OnCopy(DriveItemTreeViewAdapter adapter)
+    {
+        Console.WriteLine($"Kopieer: {adapter.SourceNode.Item?.Name}");
+    }
+    
+
+    
+}

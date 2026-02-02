@@ -1,0 +1,118 @@
+﻿@page "/File/save"
+@using System.IO
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using Construct.Application.Interfaces
+@using Construct.Domain
+@inject IFileService FileService
+
+
+
+@if (ProjectEntity == null)
+{
+    <p>Er is geen project aanwezig.</p>
+    <NewProjectSaveFile></NewProjectSaveFile>
+}
+else
+{
+   @*  <h3>Save</h3>
+
+    <FluentButton Appearance="Appearance.Accent" @onclick="SaveProject">
+        Save project
+    </FluentButton> *@
+
+
+    @* <SaveProject></SaveProject> *@
+
+
+    <SaveProjectFileComponent></SaveProjectFileComponent>
+
+
+}
+
+
+
+
+
+
+
+
+@code {
+
+    [CascadingParameter] public ProjectEntity? ProjectEntity { get; set; } 
+
+
+    // VERVANGEN door ProjectJsonOptions.Default
+    
+
+    // private JsonSerializerOptions jsonOptions = new()
+    // {
+    //     WriteIndented = true,
+    //     ReferenceHandler = ReferenceHandler.IgnoreCycles,
+    //     NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+    //     PropertyNameCaseInsensitive = true,
+    //     IgnoreReadOnlyFields = true,
+    //     IgnoreReadOnlyProperties = true,
+
+
+    // };
+
+    // Verwijder bovenstaand if TESTED
+
+
+
+    private static string _fileName { get; set; } = "proj.ktbp";
+
+    //private string _fileName = "project.ktbp";
+    private string _filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), _fileName);
+
+
+    protected override void OnInitialized()
+    {
+        if (ProjectEntity == null) return;
+        _fileName = $"proj-{ProjectEntity.ProjectInfo.Nummer}.ktbp";
+    }
+
+
+
+    public void SaveProject()
+    {
+        // Save the project to a file
+        _filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), _fileName);
+
+        MaakJsonSystemText(ProjectEntity, _filePath);
+    }
+
+
+    public void MaakJsonSystemText(ProjectEntity project, string path)
+    {
+        if (project == null)
+        {
+            throw new ArgumentNullException(nameof(project));
+        }
+        // serialize JSON to a string and then write string to a file
+        string jsonProject = System.Text.Json.JsonSerializer.Serialize(project, ProjectJsonOptions.Default);
+
+        File.WriteAllText(path, jsonProject);
+
+
+        //File.WriteAllText(path,
+          //  System.Text.Json.JsonSerializer.Serialize(project, jsonOptions));
+    }
+
+    [Obsolete("Use MaakJsonSystemText instead")]
+    public void MaakJson(ProjectEntity project, string path)
+    {
+        // serialize JSON to a string and then write string to a file
+        var settings = new JsonSerializerSettings
+            {
+                //TypeNameHandling = TypeNameHandling.Auto,
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                Formatting = Formatting.Indented,
+
+            };
+
+        File.WriteAllText(path, 
+            JsonConvert.SerializeObject(project, settings));
+    }
+}

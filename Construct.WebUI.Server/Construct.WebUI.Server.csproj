@@ -1,0 +1,364 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>3949ec91-2a2b-488e-a8c6-53bd85177dc0</UserSecretsId>
+  </PropertyGroup>
+
+	<!-- Voor installatie als Windows App-->
+	<!-- bash 'dotnet publish -c Release -r win-x64 \-\-self-contained true' -->
+	<PropertyGroup>
+		<!--<RuntimeIdentifier>win-x64</RuntimeIdentifier>--> 
+		<!--<SelfContained>true</SelfContained>-->
+		<PublishSingleFile>false</PublishSingleFile> <!-- gewijzigd naar false op 12 mei 2025 -->
+		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+		<PublishTrimmed>false</PublishTrimmed> <!-- of true als je trimming veilig kunt toepassen -->
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Update="appsettings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		
+	</ItemGroup>
+	
+	
+	<ItemGroup>
+    <None Remove="Components\Layout\MainLayout.razor.css" />
+    <None Remove="Components\Layout\NavMenu.razor.css" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Components\App.razor.BAK_WERKT_NIET" />
+    <Content Include="Shared\Data\EurocodeData.cs" />
+    <Content Include="Shared\SampleData\DataSource.cs" />
+    <Content Include="Shared\ViewModels\AssemblagesViewModel.cs" />
+    <Content Include="Shared\ViewModels\ProjectInfoMapper.cs" />
+    <Content Include="Shared\ViewModels\ProjectInfoViewModel.cs" />
+    <Content Include="Shared\ViewModels\ProjectViewModel.cs" />
+  </ItemGroup>
+
+
+
+  <ItemGroup>
+    <PackageReference Include="Kaskon.BeamClassLibrary" Version="1.0.0" />
+    <PackageReference Include="Kaskon.CommonLibrary" Version="2.2.39" />
+    <PackageReference Include="Kaskon.Eurocode1.Belastingen" Version="1.29.1" />
+    <PackageReference Include="Kaskon.EurocodeComponenten" Version="2.2.3" />
+	<PackageReference Include="Kaskon.Algemeen" Version="1.0.0" />
+	<PackageReference Include="Markdig" Version="0.44.0" />
+	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.10" />
+	<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.10" />	  	
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.1" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Emoji" Version="4.13.1" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.13.1" />
+    <PackageReference Include="Microsoft.Graph" Version="5.95.0" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="4.0.1" />
+    <PackageReference Include="Microsoft.IdentityModel.Validators" Version="8.14.0" />
+    <PackageReference Include="MigraDoc.DocumentObjectModel.Core" Version="1.0.0" />
+    <PackageReference Include="MigraDoc.Rendering.Core" Version="1.0.0" />
+    <PackageReference Include="MigraDoc.RtfRendering.Core" Version="1.0.0" />
+    <PackageReference Include="Riok.Mapperly" Version="4.3.0" />
+    <PackageReference Include="SkiaSharp.Extended" Version="3.0.0" />
+    <PackageReference Include="Svg.Skia" Version="3.2.1" />
+
+
+	  
+	  
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Construct.Infrastructure\Construct.Infrastructure.csproj" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<None Include="appsettings.Development.json" />
+		<None Include="appsettings.Production.json" />
+		<None Include="wwwroot\Flags\ac.svg" />
+		<None Include="wwwroot\Flags\ad.svg" />
+		<None Include="wwwroot\Flags\ae.svg" />
+		<None Include="wwwroot\Flags\af.svg" />
+		<None Include="wwwroot\Flags\ag.svg" />
+		<None Include="wwwroot\Flags\ai.svg" />
+		<None Include="wwwroot\Flags\al.svg" />
+		<None Include="wwwroot\Flags\am.svg" />
+		<None Include="wwwroot\Flags\ao.svg" />
+		<None Include="wwwroot\Flags\aq.svg" />
+		<None Include="wwwroot\Flags\ar.svg" />
+		<None Include="wwwroot\Flags\as.svg" />
+		<None Include="wwwroot\Flags\at.svg" />
+		<None Include="wwwroot\Flags\au.svg" />
+		<None Include="wwwroot\Flags\aw.svg" />
+		<None Include="wwwroot\Flags\ax.svg" />
+		<None Include="wwwroot\Flags\az.svg" />
+		<None Include="wwwroot\Flags\ba.svg" />
+		<None Include="wwwroot\Flags\bb.svg" />
+		<None Include="wwwroot\Flags\bd.svg" />
+		<None Include="wwwroot\Flags\be.svg" />
+		<None Include="wwwroot\Flags\bf.svg" />
+		<None Include="wwwroot\Flags\bg.svg" />
+		<None Include="wwwroot\Flags\bh.svg" />
+		<None Include="wwwroot\Flags\bi.svg" />
+		<None Include="wwwroot\Flags\bj.svg" />
+		<None Include="wwwroot\Flags\bl.svg" />
+		<None Include="wwwroot\Flags\bm.svg" />
+		<None Include="wwwroot\Flags\bn.svg" />
+		<None Include="wwwroot\Flags\bo.svg" />
+		<None Include="wwwroot\Flags\bq.svg" />
+		<None Include="wwwroot\Flags\br.svg" />
+		<None Include="wwwroot\Flags\bs.svg" />
+		<None Include="wwwroot\Flags\bt.svg" />
+		<None Include="wwwroot\Flags\bv.svg" />
+		<None Include="wwwroot\Flags\bw.svg" />
+		<None Include="wwwroot\Flags\by.svg" />
+		<None Include="wwwroot\Flags\bz.svg" />
+		<None Include="wwwroot\Flags\ca.svg" />
+		<None Include="wwwroot\Flags\cc.svg" />
+		<None Include="wwwroot\Flags\cd.svg" />
+		<None Include="wwwroot\Flags\cefta.svg" />
+		<None Include="wwwroot\Flags\cf.svg" />
+		<None Include="wwwroot\Flags\cg.svg" />
+		<None Include="wwwroot\Flags\ch.svg" />
+		<None Include="wwwroot\Flags\ci.svg" />
+		<None Include="wwwroot\Flags\ck.svg" />
+		<None Include="wwwroot\Flags\cl.svg" />
+		<None Include="wwwroot\Flags\cm.svg" />
+		<None Include="wwwroot\Flags\cn.svg" />
+		<None Include="wwwroot\Flags\co.svg" />
+		<None Include="wwwroot\Flags\cp.svg" />
+		<None Include="wwwroot\Flags\cr.svg" />
+		<None Include="wwwroot\Flags\cu.svg" />
+		<None Include="wwwroot\Flags\cv.svg" />
+		<None Include="wwwroot\Flags\cw.svg" />
+		<None Include="wwwroot\Flags\cx.svg" />
+		<None Include="wwwroot\Flags\cy.svg" />
+		<None Include="wwwroot\Flags\cz.svg" />
+		<None Include="wwwroot\Flags\de.svg" />
+		<None Include="wwwroot\Flags\dg.svg" />
+		<None Include="wwwroot\Flags\dj.svg" />
+		<None Include="wwwroot\Flags\dk.svg" />
+		<None Include="wwwroot\Flags\dm.svg" />
+		<None Include="wwwroot\Flags\do.svg" />
+		<None Include="wwwroot\Flags\dz.svg" />
+		<None Include="wwwroot\Flags\ea.svg" />
+		<None Include="wwwroot\Flags\ec.svg" />
+		<None Include="wwwroot\Flags\ee.svg" />
+		<None Include="wwwroot\Flags\eg.svg" />
+		<None Include="wwwroot\Flags\eh.svg" />
+		<None Include="wwwroot\Flags\er.svg" />
+		<None Include="wwwroot\Flags\es-ct.svg" />
+		<None Include="wwwroot\Flags\es-ga.svg" />
+		<None Include="wwwroot\Flags\es.svg" />
+		<None Include="wwwroot\Flags\et.svg" />
+		<None Include="wwwroot\Flags\eu.svg" />
+		<None Include="wwwroot\Flags\fi.svg" />
+		<None Include="wwwroot\Flags\fj.svg" />
+		<None Include="wwwroot\Flags\fk.svg" />
+		<None Include="wwwroot\Flags\fm.svg" />
+		<None Include="wwwroot\Flags\fo.svg" />
+		<None Include="wwwroot\Flags\fr.svg" />
+		<None Include="wwwroot\Flags\ga.svg" />
+		<None Include="wwwroot\Flags\gb-eng.svg" />
+		<None Include="wwwroot\Flags\gb-nir.svg" />
+		<None Include="wwwroot\Flags\gb-sct.svg" />
+		<None Include="wwwroot\Flags\gb-wls.svg" />
+		<None Include="wwwroot\Flags\gb.svg" />
+		<None Include="wwwroot\Flags\gd.svg" />
+		<None Include="wwwroot\Flags\ge.svg" />
+		<None Include="wwwroot\Flags\gf.svg" />
+		<None Include="wwwroot\Flags\gg.svg" />
+		<None Include="wwwroot\Flags\gh.svg" />
+		<None Include="wwwroot\Flags\gi.svg" />
+		<None Include="wwwroot\Flags\gl.svg" />
+		<None Include="wwwroot\Flags\gm.svg" />
+		<None Include="wwwroot\Flags\gn.svg" />
+		<None Include="wwwroot\Flags\gp.svg" />
+		<None Include="wwwroot\Flags\gq.svg" />
+		<None Include="wwwroot\Flags\gr.svg" />
+		<None Include="wwwroot\Flags\gs.svg" />
+		<None Include="wwwroot\Flags\gt.svg" />
+		<None Include="wwwroot\Flags\gu.svg" />
+		<None Include="wwwroot\Flags\gw.svg" />
+		<None Include="wwwroot\Flags\gy.svg" />
+		<None Include="wwwroot\Flags\hk.svg" />
+		<None Include="wwwroot\Flags\hm.svg" />
+		<None Include="wwwroot\Flags\hn.svg" />
+		<None Include="wwwroot\Flags\hr.svg" />
+		<None Include="wwwroot\Flags\ht.svg" />
+		<None Include="wwwroot\Flags\hu.svg" />
+		<None Include="wwwroot\Flags\ic.svg" />
+		<None Include="wwwroot\Flags\id.svg" />
+		<None Include="wwwroot\Flags\ie.svg" />
+		<None Include="wwwroot\Flags\il.svg" />
+		<None Include="wwwroot\Flags\im.svg" />
+		<None Include="wwwroot\Flags\in.svg" />
+		<None Include="wwwroot\Flags\io.svg" />
+		<None Include="wwwroot\Flags\iq.svg" />
+		<None Include="wwwroot\Flags\ir.svg" />
+		<None Include="wwwroot\Flags\is.svg" />
+		<None Include="wwwroot\Flags\it.svg" />
+		<None Include="wwwroot\Flags\je.svg" />
+		<None Include="wwwroot\Flags\jm.svg" />
+		<None Include="wwwroot\Flags\jo.svg" />
+		<None Include="wwwroot\Flags\jp.svg" />
+		<None Include="wwwroot\Flags\ke.svg" />
+		<None Include="wwwroot\Flags\kg.svg" />
+		<None Include="wwwroot\Flags\kh.svg" />
+		<None Include="wwwroot\Flags\ki.svg" />
+		<None Include="wwwroot\Flags\km.svg" />
+		<None Include="wwwroot\Flags\kn.svg" />
+		<None Include="wwwroot\Flags\kp.svg" />
+		<None Include="wwwroot\Flags\kr.svg" />
+		<None Include="wwwroot\Flags\kw.svg" />
+		<None Include="wwwroot\Flags\ky.svg" />
+		<None Include="wwwroot\Flags\kz.svg" />
+		<None Include="wwwroot\Flags\la.svg" />
+		<None Include="wwwroot\Flags\lb.svg" />
+		<None Include="wwwroot\Flags\lc.svg" />
+		<None Include="wwwroot\Flags\li.svg" />
+		<None Include="wwwroot\Flags\lk.svg" />
+		<None Include="wwwroot\Flags\lr.svg" />
+		<None Include="wwwroot\Flags\ls.svg" />
+		<None Include="wwwroot\Flags\lt.svg" />
+		<None Include="wwwroot\Flags\lu.svg" />
+		<None Include="wwwroot\Flags\lv.svg" />
+		<None Include="wwwroot\Flags\ly.svg" />
+		<None Include="wwwroot\Flags\ma.svg" />
+		<None Include="wwwroot\Flags\mc.svg" />
+		<None Include="wwwroot\Flags\md.svg" />
+		<None Include="wwwroot\Flags\me.svg" />
+		<None Include="wwwroot\Flags\mf.svg" />
+		<None Include="wwwroot\Flags\mg.svg" />
+		<None Include="wwwroot\Flags\mh.svg" />
+		<None Include="wwwroot\Flags\mk.svg" />
+		<None Include="wwwroot\Flags\ml.svg" />
+		<None Include="wwwroot\Flags\mm.svg" />
+		<None Include="wwwroot\Flags\mn.svg" />
+		<None Include="wwwroot\Flags\mo.svg" />
+		<None Include="wwwroot\Flags\mp.svg" />
+		<None Include="wwwroot\Flags\mq.svg" />
+		<None Include="wwwroot\Flags\mr.svg" />
+		<None Include="wwwroot\Flags\ms.svg" />
+		<None Include="wwwroot\Flags\mt.svg" />
+		<None Include="wwwroot\Flags\mu.svg" />
+		<None Include="wwwroot\Flags\mv.svg" />
+		<None Include="wwwroot\Flags\mw.svg" />
+		<None Include="wwwroot\Flags\mx.svg" />
+		<None Include="wwwroot\Flags\my.svg" />
+		<None Include="wwwroot\Flags\mz.svg" />
+		<None Include="wwwroot\Flags\na.svg" />
+		<None Include="wwwroot\Flags\nc.svg" />
+		<None Include="wwwroot\Flags\ne.svg" />
+		<None Include="wwwroot\Flags\nf.svg" />
+		<None Include="wwwroot\Flags\ng.svg" />
+		<None Include="wwwroot\Flags\ni.svg" />
+		<None Include="wwwroot\Flags\nl.svg" />
+		<None Include="wwwroot\Flags\no.svg" />
+		<None Include="wwwroot\Flags\np.svg" />
+		<None Include="wwwroot\Flags\nr.svg" />
+		<None Include="wwwroot\Flags\nu.svg" />
+		<None Include="wwwroot\Flags\nz.svg" />
+		<None Include="wwwroot\Flags\om.svg" />
+		<None Include="wwwroot\Flags\pa.svg" />
+		<None Include="wwwroot\Flags\pe.svg" />
+		<None Include="wwwroot\Flags\pf.svg" />
+		<None Include="wwwroot\Flags\pg.svg" />
+		<None Include="wwwroot\Flags\ph.svg" />
+		<None Include="wwwroot\Flags\pk.svg" />
+		<None Include="wwwroot\Flags\pl.svg" />
+		<None Include="wwwroot\Flags\pm.svg" />
+		<None Include="wwwroot\Flags\pn.svg" />
+		<None Include="wwwroot\Flags\pr.svg" />
+		<None Include="wwwroot\Flags\ps.svg" />
+		<None Include="wwwroot\Flags\pt.svg" />
+		<None Include="wwwroot\Flags\pw.svg" />
+		<None Include="wwwroot\Flags\py.svg" />
+		<None Include="wwwroot\Flags\qa.svg" />
+		<None Include="wwwroot\Flags\re.svg" />
+		<None Include="wwwroot\Flags\README.md" />
+		<None Include="wwwroot\Flags\ro.svg" />
+		<None Include="wwwroot\Flags\roc.svg" />
+		<None Include="wwwroot\Flags\rs.svg" />
+		<None Include="wwwroot\Flags\ru.svg" />
+		<None Include="wwwroot\Flags\rw.svg" />
+		<None Include="wwwroot\Flags\sa.svg" />
+		<None Include="wwwroot\Flags\sb.svg" />
+		<None Include="wwwroot\Flags\sc.svg" />
+		<None Include="wwwroot\Flags\sd.svg" />
+		<None Include="wwwroot\Flags\se.svg" />
+		<None Include="wwwroot\Flags\sg.svg" />
+		<None Include="wwwroot\Flags\sh.svg" />
+		<None Include="wwwroot\Flags\si.svg" />
+		<None Include="wwwroot\Flags\sj.svg" />
+		<None Include="wwwroot\Flags\sk.svg" />
+		<None Include="wwwroot\Flags\sl.svg" />
+		<None Include="wwwroot\Flags\sm.svg" />
+		<None Include="wwwroot\Flags\sn.svg" />
+		<None Include="wwwroot\Flags\so.svg" />
+		<None Include="wwwroot\Flags\sr.svg" />
+		<None Include="wwwroot\Flags\ss.svg" />
+		<None Include="wwwroot\Flags\st.svg" />
+		<None Include="wwwroot\Flags\sv.svg" />
+		<None Include="wwwroot\Flags\sx.svg" />
+		<None Include="wwwroot\Flags\sy.svg" />
+		<None Include="wwwroot\Flags\sz.svg" />
+		<None Include="wwwroot\Flags\ta.svg" />
+		<None Include="wwwroot\Flags\tc.svg" />
+		<None Include="wwwroot\Flags\td.svg" />
+		<None Include="wwwroot\Flags\tf.svg" />
+		<None Include="wwwroot\Flags\tg.svg" />
+		<None Include="wwwroot\Flags\th.svg" />
+		<None Include="wwwroot\Flags\tj.svg" />
+		<None Include="wwwroot\Flags\tk.svg" />
+		<None Include="wwwroot\Flags\tl.svg" />
+		<None Include="wwwroot\Flags\tm.svg" />
+		<None Include="wwwroot\Flags\tn.svg" />
+		<None Include="wwwroot\Flags\to.svg" />
+		<None Include="wwwroot\Flags\tpe.svg" />
+		<None Include="wwwroot\Flags\tr.svg" />
+		<None Include="wwwroot\Flags\tt.svg" />
+		<None Include="wwwroot\Flags\tv.svg" />
+		<None Include="wwwroot\Flags\tz.svg" />
+		<None Include="wwwroot\Flags\ua.svg" />
+		<None Include="wwwroot\Flags\ug.svg" />
+		<None Include="wwwroot\Flags\um.svg" />
+		<None Include="wwwroot\Flags\un.svg" />
+		<None Include="wwwroot\Flags\us.svg" />
+		<None Include="wwwroot\Flags\uy.svg" />
+		<None Include="wwwroot\Flags\uz.svg" />
+		<None Include="wwwroot\Flags\va.svg" />
+		<None Include="wwwroot\Flags\vc.svg" />
+		<None Include="wwwroot\Flags\ve.svg" />
+		<None Include="wwwroot\Flags\vg.svg" />
+		<None Include="wwwroot\Flags\vi.svg" />
+		<None Include="wwwroot\Flags\vn.svg" />
+		<None Include="wwwroot\Flags\vu.svg" />
+		<None Include="wwwroot\Flags\wf.svg" />
+		<None Include="wwwroot\Flags\ws.svg" />
+		<None Include="wwwroot\Flags\xk.svg" />
+		<None Include="wwwroot\Flags\xx.svg" />
+		<None Include="wwwroot\Flags\ye.svg" />
+		<None Include="wwwroot\Flags\yt.svg" />
+		<None Include="wwwroot\Flags\za.svg" />
+		<None Include="wwwroot\Flags\zm.svg" />
+		<None Include="wwwroot\Flags\zw.svg" />
+	</ItemGroup>
+	
+	
+  <ItemGroup>
+    <Content Update="Components\Pages\Project\Grondslagen.razor">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </Content>
+    <Content Update="wwwroot\images\logos\kaskon.nl.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+	
+	
+  <ItemGroup>
+    <Folder Include="wwwroot\NewFolder\" />
+  </ItemGroup>
+
+</Project>

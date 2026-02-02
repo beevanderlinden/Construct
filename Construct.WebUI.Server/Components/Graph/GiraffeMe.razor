@@ -1,0 +1,46 @@
+﻿@namespace Giraffe
+@inject GraphServiceClient GraphClient
+
+<h3>Mijn profielgegevens</h3>
+
+@if (user != null)
+{
+    @if (!string.IsNullOrEmpty(photoBase64))
+    {
+        <img src="data:image/jpeg;base64,@photoBase64" alt="Profielfoto" style="max-height:100px;border-radius:50%;margin-bottom:10px;" />
+    }
+
+    <p><strong>Naam:</strong> @user.DisplayName</p>
+    <p><strong>Email:</strong> @user.Mail</p>
+    <p><strong>About me:</strong> @user.AboutMe</p>
+}
+else
+{
+    <p>Laden...</p>
+}
+
+@code {
+    private User? user;
+    private string? photoBase64;
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await GraphClient.Me.GetAsync();
+
+        try
+        {
+            using var photoStream = await GraphClient.Me.Photo.Content.GetAsync();
+            if (photoStream != null)
+            {
+                using var ms = new MemoryStream();
+                await photoStream.CopyToAsync(ms);
+                photoBase64 = Convert.ToBase64String(ms.ToArray());
+            }
+        }
+        catch (Microsoft.Graph.Models.ODataErrors.ODataError)
+        {
+            // Geen foto beschikbaar
+            photoBase64 = null;
+        }
+    }
+}

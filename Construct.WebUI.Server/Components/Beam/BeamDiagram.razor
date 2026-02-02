@@ -1,0 +1,467 @@
+﻿@using System.Globalization
+@using Construct.Application.Diagrams
+@using Construct.Application.Services
+@using Mechanica.SimpleBeam
+@inject IJSRuntime JS
+
+@if (Beam != null)
+{
+   @*  <div class="beam-diagram @((Beam.IsDirty && Options.ViewType == ViewType.Diagram) ? "dirty" : "")" id="@_containerId" style="width:100%; height:100%;">
+        <svg xmlns="http://www.w3.org/2000/svg"
+             @ref="svgRef"
+             viewBox="@CurrentViewBox"
+             width="100%" height="220px"
+             @onpointerdown="OnSvgPointerDown"
+             @onpointermove="OnPointerMove"
+             @onpointerup="OnPointerUp">
+           
+            @foreach (var svg in _baseSvgs)
+            {
+                <BaseSvgComponent @key="svg.Id"
+                                  Svg="svg"
+                                   />
+            }
+
+           
+
+        </svg>
+    </div> *@
+
+    @* <div>
+        <p>Loadcase : @Options.LoadCase</p>
+        <p>aantal tags: @_baseSvgs.Count</p>
+        <ul>
+        @foreach (var svg in _baseSvgs)
+        {
+            <li>@svg.Render()</li>
+        }
+        </ul>
+    </div> *@
+
+
+    @* <div>schaal:@Scale</div> *@
+
+    <div class="beam-diagram @((Beam.IsDirty && Options.ViewType == ViewType.Diagram) ? "dirty" : "")" 
+         id="@_containerId" 
+         style="@Style">
+        <svg xmlns="http://www.w3.org/2000/svg"
+             @ref="svgRef"
+             viewBox="@CurrentViewBox"
+             preserveAspectRatio="xMinYMid meet"
+             width=@_width height=@Height
+             @onpointerdown="OnSvgPointerDown"
+             @onpointermove="OnPointerMove"
+             @onpointerup="OnPointerUp">
+            @((MarkupString)SvgXml)
+        </svg>
+    </div>
+
+    
+
+
+}
+
+@code {
+
+    /* ============================
+     * Parameters
+     * ============================ */
+
+    [Parameter, EditorRequired] public SBLigger Beam { get; set; }
+    [Parameter] public EventCallback<SBLigger> BeamChanged { get; set; }
+    [Parameter, EditorRequired] public OptionsContext Options { get; set; }
+    //[Parameter] public string Style { get; set; } = "user-select:none; width:100%;";
+    [Parameter] public string Height { get; set; } = "200px";
+
+
+
+
+    /* ============================
+     * Interne state
+     * ============================ */
+
+    private string SvgXml = "";
+    private string Style => $"user-select:none; width: 100%;";
+
+    private double _maxScaleX => Options.Diagram?.ScaleX ?? 200;
+    private double _scale => Options.Diagram?.Scale ?? 200;
+    private double _maxWidth => _useMaxWidth? _maxScaleX * Beam.Length : 9999;
+
+    private bool _useMaxWidth => _maxScaleX != _scale;
+    private double _getWidth => Math.Min(widthPx, (_scale / _maxScaleX * widthPx));
+
+    private string _width => double.IsNaN(_getWidth)? "100%" : _getWidth.ToString("0");
+
+    private List<BaseSvg> _baseSvgs = [];
+
+    private string CurrentViewBox = "0 0 1 1";
+
+    private readonly string _containerId =
+        $"beamDiagram_{Guid.NewGuid():N}";
+
+    private readonly BoundingBox boundingBox = new();
+    private BoundingBox? _lastBoundingBox;
+    private const double ViewBoxTolerance = 1e-2; // 1 cm
+
+
+    private ElementReference svgRef;
+    private DotNetObjectReference<BeamDiagram>? objRef;
+
+    private double widthPx;
+    private double heightPx;
+
+    private DragState CurrentDrag { get; set; } = new DragState();
+    [Parameter] public double Scale { get; set; } = 200; // px per meter
+    [Parameter] public double YBasis { get; set; } = 100;
+
+
+    /* ============================
+     * Lifecycle
+     * ============================ */
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            objRef = DotNetObjectReference.Create(this);
+
+            await UpdateSvgAsync();
+
+            await JS.InvokeVoidAsync(
+                "svgHelpers.registerResizeCallback",
+                _containerId,
+                objRef);
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await UpdateSvgAsync();
+    }
+
+
+    /* ============================
+     * Resize
+     * ============================ */
+
+    [JSInvokable]
+    public async Task OnContainerResize(double width, double height)
+    {
+        widthPx = width;
+        heightPx = height;
+        await UpdateSvgAsync(width, height);
+    }
+
+
+    /* ============================
+     * Core render logic
+     * ============================ */
+
+    private async Task UpdateSvgAsync(double? width = null, double? height = null)
+    {
+        if (width == null || width <= 0)
+        {
+            var size = await JS.InvokeAsync<AssemblageSvg.DomRect>(
+                "svgHelpers.getBoundingClientRect",
+                _containerId);
+
+            if (size == null || size.Width <= 0 || size.Height <= 0)
+                return;
+
+            width = size.Width;
+            height = size.Height;
+        }
+
+
+        if (Beam == null || Options == null)
+            return;
+
+        Console.WriteLine($"[UpdateSvgAsync fired] w:{width}, h:{height}");
+
+        if (width == null || height == null)
+        {
+            var size = await JS.InvokeAsync<AssemblageSvg.DomRect>(
+                "svgHelpers.getBoundingClientRect",
+                _containerId);
+
+            if (size == null)
+                return;
+
+            width = size.Width;
+            height = size.Height;
+        }
+
+        boundingBox.Reset();
+
+        switch (Options.ViewType)
+        {
+            case ViewType.Geometry:
+            case ViewType.GeometryWithLoadCase:
+                SvgGenerator.GenerateBeamSvgContent(
+                   beam: Beam,
+                   bb: boundingBox,
+                   wPx: width.Value,
+                   hPx: height.Value,
+                   geval: Options.LoadCase
+               );
+                break;
+            case ViewType.Diagram:
+                _baseSvgs = [];
+                break;
+            default:
+                throw new NotSupportedException();
+        }
+
+        SvgXml = Options.ViewType switch
+        {
+            ViewType.Geometry =>
+                SvgGenerator.GenerateBeamSvgContent(
+                    beam: Beam, 
+                    bb: boundingBox,
+                    wPx: width.Value, 
+                    hPx: height.Value,
+                    geval: null
+                ),
+
+            ViewType.GeometryWithLoadCase =>
+                SvgGenerator.GenerateBeamSvgContent(
+                    beam: Beam,
+                    bb: boundingBox,
+                    wPx: width.Value, 
+                    hPx: height.Value,
+                    geval: Options.LoadCase),
+
+            ViewType.Diagram =>
+                SvgGenerator.GenerateBeamDiagramSvgContent(
+                    beam: Beam,
+                    bb: boundingBox,
+                    wPx: width.Value,
+                    hPx: height.Value,
+                    diagramContext: Options.Diagram!
+                    
+                    ),
+
+            _ => throw new NotSupportedException()
+        };
+
+        // 🧠 2-pass stabilisatie
+        if (_lastBoundingBox == null ||
+            ViewBoxChangedSignificantly(
+                _lastBoundingBox,
+                boundingBox,
+                ViewBoxTolerance))
+        {
+            CurrentViewBox = BuildViewBox(boundingBox);
+            _lastBoundingBox = boundingBox.Clone();
+
+            StateHasChanged(); // alleen als écht nodig
+        }
+
+
+    }
+
+
+    /* ============================
+     * Helpers
+     * ============================ */
+
+    private static string BuildViewBox(BoundingBox bb)
+    {
+        return $"{bb.MinX.ToString("0.0000",CultureInfo.InvariantCulture)} " +
+               $"{bb.MinY.ToString("0.0000",CultureInfo.InvariantCulture)} " +
+               $"{bb.Width.ToString("0.0000",CultureInfo.InvariantCulture)} " +
+               $"{bb.Height.ToString("0.000",CultureInfo.InvariantCulture)}";
+    }
+
+    private static bool ViewBoxChangedSignificantly(
+    BoundingBox oldBb,
+    BoundingBox newBb,
+    double tol)
+    {
+        return
+            Math.Abs(oldBb.MinX - newBb.MinX) > tol ||
+            Math.Abs(oldBb.MinY - newBb.MinY) > tol ||
+            Math.Abs(oldBb.Width - newBb.Width) > tol ||
+            Math.Abs(oldBb.Height - newBb.Height) > tol;
+    }
+
+
+
+
+    /* ============================
+     * Embedded models
+     * ============================ */
+    public class DragState
+    {
+        public string? LoadId { get; set; }   // de GUID van de load
+        public string Handle { get; set; } = ""; // "start", "end", "move", "position"
+        public double StartX { get; set; }     // beginpositie bij pointerdown
+        public double AccumulatedMeters { get; set; } = 0;
+        public bool Active { get; set; } = false;
+        public double Scale { get; set; } = 200;
+    }
+
+
+    private async Task OnSvgPointerDown(PointerEventArgs e)
+    {
+        var data = await JS.InvokeAsync<Dictionary<string, string>>(
+            "svgHelpers.getElementDataAttributesAtPoint",
+            e.ClientX,
+            e.ClientY
+        );
+
+        if (data != null && data.TryGetValue("load-id", out var loadId))
+        {
+            CurrentDrag.LoadId = loadId;
+            CurrentDrag.Handle = data["handle"];
+            CurrentDrag.StartX = e.ClientX;
+            CurrentDrag.Active = true;
+        }
+    }
+
+
+
+    private void OnPointerDown(string loadId, string handle, PointerEventArgs e)
+    {
+        CurrentDrag.LoadId = loadId;
+        CurrentDrag.Handle = handle;
+        CurrentDrag.StartX = e.ClientX;
+        CurrentDrag.Active = true;
+    }
+
+    // private void OnSvgPointerDown(BaseSvg svg, PointerEventArgs e)
+    // {
+    //     // gebruik de Id en eventueel InteractiveAttributes van de BaseSvg zelf
+    //     CurrentDrag.LoadId = svg.Id;
+    //     CurrentDrag.Handle = svg.InteractiveAttributes.TryGetValue("handle", out var h) ? h : "";
+    //     CurrentDrag.StartX = e.ClientX;
+    //     CurrentDrag.Active = true;
+    // }
+
+
+    private void OnPointerMove(PointerEventArgs e)
+    {
+        if (!CurrentDrag.Active || string.IsNullOrEmpty(CurrentDrag.LoadId)) return;
+
+        double dxPx = e.ClientX - CurrentDrag.StartX;
+        double rawMeters = dxPx / _scale;
+
+        const double step = 0.05;
+
+        // 🔑 snap op totaal, niet op delta
+        double snappedMeters =
+            Math.Round(rawMeters / step) * step;
+
+        // 🔑 alleen het verschil toepassen
+        double deltaMeters =
+            snappedMeters - 0;
+
+        if (Math.Abs(deltaMeters) < double.Epsilon)
+            return;
+        
+
+        var load = Beam.Loads.FirstOrDefault(l => l.Id == CurrentDrag.LoadId);
+
+        if (load == null) 
+            return;
+
+        switch (CurrentDrag.Handle)
+        {
+            case "start":
+                if (load is DistributedLoad dl1)
+                {
+                    dl1.StartPosition += deltaMeters;
+                    if (dl1.StartPosition < 0)
+                    {
+                        dl1.StartPosition = 0;
+                    }
+                    if (dl1.StartPosition > dl1.MaxStartPosition)
+                    {
+                        dl1.StartPosition = dl1.MaxStartPosition;
+                    }
+                }
+                break;
+            case "end":
+                if (load is DistributedLoad dl2)
+                {
+                    dl2.EndPosition += deltaMeters;
+                    if (dl2.EndPosition > Beam.Length)
+                    {
+                        dl2.EndPosition = Beam.Length;
+                    }
+                    if (dl2.EndPosition < dl2.MinEndPostion)
+                    {
+                        dl2.EndPosition = dl2.MinEndPostion;
+                    }
+                }
+
+
+                break;
+            case "move":
+                if (load is DistributedLoad dl3)
+                {
+                    double width = dl3.Range.End - dl3.Range.Start;
+                    double center = dl3.Range.Start + width / 2 + deltaMeters;
+                    dl3.StartPosition = center - width / 2;
+                    dl3.EndPosition = center + width / 2;
+                }
+                break;
+            case "position":
+                if (load is PointLoad pl) pl.Position += deltaMeters;
+                break;
+        }
+
+        CurrentDrag.StartX = e.ClientX;
+        //UpdateBaseSvgForLoad(load);
+
+        // 🔑 bijwerken wat al is toegepast
+        //CurrentDrag.AccumulatedMeters = snappedMeters;
+        UpdateSvgAsync(widthPx,heightPx);
+
+
+        StateHasChanged();
+    }
+
+    private void UpdateBaseSvgForLoad(ILoad load)
+    {
+        if (load == null) return;
+
+        // Zoek de SvgGroup die bij deze load hoort
+        var index = _baseSvgs.FindIndex(s =>
+            s is SvgGroup g &&
+            g.Data.TryGetValue("load-id", out var lid) &&
+            lid == load.Id
+        );
+
+        if (index < 0) return; // groep niet gevonden
+
+        // Bouw nieuwe BaseSvg's voor deze load
+        var newSvgs = load.ToSvg(Scale, YBasis, 20, showValue: true);
+
+        // Maak een nieuwe groep en vul dezelfde data
+        var newGroup = new SvgGroup
+        {
+            Data = { ["load-id"] = load.Id }
+        };
+        foreach (var s in newSvgs)
+        {
+            newGroup.Add(s);
+
+        }
+
+        // Vervang de oude groep in _baseSvgs
+        _baseSvgs[index] = newGroup;
+    }
+
+
+    private void OnPointerUp(PointerEventArgs e)
+    {
+        CurrentDrag.Active = false;
+        CurrentDrag.LoadId = null;
+        CurrentDrag.Handle = "";
+    }
+
+
+
+
+}

@@ -1,0 +1,203 @@
+﻿@inject IJSRuntime JS
+@inject IProjectFileService ProjectFileService
+@inject IProjectStateService ProjectStateService
+@inject IFileService FileService
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+@using System.IO.Compression
+@using Construct.Application.Interfaces
+@using Construct.Application.Services
+
+
+
+
+@if (!string.IsNullOrEmpty(geselecteerdeMapNaam))
+{
+    <p>Geselecteerde map : <strong>@geselecteerdeMapNaam</strong></p>
+}
+else
+{
+    <p>Er is nog geen map geselecteerd</p>
+}
+
+
+@* <button class="btn btn-primary" @onclick="LeesCprjBestanden">📂 Open map</button> *@
+@* <button class="btn btn-primary" @onclick="KiesGebruikersmapOfOpenOpgeslagenMap">📂 Kies map</button> *@
+<button class="btn btn-primary" @onclick="HerstelGebruikersmap">📂 Kies map</button>
+@* <button class="btn btn-secondary" @onclick="KiesGebruikersmapOfOpenOpgeslagenMap">🔄 Refresh</button> *@
+
+
+
+@* <button class="btn btn-success" @onclick="SlaCprjBestandOp">💾 Sla bestand op</button> *@
+
+
+
+@if (projectFileInfos.Any())
+{
+    <ProjectCardList ProjectFileInfos="projectFileInfos" 
+    OnSelectedProjectFileInfoChanged="SelectProjectFileInfo" />
+}
+else if (!string.IsNullOrEmpty(geselecteerdeMapNaam))
+{
+    <p>
+        Geen project-bestanden in huidige map.<br />
+        <i>Submappen worden niet ondersteund.</i>
+    </p>
+
+}
+
+@* <h6>CprjManagerComponent</h6>
+<CprjManagerComponent></CprjManagerComponent> *@
+
+
+
+
+@code {
+    //private List<string> jsonInhoud = new();
+    private List<ProjectFileInfo> projectFileInfos = [];
+
+    //private string? selectedFile;
+    private ProjectFileInfo? selectedProjectFileInfo;
+
+
+    string? geselecteerdeMapNaam;
+
+    private async Task ToonGeselecteerdeMap()
+    {
+        geselecteerdeMapNaam = await JS.InvokeAsync<string>("window.dirInterop.getSelectedDirectoryName");
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Delay(1);
+        //await KiesGebruikersmapOfOpenOpgeslagenMap();
+        //return base.OnInitializedAsync();
+    }
+
+    private async Task HerstelGebruikersmap()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("window.dirInterop.chooseNewDirectory");
+            await KiesGebruikersmapOfOpenOpgeslagenMap();
+        }
+        catch (JSException jsEx) when (jsEx.Message.Contains("The user aborted"))
+        {
+            // Optioneel: laat de gebruiker weten dat er niets is geselecteerd
+            Console.WriteLine("Gebruiker heeft selectie geannuleerd.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Onverwachte fout bij mapselectie: {ex.Message}");
+        }
+    }
+
+    private async Task KiesGebruikersmapOfOpenOpgeslagenMap()
+    {
+        try
+        {
+            projectFileInfos = await ProjectFileService.GetProjectFilesFromUserDirectoryAsync(JS);
+            projectFileInfos = projectFileInfos.OrderByDescending(i => i.LastModified).ToList();
+            await ToonGeselecteerdeMap();
+        }
+        catch (JSException jsEx) when (jsEx.Message.Contains("The user aborted"))
+        {
+            // Optioneel: laat de gebruiker weten dat er niets is geselecteerd
+            Console.WriteLine("Gebruiker heeft selectie geannuleerd.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Onverwachte fout bij mapselectie: {ex.Message}");
+        }
+
+    }
+
+
+    // private async Task LeesCprjBestanden()
+    // {
+    //     var bestanden = await JS.InvokeAsync<List<CprjRaw>>("dirInterop.openDirectoryAndReadCprjFiles");
+
+    //     jsonInhoud.Clear();
+    //     projectFileInfos.Clear();
+
+    //     foreach (var bestand in bestanden)
+    //     {
+    //         var bytes = Convert.FromBase64String(bestand.Base64);
+
+
+
+    //         using var inputStream = new MemoryStream(bytes);
+    //         using var gzip = new GZipStream(inputStream, CompressionMode.Decompress);
+    //         using var reader = new StreamReader(gzip);
+    //         string json = await reader.ReadToEndAsync();
+    //         jsonInhoud.Add(json);
+    //     }
+
+
+
+
+    // }
+
+    private async Task SlaCprjBestandOp()
+    {
+        string json = "{ \"voorbeeld\": true, \"timestamp\": \"" + DateTime.Now + "\" }";
+        byte[] compressed;
+
+        using (var output = new MemoryStream())
+        {
+            using (var gzip = new GZipStream(output, CompressionMode.Compress))
+            using (var writer = new StreamWriter(gzip))
+            {
+                writer.Write(json);
+            }
+            compressed = output.ToArray();
+        }
+
+        string base64 = Convert.ToBase64String(compressed);
+        await JS.InvokeVoidAsync("dirInterop.saveCprjFile", "nieuw_project.cprj", base64);
+    }
+
+
+    private async void SelectProjectFileInfo(ProjectFileInfo projectFileInfo)
+    {
+        selectedProjectFileInfo = projectFileInfo;
+        await LoadProjectAsync();
+        NavigationManager.NavigateTo("/Project/assemblages");
+
+    }
+
+
+
+
+
+    private async Task LoadProjectAsync()
+    {
+        if (selectedProjectFileInfo == null)
+        {
+            return;
+        }
+
+        await Task.Delay(10); // Simuleer een vertraging
+
+        ProjectEntity? project = FileService.LoadFromBase64<ProjectEntity>(selectedProjectFileInfo.Base64);
+
+        if (project != null)
+        {
+            project.InitAll();
+            ProjectStateService.SetProject(project);
+            ProjectStateService.SetProjectFileInfo(selectedProjectFileInfo);
+            ToastService.ShowToast(ToastIntent.Success, $"Project geladen \r\n{project.ProjectInfo}");
+            StateHasChanged();
+        }
+
+
+
+
+    }
+
+
+   
+}
+
+

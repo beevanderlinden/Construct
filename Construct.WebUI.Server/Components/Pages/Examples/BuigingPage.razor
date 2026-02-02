@@ -1,0 +1,92 @@
+﻿@page "/Lab/buiging"
+@using Eurocode.Belastingen
+@using EurocodeRazorClassLibrary
+@using Eurocode.BetonConstructies
+@using Profielen.Parametrisch
+@using CommonLibrary
+
+<h3>BuigingPage</h3>
+
+
+<FluentTabs>
+
+    <FluentTab Label="Buiging">
+        <BuigingBasicComponent @bind-Model="@Model" />
+    </FluentTab>
+
+    <FluentTab Label="Dwarskracht">
+        <EurocodeBetonDwarskrachtComponent @bind-Model="Dwarskracht" />
+    </FluentTab>
+
+    <FluentTab Label="Materiaal">
+        <EurocodeBetonMaterialen @bind-Model="@beton" />
+
+    </FluentTab>
+    <FluentTab Label="Dekking">
+        <EurocodeBetonDuurzaamheid @bind-Model="@dekking" />
+    </FluentTab>
+
+    <FluentTab Label="Profiel">
+        <BetonProfielComponent @bind-Model="@betonProfiel" />
+        <div>
+            <BetonDoorsnedePlot @bind-BetonProfiel="@betonProfiel" /> 
+
+        </div>
+    </FluentTab>
+
+    <FluentTab Label="Snedekrachten">
+        <EurocodeRazorClassLibrary.Shared.SnedekrachtenComponent @bind-Model="@snedekrachten" />
+    </FluentTab>
+
+</FluentTabs>
+
+
+@* <BaseEurocodeContextComponent TContext="BendingResults" @bind-Model="@Model" /> *@
+@* <p>Verankeringslengte: @verankeringsLengte.ToMarkupString()</p> *@
+
+
+
+
+
+
+@code {
+    private VerankeringLangswapeningContext verankeringsLengte = new VerankeringLangswapeningContext();
+    private GrondslagenContext grondslagen = new GrondslagenContext();
+    private BetonContext beton = new (BetonsterkteklasseEnum.C30_37);
+    private BetonDekkingContext dekking = new();
+    private Profielen.Beton.BetonProfiel betonProfiel = new(500, 600);
+    //private ParametrischProfielContext profiel = new(500, 600);
+    private WapeningContext wapening = new();
+    private Snedekrachten snedekrachten = new();
+    private SectionForces sectionForces { get; set; } = new();
+
+    private BendingResults Model = new BendingResults();
+    private DwarskrachtWapContext Dwarskracht = new(new(), new(), new());
+
+    protected override void OnInitialized()
+    {
+        // beton en grondslagen gaan in de dekking
+        dekking.Beton = beton;
+        dekking.Grondslagen = grondslagen;
+
+        // dekking gaat in de wapening
+        wapening.Dekking = dekking;
+
+        snedekrachten.My.Ed = 80;
+        snedekrachten.Vz.Ed = 160;
+
+
+        // beton, profiel, wapening en snedekrachten gaan de buiging
+        // TODO kijken of dit weer werkt!
+        // TODO nakijken BetonProfiel! 
+        //Model = new BendingResults(beton, betonProfiel.Profiel, wapening, sectionForces);
+        //Dwarskracht = new(beton, betonProfiel.Profiel, sectionForces);
+
+        verankeringsLengte.Beton = beton;
+        verankeringsLengte.Diameter = wapening.GemiddeldeDiameter;
+        verankeringsLengte.RekenwaardeStaafspanning = (Model.AsRequired / Model.Wapening.As) * Model.Beton.BetonStaal.Fyd;
+        
+        
+    }
+
+}

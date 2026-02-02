@@ -1,0 +1,434 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using System.Collections.Generic
+@using CommonLibrary.Models
+@using Construct.Application.Services
+@using Construct.WebUI.Server.Helpers
+@using Eurocode.HoutConstructies
+@using Eurocode.StaalConstructies
+@using Microsoft.AspNetCore.Components
+@using Eurocode.Belastingen
+@using Mechanica.SimpleBeam
+@using System.Globalization
+@using DIA = Construct.Application.Diagrams
+@using CommonLibrary.Interfaces
+
+
+
+
+
+<div>
+    <FluentTabs @bind-ActiveTabId="_activeTabId" OnTabChange="HandleOnTabChange" Size="TabSize.Medium" >
+
+        <FluentTab Id="tab1" Label="geometrie">
+            <Content>
+                <BeamDiagram @bind-Beam="Beam"
+                             Options="@GetLoadCaseDiagramOptions(null)" />
+
+                <KaskonInputContainer Label="schema">
+                    <FluentSelectEnum TEnum="SchemaType" @bind-EnumSelectedValue="@Beam.Schematisering" LabelPosition="LabelPosition.Top" /> 
+                </KaskonInputContainer>
+
+                <KaskonInputContainer Label="lengte">
+                    <FluentNumberField @bind-Value="Beam.Length" TValue="double" Step="0.1" Min="0" Max="40"></FluentNumberField>
+                </KaskonInputContainer>
+
+
+
+                <KaskonInputContainer Label="profiel">
+                    <FluentTextField Disabled="true" Value="@Beam.Profiel?.Naam"></FluentTextField>
+                </KaskonInputContainer>
+
+
+                <KaskonInputContainer Label="grade">
+                    <FluentTextField Disabled="true" Value="@Beam.Materiaal?.Naam"></FluentTextField>
+                </KaskonInputContainer>
+
+                <KaskonInputContainer Label="EI">
+                    <FluentTextField Disabled="true" Value="@(Beam.EI.ToString("E"))"></FluentTextField>
+                </KaskonInputContainer>
+
+
+                @if (Beam.Profiel is BaseProfiel p)
+                {
+                    <BaseProfielView Profiel="p" />
+
+                }
+                @if (Beam.Profiel is IBetonProfiel betonProfiel)
+                {
+                    // betonprofiel met wapening
+                    
+                }
+                @if (Beam.PlaatWapening != null)
+                {
+                    <PlaatWapeningTabelPosComponent Model="Beam.PlaatWapening" />
+                    <PlaatWapeningComponent Model="Beam.PlaatWapening" />
+                }
+                else
+                {
+                    <p>⁉️ Geen plaatwapening 🔎</p>
+                }
+
+                @if (Beam.Materiaal is BaseMateriaal m)
+                {
+                    var tblMateriaal = BeamResultsHelper.GetTabelMateriaalEigenschappen([m]);
+                    
+                    <TableContentRenderer 
+                        Table="tblMateriaal"
+                        Title="Materiaal eigenschappen"  />
+
+                    if (m is BetonContext beton)
+                    {
+                        var tbl = BeamResultsHelper.GetTabelMateriaalEigenschappen([beton]);
+                        <TableContentRenderer Table = "tbl" />
+                    }
+                    if (m is StaalContext staal)
+                    {
+                        var tbl = BeamResultsHelper.GetTabelMateriaalEigenschappen([staal]);
+                        <TableContentRenderer Table="tbl" />
+                    }
+                    if (m is HoutContext hout)
+                    {
+                        var tbl = BeamResultsHelper.GetTabelMateriaalEigenschappen([hout]);
+                        <TableContentRenderer Table="tbl" />
+                    }
+                }
+
+
+
+
+
+            </Content>
+
+        </FluentTab>
+       
+
+
+        @if (Beam.LoadContext != null)
+        {
+            @foreach (var lc in Beam.LoadContext.BelastingGevallen)
+            {
+                <FluentTab Id="@($"tab-lc-{lc.Id}")" Label="@lc.Naam">
+                    <Content>
+                        <BeamDiagram @bind-Beam="Beam"
+                                     Options="@GetLoadCaseDiagramOptions(lc)" />
+
+                        <BeemLoadCase @bind-Beam="Beam"
+                                      LoadCase="lc" />
+           
+                    </Content>
+                </FluentTab>
+            }
+
+            @foreach (var tab in _combiTabGroups)
+            {
+                <FluentTab Id="@($"tab-{tab.Key}")" Label="@tab.Key">
+                    <Content>
+                        
+
+                        @foreach (var diagram in GetCombinationDiagrams(tab.Value))
+                        {
+                            if (Beam.IsDirty)
+                            {
+                                BijwerkenAsync();
+                                <FluentButton OnClick="BijwerkenAsync"
+                                                Style="z-index:9999;">
+                                    Bijwerken
+                                </FluentButton>
+                            }
+                            <BeamDiagram @bind-Beam="Beam"
+                                            Options="diagram"
+                                            Height="200px" />
+                        }
+                       
+                        @if (tab.Key.ToLower().StartsWith("fun") && Beam.Profiel is BaseProfiel profiel && Beam.Materiaal is BaseMateriaal materiaal)
+                        {
+                            var tblKrachten = BeamResultsHelper.GetTabelSnedeKrachten(Beam, maxRows: 10);
+                            var tblToetsen = BeamResultsHelper.GetTabelSnedeToetsen(Beam, profiel, materiaal, sectionClass: 1, maxRows: 10);
+
+                            
+                            <TableContentRenderer Table="tblKrachten" 
+                                                  Title="Snedekrachten" />
+
+
+                            @if (profiel is IHoutProfiel || profiel is IStaalProfiel)
+                            {
+                                <TableContentRenderer Table="tblToetsen"
+                                                      Title="Snede-toetsen" />
+                            }
+
+                            @if (materiaal is BetonContext beton)
+                            {
+                                <h3>Tabel hoofdwapening</h3>
+                                var tblM = BeamResultsHelper.GetTabelBendingResults(Beam, profiel, beton);
+                                <TableContentRenderer Table="tblM.Hoofd" Title="Momentwapening" />
+
+                                <h3>Tabel dwarksrachtwapening</h3>
+                                <TableContentRenderer Table="tblM.Dwars" Title="Dwarskrachtwapning" />
+
+                            }
+
+
+
+
+                        }
+                        
+
+
+
+                    </Content>
+                </FluentTab>
+            }
+        }
+       
+    </FluentTabs>
+</div>
+
+
+<div>
+    @if (Beam.IsDirty)
+    {
+        <FluentButton OnClick="BijwerkenAsync">Bijwerken</FluentButton>
+
+    }
+    else{
+        <FluentButton OnClick="BijwerkenAsync">Bijwerken</FluentButton>
+
+    }
+</div>
+
+
+
+   
+
+  
+
+
+
+   
+
+
+
+
+
+@code {
+    [Parameter, EditorRequired] public SBLigger Beam { get; set; }
+    [Parameter] public EventCallback<SBLigger> BeamChanged { get; set; }
+
+    private static readonly Dictionary<string, Eurocode.Belastingen.BelastingCombinatieTypeEnum> _combiTabGroups =
+    new()
+    {
+        ["Fundamenteel"] = 
+        Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A |
+        Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B,
+        ["Freq"] = BelastingCombinatieTypeEnum.Frequent,
+        ["Qb"] = BelastingCombinatieTypeEnum.QuasiBlijvend,
+        ["Kar"] = BelastingCombinatieTypeEnum.Karakteristiek
+    };
+
+
+    //List<BaseSvg> svgAxis => SvgGenerator.GetSvgAxis(Beam.Profiel);
+
+
+    //private enum Schematisering
+    //{
+    //    VrijOpgelegd,
+    //    Uitkraging
+    //}
+
+    // private DIA.OptionsContext GetOptionsBg1 =>
+    //     new DIA.OptionsContext
+    //     {
+    //         ViewType = DIA.ViewType.GeometryWithLoadCase,
+    //         LoadCase = bg1,
+
+    //     };
+
+    // private DIA.OptionsContext GetDiagramBg1 => new DIA.OptionsContext
+    //     {
+    //         ViewType = DIA.ViewType.Diagram,
+    //         LoadCase = bg1,
+    //         Diagram = new()
+    //         {
+    //             LoadCase = bg1,
+    //             Source = DIA.DiagramSource.LoadCase
+    //         }
+    //     };
+
+    // private DIA.OptionsContext Bg2MomentDiagram => new DIA.OptionsContext
+    // {
+    //     ViewType = DIA.ViewType.Diagram,
+    //     LoadCase = bg2,
+    //     Diagram = new()
+    //     {
+    //         LoadCase = bg2,
+    //         Source = DIA.DiagramSource.LoadCase
+    //     }
+    // };
+
+    private DIA.OptionsContext GetLoadCaseDiagramOptions(BelastingGeval? geval)
+    {
+        return DIA.OptionsContext.GetFiguur(geval);
+    }
+
+    private DIA.OptionsContext GetLoadCaseDemo(BelastingGeval? geval)
+    {
+        return DIA.OptionsContext.GetDiagram(geval, DIA.DiagramType.ShearForceVz);
+    }
+
+    private DIA.OptionsContext GetLoadCaseDemoM(BelastingGeval? geval)
+    {
+        return DIA.OptionsContext.GetDiagram(geval, DIA.DiagramType.BendingMomentMy);
+    }
+
+
+    private IEnumerable<DIA.OptionsContext> GetCombinationDiagrams(
+    BelastingCombinatieTypeEnum type)
+    {
+        switch (type)
+        {
+            case BelastingCombinatieTypeEnum.Fundamenteel_A:
+            case BelastingCombinatieTypeEnum.Fundamenteel_B:
+            case (BelastingCombinatieTypeEnum.Fundamenteel_A | BelastingCombinatieTypeEnum.Fundamenteel_B):
+                return new[]
+                {
+                DIA.OptionsContext.GetDiagram(type, DIA.DiagramType.BendingMomentMy),
+                 DIA.OptionsContext.GetDiagram(type, DIA.DiagramType.ShearForceVz),
+                };
+            default:
+                return new[]
+                {
+                DIA.OptionsContext.GetDiagram(type, DIA.DiagramType.BendingMomentMy),
+                DIA.OptionsContext.GetDiagram(type, DIA.DiagramType.DeflectionW),
+                };
+
+        }
+
+        return type switch
+        {
+
+            (
+                BelastingCombinatieTypeEnum.Fundamenteel_A | 
+                BelastingCombinatieTypeEnum.Fundamenteel_B) => new[]
+            {
+                 DIA.OptionsContext.GetDiagram(type, DIA.DiagramType.BendingMomentMy),
+                 DIA.OptionsContext.GetDiagram(type, DIA.DiagramType.ShearForceVz),
+            },
+
+
+            BelastingCombinatieTypeEnum.Frequent | 
+            BelastingCombinatieTypeEnum.QuasiBlijvend | 
+            BelastingCombinatieTypeEnum.Karakteristiek => new[]
+        {
+                DIA.OptionsContext.GetDiagram(type, DIA.DiagramType.BendingMomentMy),
+                DIA.OptionsContext.GetDiagram(type, DIA.DiagramType.DeflectionW),
+
+            },
+
+
+
+            _ => new[]
+            {
+                 DIA.OptionsContext.GetDiagram(type, DIA.DiagramType.BendingMomentMy),
+                 DIA.OptionsContext.GetDiagram(type, DIA.DiagramType.ShearForceVz),
+            },
+        };
+    }
+
+
+
+    //DIA.OptionsContext Fig1 => DIA.OptionsContext.GetFiguur(bg1);
+    //DIA.OptionsContext Fig2 => DIA.OptionsContext.GetFiguur(bg2);
+    //DIA.OptionsContext Diagram1 => DIA.OptionsContext.GetDiagram(bg1, DIA.DiagramType.BendingMomentMy);
+    //DIA.OptionsContext Diagram2 => DIA.OptionsContext.GetDiagram(bg2, DIA.DiagramType.BendingMomentMy);
+    //DIA.OptionsContext DiagramFundamenteel => 
+    //    DIA.OptionsContext.GetDiagram(
+    //        (BelastingCombinatieTypeEnum.Fundamenteel_A | BelastingCombinatieTypeEnum.Fundamenteel_B), 
+    //        DIA.DiagramType.BendingMomentMy);
+    //DIA.OptionsContext DiagramFundamenteelVz =>
+    //DIA.OptionsContext.GetDiagram(
+    //   (BelastingCombinatieTypeEnum.Fundamenteel_A | BelastingCombinatieTypeEnum.Fundamenteel_B),
+    //   DIA.DiagramType.ShearForceVz);
+
+    //DIA.OptionsContext DiagramFrequent => DIA.OptionsContext.GetDiagram(BelastingCombinatieTypeEnum.Frequent,DIA.DiagramType.BendingMomentMy);
+    //DIA.OptionsContext DiagramQuasiBlijvend => DIA.OptionsContext.GetDiagram(BelastingCombinatieTypeEnum.QuasiBlijvend, DIA.DiagramType.BendingMomentMy);
+
+    //BelastingGeval? bg1 => Strook.Beam.LoadContext?.BelastingGevallen.FirstOrDefault();
+    //BelastingGeval? bg2 => Strook.Beam.LoadContext?.BelastingGevallen.LastOrDefault();
+    //List<BelastingCombinatie>? fundamenteel => 
+    //Strook.Beam.LoadContext?.BelastingCombinaties.
+    //Where(x => x.Type == (BelastingCombinatieTypeEnum.Fundamenteel_A | 
+    //    BelastingCombinatieTypeEnum.Fundamenteel_B)).ToList();
+    //List<BelastingCombinatie>? frequent =>
+    //Strook.Beam.LoadContext?.BelastingCombinaties.
+    //Where(x => x.Type == BelastingCombinatieTypeEnum.Frequent).ToList();
+    //List<BelastingCombinatie>? quasiBlijvend =>
+    //Strook.Beam.LoadContext?.BelastingCombinaties.
+    //Where(x => x.Type == BelastingCombinatieTypeEnum.QuasiBlijvend).ToList();
+
+
+    private string? _activeTabId = "tab1";
+    FluentTab? activeTab;
+    private void HandleOnTabChange(FluentTab tab)
+    {
+        activeTab = tab;
+    }
+
+    async Task BijwerkenAsync()
+    {
+        Beam.Compute();
+        if (BeamChanged.HasDelegate)
+        {
+            await BeamChanged.InvokeAsync(Beam); // informeert ouder
+        }
+    }
+
+    void AddLoadCase()
+    {
+        //if (Strook.Father == null) return;
+        //Strook.Father.Belastingen.BelastingGevallen.Add(new Eurocode.Belastingen.BelastingGeval { Nr = Strook.Father.Belastingen.BelastingGevallen.Count + 1 });
+    }
+
+    void DeleteLoadCase(BelastingGeval? lc)
+    {
+        //Strook.Father.Belastingen.BelastingGevallen.Remove(lc);
+    }
+
+    async Task AddPointLoad(BelastingGeval lc)
+    {
+        Mechanica.SimpleBeam.PointLoad pl = new(Beam.Length / 2.0, -10)
+        {
+            LoadCase = lc, 
+            Name = $"F{Beam.Loads.OfType<PointLoad>().Count()+1}"
+        };
+        Beam.Loads.Add(pl);
+        await BijwerkenAsync();
+    }
+
+    async Task AddDistributedLoad(BelastingGeval lc)
+    {
+        Mechanica.SimpleBeam.DistributedLoad distributedLoad = new(0, Beam.Length, -10) 
+        { 
+            LoadCase = lc, 
+            Name = $"DL{Beam.Loads.OfType<DistributedLoad>().Count()+1}" 
+        };
+        Beam.Loads.Add(distributedLoad);
+        await BijwerkenAsync();
+    }
+
+    async Task DeleteLoad(ILoad load)
+    {
+        Beam.Loads.Remove(load);
+        await BijwerkenAsync();
+    }
+
+
+    private void ProfielGekozen(IProfiel profiel)
+    {
+        if (profiel == null) return;
+        Beam.Profiel = (BaseProfiel)profiel;
+    }
+
+    // Tabellen worden nu tegenereerd via BeamResultsHelper (gedeelde logica)
+    // Zie: Construct.WebUI.Server\Components\Beam\BeamResultsHelper.cs
+   
+}

@@ -1,0 +1,123 @@
+﻿@page "/assemblage-svg"
+@using Construct.Application.Services
+@inject IJSRuntime JS
+
+@if (Model != null)
+{
+    <div id="@_containerId">
+        @((MarkupString)SvgXml)
+    </div>
+
+    <div style="margin-left:3.5px;">
+        <ButtonDownloadSvg SvgXml="@SvgXml" MaxPixels="maxPixels" FileName="@Model.Merk" Visible=@ToonDownloadButtons />
+    </div>
+}
+
+
+@code {
+    private string SvgXml = ""; // de gegenereerde SVG-XML
+    private readonly string _containerId = $"svgContainer_{Guid.NewGuid():N}"; // unieke id voor container div
+
+    [Parameter, EditorRequired] public AssemblageEntity Model { get; set; } 
+    [Parameter] public EventCallback<AssemblageEntity> ModelChanged { get; set; }
+    [Parameter] public string Style { get; set; } = "position:sticky; top:40px; z-index:10; width:100%; height:600px; border:1px solid gray";
+    [Parameter] public bool ToonDownloadButtons { get; set; } = false;
+    [Parameter] public bool ToonMaatlijnen { get; set; } = true;
+
+    // voor complete svg-model in world-Units
+    private BoundingBox boundingBox { get; set; } = new();
+
+    // voor groote van de container
+    private double widthPx { get; set; }
+    private double heightPx { get; set; }
+    private int maxPixels => (int)Math.Max(widthPx, heightPx);
+
+    private DotNetObjectReference<AssemblageSvg>? objRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            objRef = DotNetObjectReference.Create(this);
+
+            // eerste keer render
+            await UpdateSvgAsync();
+
+            // registreer dynamische resize callback
+            await JS.InvokeVoidAsync("svgHelpers.registerResizeCallback", _containerId, objRef);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnContainerResize(double width, double height)
+    {
+        widthPx = width;
+        heightPx = height;
+        await UpdateSvgAsync(width, height);
+    }
+
+    private async Task UpdateSvgAsync(double? width = null, double? height = null)
+    {
+        if (width == null || height == null)
+        {
+            var size = await JS.InvokeAsync<DomRect>("svgHelpers.getBoundingClientRect", _containerId);
+            if (size == null) return;
+            width = size.Width;
+            height = size.Height;
+        }
+
+
+        boundingBox.Reset();
+
+
+        if (Model is SteekTrapEntity steekTrap)
+        {
+            SvgXml = TrapSvgGenerator.GenerateTrapSvgXml(steekTrap, boundingBox, width.Value, height.Value, Style, ToonMaatlijnen);
+        }
+        else if (Model is BordesEntity bordes)
+        {
+            SvgXml = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100%\" height=\"100%\"><text x=\"10\" y=\"20\" fill=\"red\">Onbekend model type voor SVG generatie.</text></svg>";
+            SvgXml = SvgGenerator.GenerateBordesSvgXml(bordes, boundingBox, width.Value, height.Value, Style, ToonMaatlijnen);
+        }
+        else if (Model is KolomEntity kolom)
+        {
+            SvgXml = SvgGenerator.GenerateKolomSvgXml(kolom, boundingBox, width.Value, height.Value, Style, ToonMaatlijnen);
+        }
+        else if (Model is LiggerEntity ligger)
+        {
+            //SvgXml = SvgGenerator.Generate
+        }
+
+
+
+        else
+        {
+            // onbekend type
+            SvgXml = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100%\" height=\"100%\"><text x=\"10\" y=\"20\" fill=\"red\">Onbekend model type voor SVG generatie.</text></svg>";
+        }
+
+
+
+
+
+        StateHasChanged();
+    }
+
+    public class DomRect { public double Width { get; set; } public double Height { get; set; } }
+
+   
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        // Als het Model verandert, update SVG
+        await UpdateSvgAsync();
+    }
+
+
+
+    public void Dispose()
+    {
+        objRef?.Dispose();
+    }
+}

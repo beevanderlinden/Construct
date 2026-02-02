@@ -1,0 +1,24 @@
+﻿@page "/Project/grondslagen"
+@using Construct.Application.Services
+@using EurocodeRazorClassLibrary.Grondslagen
+@using EurocodeRazorClassLibrary.Custom
+
+@if (ProjectState?.CurrentProject == null)
+{
+    <h3>Project niet gevonden</h3>
+}
+else
+{
+    @* <EurocodeGrondslagen @bind-Model="ProjectState.CurrentProject.ProjectInfo.Grondslagen" /> *@
+    <FluentCard AreaRestricted="false">
+        <h1>Grondslagen (EC0)</h1>
+        <Grondslagen @bind-Model="ProjectState.CurrentProject.ProjectInfo.Grondslagen" />
+    </FluentCard>
+}
+
+
+
+@code {
+    [CascadingParameter] public IProjectStateService? ProjectState{ get; set; } 
+
+}

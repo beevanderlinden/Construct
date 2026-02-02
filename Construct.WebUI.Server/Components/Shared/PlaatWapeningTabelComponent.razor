@@ -1,0 +1,93 @@
+@using Eurocode.BetonConstructies
+
+@if (Model == null)
+{
+    <p>Geen plaatwapening</p>
+}
+else
+{
+    <table class="kaskon-table" style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr>
+                <th style="text-align:left; padding:6px; border-bottom:1px solid var(--neutral-stroke-2);">Vlak</th>
+                <th style="text-align:left; padding:6px; border-bottom:1px solid var(--neutral-stroke-2);">Laag</th>
+                <th style="text-align:left; padding:6px; border-bottom:1px solid var(--neutral-stroke-2);">Tekst</th>
+                <th style="text-align:left; padding:6px; border-bottom:1px solid var(--neutral-stroke-2);">Øeq</th>
+                <th style="text-align:left; padding:6px; border-bottom:1px solid var(--neutral-stroke-2);">As [mm²]</th>
+                <th style="text-align:left; padding:6px; border-bottom:1px solid var(--neutral-stroke-2);">Type</th>
+                <th style="text-align:left; padding:6px; border-bottom:1px solid var(--neutral-stroke-2);">Hoofd in</th>
+            </tr>
+        </thead>
+        <tbody>
+            @RenderRow(Model.Boven, "Boven", 1)
+            @RenderRow(Model.Boven, "Boven", 2)
+            @RenderRow(Model.Onder, "Onder", 2)
+            @RenderRow(Model.Onder, "Onder", 1)
+        </tbody>
+    </table>
+}
+
+@code {
+    [Parameter] public PlaatWapening? Model { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    RenderFragment RenderRow(PlaatWapeningGroep? groep, string vlak, int laag) => @<tr>
+        <td style="padding:6px; border-bottom:1px solid var(--neutral-stroke-2);">@vlak</td>
+        <td style="padding:6px; border-bottom:1px solid var(--neutral-stroke-2);">@laag</td>
+        @{
+            var ctx = groep != null && groep.LaagHoofdwapening == laag ? groep.BasisWapening : groep?.VerdeelWapening;
+        }
+        <td style="padding:6px; border-bottom:1px solid var(--neutral-stroke-2);">
+            @if (ctx != null)
+            {
+                <FluentTextField Value="@(ctx.Tekst ?? string.Empty)" ValueChanged="@(v => SetTekst(groep, laag, v))" />
+            }
+            else
+            {
+                <FluentTextField Value="" ValueChanged="@(v => SetTekst(groep, laag, v))" />
+            }
+        </td>
+        <td style="padding:6px; border-bottom:1px solid var(--neutral-stroke-2);">@(ctx != null ? string.Format("{0:0.#} mm", ctx.GemiddeldeDiameter) : string.Empty)</td>
+        <td style="padding:6px; border-bottom:1px solid var(--neutral-stroke-2);">@(ctx != null ? string.Format("{0:0}", ctx.As) : string.Empty)</td>
+        <td style="padding:6px; border-bottom:1px solid var(--neutral-stroke-2);">@(groep != null && groep.LaagHoofdwapening == laag ? "hoofdwapening" : "verdeel")</td>
+        <td style="padding:6px; border-bottom:1px solid var(--neutral-stroke-2);">
+            @if (groep != null)
+            {
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <label style="font-size:0.9em;">1</label>
+                    <input type="radio" name="@("r_" + vlak + "_" + groep.GetHashCode())" checked="@(groep.LaagHoofdwapening == 1)" @onchange="@(e => SetLaagHoofd(groep, 1))" />
+                    <label style="font-size:0.9em;">2</label>
+                    <input type="radio" name="@("r_" + vlak + "_" + groep.GetHashCode())" checked="@(groep.LaagHoofdwapening == 2)" @onchange="@(e => SetLaagHoofd(groep, 2))" />
+                </div>
+            }
+        </td>
+    </tr>;
+
+    void SetTekst(PlaatWapeningGroep? groep, int laag, string tekst)
+    {
+        if (groep == null) return;
+        var isHoofd = groep.LaagHoofdwapening == laag;
+        if (isHoofd)
+        {
+            if (groep.BasisWapening == null) groep.BasisWapening = new WapeningContext();
+            groep.BasisWapening.Tekst = tekst;
+            groep.BasisWapening.SetZRef();
+        }
+        else
+        {
+            if (groep.VerdeelWapening == null) groep.VerdeelWapening = new WapeningContext();
+            groep.VerdeelWapening.Tekst = tekst;
+            groep.VerdeelWapening.SetZRef();
+        }
+
+        OnChanged.InvokeAsync();
+    }
+
+    void SetLaagHoofd(PlaatWapeningGroep groep, int laag)
+    {
+        if (groep == null) return;
+        groep.LaagHoofdwapening = laag;
+        // domain will update dekkingen
+        OnChanged.InvokeAsync();
+    }
+}

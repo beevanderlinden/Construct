@@ -1,0 +1,54 @@
+﻿@typeparam TEnum where TEnum : struct, Enum
+
+<FluentCombobox Items="_enumOptions"
+                TOption="Option<string>"
+                OptionText="@(i => i.Text)"
+                OptionValue="@(i => i.Value)"
+                @bind-SelectedOption="_selectedOption"
+                @bind-Value="_selectedValue"
+                Placeholder="@Placeholder" />
+
+@code {
+    [Parameter] public TEnum? Value { get; set; }
+    [Parameter] public EventCallback<TEnum?> ValueChanged { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+
+    private List<Option<string>> _enumOptions = new();
+    private Option<string>? _selectedOption;
+    private string? _selectedValue;
+
+    protected override void OnParametersSet()
+    {
+        // Load enum options only once
+        if (!_enumOptions.Any())
+        {
+            _enumOptions = Enum.GetValues<TEnum>()
+                .Select(e => new Option<string>
+                {
+                    Value = ((int)(object)e).ToString(),
+                    Text = e.ToString()
+                })
+                .ToList();
+        }
+
+        // Zet initial value
+        var valueInt = Value.HasValue ? ((int)(object)Value.Value).ToString() : null;
+        _selectedValue = valueInt;
+        _selectedOption = _enumOptions.FirstOrDefault(o => o.Value == valueInt);
+    }
+
+    private async Task OnValueChanged(string? newValue)
+    {
+        _selectedValue = newValue;
+
+        if (int.TryParse(newValue, out int intValue))
+        {
+            TEnum enumValue = (TEnum)(object)intValue;
+            await ValueChanged.InvokeAsync(enumValue);
+        }
+        else
+        {
+            await ValueChanged.InvokeAsync(null);
+        }
+    }
+}

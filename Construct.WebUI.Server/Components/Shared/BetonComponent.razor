@@ -1,0 +1,54 @@
+﻿
+                    
+    <FluentSelectEnum Label="Betonsterkteklasse"
+                        TEnum="BetonsterkteklasseEnum"
+                        @bind-EnumSelectedValue="@Model.Betonsterkteklasse" />
+
+    @if(ToonBetonstaal)
+    {
+        <FluentSelectEnum Label="Betonstaal"
+                          TEnum="BetonStaalKwaliteitEnum"
+                          @bind-EnumSelectedValue="@Model.BetonStaal.BetonStaalKwaliteit" />
+    }
+   
+
+
+
+
+
+
+
+@code {
+
+    /// <summary>
+    /// De betoncontext.
+    /// </summary>
+    [Parameter]
+    public required BetonContext Model{ get; set; } = new();
+
+    /// <summary>
+    /// Callback is nodig voor @bind-Model
+    /// </summary>
+    [Parameter]
+    public EventCallback<BetonContext> ModelChanged { get; set; }
+
+    [Parameter]
+    public Orientation Orientation { get; set; } = Orientation.Horizontal;
+
+    [Parameter]
+    public VerticalAlignment VerticalAlignment { get; set; } = VerticalAlignment.Center;
+
+    [Parameter]
+    public HorizontalAlignment HorizontalAlignment { get; set; } = HorizontalAlignment.Left;
+
+    [Parameter]
+    public bool ToonBetonstaal { get; set; } = true;
+
+
+  
+    
+
+
+
+
+}

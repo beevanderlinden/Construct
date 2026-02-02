@@ -1,0 +1,130 @@
+﻿@using Construct.Application.Interfaces
+@using Construct.WebUI.Server.Shared.SampleData
+@using Microsoft.FluentUI.AspNetCore.Components
+@inject Construct.WebUI.Server.Shared.SampleData.DataSource SampleData
+@inject IWebHostEnvironment Env
+
+
+
+@* 
+    Toelichting werkwijze
+    Gebruik een ViewModel om zaken te valideren en te verwerken. (stuff needs to be processed)
+    Pas als dit gedaan is kan de ViewModel de wijzigingen doorgeven via de interface naar 
+    het EntityModel.
+
+    Als voorbeeld de projectinfo hieronder. 
+    Eerst moet bekeken worden of de projectnaam is ingevuld en niet te lang is.
+    Daarna kan dit pas worden doorgestuurd naar het entityModel. 
+    We kunnen dus niet de data-binding aan het entityModel koppelen, maar hebben een ViewModel (tussenmodel) nodig.
+
+*@
+
+
+<EditForm Model="@Model" OnValidSubmit="@HandleValidSubmit" FormName="project-info_fluent">
+    <DataAnnotationsValidator />
+    @*  <FluentValidationSummary /> *@
+
+
+
+    <KaskonInputContainer Label="projectnummer" Required>
+        <FluentTextField @bind-Value="Model.Nummer" Size="40" Required Maxlength="20" />
+        <FluentValidationMessage For="@(() => Model.Nummer)" />
+    </KaskonInputContainer>
+
+
+  
+    <KaskonInputContainer Label="projectnaam" Required>
+        <FluentTextField @bind-Value="Model.Naam" Size="40" Required Maxlength="40"/>
+        <FluentValidationMessage For="@(() => Model.Naam)" />
+    </KaskonInputContainer>
+   
+    <KaskonInputContainer Label="plaatsnaam" Required>
+        <FluentTextField @bind-Value="Model.Plaatsnaam" Size="40" Required Maxlength="40"/>
+        <FluentValidationMessage For="@(() => Model.Plaatsnaam)" />
+    </KaskonInputContainer>
+
+
+
+
+
+    <p>&nbsp;</p>
+    <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" @onsubmit="HandleValidSubmit">Bijwerken</FluentButton>
+
+    @if (Env.IsDevelopment())
+    {
+        <FluentButton @onclick="AutofillTestData">Autofill test data</FluentButton>
+    }
+
+
+
+</EditForm>
+
+
+
+
+
+@code {
+    [Parameter] public ProjectInfoViewModel Model { get; set; } = new();
+
+    [CascadingParameter] public ProjectEntity? ProjectEntity { get; set; }
+    [CascadingParameter] public IProjectStateService? ProjectState { get; set; }
+    [Parameter] public EventCallback<ProjectInfoViewModel> ModelChanged { get; set; }
+
+
+    private void AutofillTestData()
+    {
+        Model.Nummer = "8080";
+        Model.Naam = "Voorbeeld";
+        Model.Plaatsnaam = "DEN HAAG";
+
+    }
+
+    async Task UpdateModel()
+    {
+        if (ProjectState?.CurrentProject != null)
+        {
+            // overschrijf de projectlabels (indien aanwezig)
+            //foreach
+            //ProjectState.CurrentProject.Documenten.
+            // nee, dat moet anders.. 
+        }
+
+        await ModelChanged.InvokeAsync(Model);
+    }
+
+
+
+
+
+    //FluentAutocomplete<string> CityList = default!;
+    IEnumerable<string> SelectedItems = Array.Empty<string>();
+
+    private void OnSearch(OptionsSearchEventArgs<string> e)
+    {
+        e.Items = SampleData.PlaatsnamenNL.Where(i => i.StartsWith(e.Text, StringComparison.OrdinalIgnoreCase))
+                             .OrderBy(i => i);
+    }
+
+
+    private async Task HandleValidSubmit()
+    {
+        Console.WriteLine("HandleValidSubmit called");
+        await UpdateModel();
+
+        
+        StateHasChanged(); 
+
+
+
+        // Process the valid form
+        //await UpdateToolboxProject();
+
+        
+        // 
+
+
+        
+
+    }
+
+}

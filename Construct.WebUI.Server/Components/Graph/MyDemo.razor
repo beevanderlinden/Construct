@@ -1,0 +1,18 @@
+﻿@namespace Giraffe
+
+<h3>Welkom bij GiraffeDrive</h3>
+
+<p>Dit is een voorbeeldcomponent in de namespace <code>Giraffe</code>.</p>
+
+<button @onclick="ClickMe">Klik mij!</button>
+
+<p>@message</p>
+
+@code {
+    private string message = "";
+
+    private void ClickMe()
+    {
+        message = "Je hebt op de knop geklikt!";
+    }
+}

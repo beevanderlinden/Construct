@@ -1,0 +1,80 @@
+﻿@using Construct.Application.Interfaces
+@inject IFileService FileService
+@inject IAppSettingService AppSettingService
+@inject IProjectFileService ProjectFileService
+@inject IProjectStateService ProjectState
+@inject IToastService ToastService
+@inject NavigationManager Navigation
+@inject ILogService Log
+
+
+
+@* <Construct.WebUI.Server.Components.Pages.File.CprjDirectory /> *@
+<Construct.WebUI.Server.Components.Pages.File.CprjFiles/>
+
+
+
+
+@code {
+    //private List<string> projectFiles = [];
+    private List<ProjectFileInfo> projectFileInfos = [];
+    private string? selectedFile;
+    //private bool _isLoaded;
+    private string? defaultSavePath;
+
+    [Obsolete("Gebruik lokale map")]
+    private async void SelectProject(string file)
+    {
+        selectedFile = file;
+        await LoadProjectAsync();
+        Navigation.NavigateTo("/Project/assemblages");
+
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            defaultSavePath = await AppSettingService.GetDefaultSavePathAsync();
+            //projectFiles = await AppSettingService.GetAvailableProjectFilesAsync();
+            projectFileInfos = await ProjectFileService.GetAvailableProjectFilesWithInfoAsync();
+            //_isLoaded = true;
+            StateHasChanged(); // handmatig her-renderen omdat we async werken
+        }
+    }
+
+
+    [Obsolete ("Gebruik lokale map")]
+    private async Task LoadProjectAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(selectedFile))
+        {
+            string path = Path.Combine("", selectedFile);
+
+            await Task.Delay(1000); // Simuleer een vertraging van 1 seconde
+
+            Console.WriteLine("Open project => " + path);
+
+            //ProjectEntity project = FileService.Load(path);
+            ProjectEntity project = FileService.Load<ProjectEntity>(path);
+
+            if (project != null)
+            {
+                project.InitAll();
+                ProjectState.SetProject(project);
+                ToastService.ShowToast(ToastIntent.Success, $"Project geladen \r\n{project.ProjectInfo}");
+                StateHasChanged();
+            }
+
+            //FileService.Load(path);
+
+            // var json = await File.ReadAllTextAsync(selectedFile);
+            // var project = JsonSerializer.Deserialize<ProjectEntity>(json);
+            // if (project != null)
+            // {
+            //     ProjectState.SetProject(project);
+            // }
+        }
+    }
+}
+

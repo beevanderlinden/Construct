@@ -1,0 +1,95 @@
+﻿@if (Model != null && Model.ProjectInfo != null)
+{
+    <div style="display:flex; align-items:flex-start; gap:2rem; flex-wrap:wrap; min-height:4cm;">
+        <!-- links -->
+        <div style="flex:0 0 auto;">
+            <table style="border-collapse:collapse; width:100%;">
+                <tbody>
+                    <tr>
+                        <td style="font-weight:600; padding:0.25rem 0.5rem;">Project:</td>
+                        <td style="padding:0.25rem 0.5rem;">@Model.ProjectInfo.ToString()</td>
+                    </tr>
+
+                    <tr>
+                        <td style="font-weight:600; padding:0.25rem 0.5rem;">Grondslagen:</td>
+                        <td style="padding:0.25rem 0.5rem;">@Model.ProjectInfo.Grondslagen.ToMarkupString()</td>
+                    </tr>
+
+                     <tr>
+                        <td style="font-weight:600; padding:0.25rem 0.5rem;">Gebruiksklasse:</td>
+                        <td style="padding:0.25rem 0.5rem;">@Model.GebruiksklasseUserFriendlyName</td>
+                    </tr>
+
+                    <tr>
+                        <td style="font-weight:600; padding:0.25rem 0.5rem;">Materialen:</td>
+                        <td style="padding:0.25rem 0.5rem;">@Model.Materiaal.ToMarkupString()</td>
+                    </tr>
+
+                    @foreach (var t in Model.Toetsen.Where(t=>t != null))
+                    {
+                        <tr>
+                            <td style="font-weight:600; padding:0.25rem 0.5rem;">@t.Heading:</td>
+                            <td style="padding:0.25rem 0.5rem;">@Emoji(t.IsValidated)</td>
+                        </tr>
+                    }
+
+                </tbody>
+            </table>
+        </div>
+
+        <!-- rechts -->
+        <div style="flex:1 1 auto; overflow-x:auto;">
+             <AssemblageSvg Model="Model" Style="height:10cm;" />
+        </div>
+    </div>
+}
+else
+{
+    <p>Model: @Model?.Naam</p>
+    <p>ProjectInfo: @Model?.ProjectInfo?.ToString()</p>
+
+    <div style="min-height:12cm; display:flex; align-items:center; justify-content:center;">
+        Bezig met laden...
+    </div>
+}
+
+
+
+
+
+
+@code {
+    [Parameter]
+    public required AssemblageEntity Model {get; set; }
+    [Parameter]
+    public EventCallback<AssemblageEntity> ModelChanged { get; set; }
+
+
+    private SteekTrapEntity? steekTrapEntity => Model as SteekTrapEntity;
+    private BordesEntity? bordesEntity => Model as BordesEntity;
+
+    private static string Emoji(bool validated)
+    {
+        return validated ? "✅" : "⚠️";
+    }
+    
+    @code 
+    {
+        private bool showContent;
+
+        protected override async Task OnInitializedAsync()
+        {
+            // kleine delay zodat layout eerst kan stabiliseren
+            await Task.Delay(20);
+            
+            // data ophalen / initialiseren hier
+            // Model = await LoadModelAsync();
+
+            showContent = true;
+        }
+    }
+
+
+
+
+}

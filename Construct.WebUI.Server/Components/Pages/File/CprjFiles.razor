@@ -1,0 +1,129 @@
+﻿@inject IJSRuntime JS
+@inject IProjectFileService ProjectFileService
+@inject IProjectStateService ProjectStateService
+@inject IFileService FileService
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+@using System.IO.Compression
+@using Construct.Application.Interfaces
+@using Construct.Application.Services
+
+
+@* <FluentButton OnClick="KiesGebruikersmapOfOpenOpgeslagenMap">Laad projecten</FluentButton> *@
+
+@if (projectFileInfos.Any())
+{
+    <ProjectCardList ProjectFileInfos="projectFileInfos" 
+                     OnSelectedProjectFileInfoChanged="SelectProjectFileInfo" />
+}
+else if (!string.IsNullOrEmpty(geselecteerdeMapNaam))
+{
+    <p>
+        Geen project-bestanden in huidige map.<br />
+        <i>Submappen worden niet ondersteund.</i>
+    </p>
+
+}
+
+
+
+@code {
+    private List<ProjectFileInfo> projectFileInfos = [];
+    private ProjectFileInfo? selectedProjectFileInfo;
+
+    string? geselecteerdeMapNaam;
+
+    //private async Task ToonGeselecteerdeMap()
+    //{
+    //    geselecteerdeMapNaam = await JS.InvokeAsync<string>("window.dirInterop.getSelectedDirectoryName");
+    //}
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        //await KiesGebruikersmapOfOpenOpgeslagenMap();
+    }
+
+
+    // private async Task KiesGebruikersmapOfOpenOpgeslagenMap()
+    // {
+    //     try
+    //     {
+    //         projectFileInfos = await ProjectFileService.GetProjectFilesFromUserDirectoryAsync(JS);
+    //         projectFileInfos = projectFileInfos.OrderByDescending(i => i.LastModified).ToList();
+    //         await ToonGeselecteerdeMap();
+    //     }
+    //     catch (JSException jsEx) when (jsEx.Message.Contains("The user aborted"))
+    //     {
+    //         // Optioneel: laat de gebruiker weten dat er niets is geselecteerd
+    //         Console.WriteLine("Gebruiker heeft selectie geannuleerd.");
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Console.WriteLine($"Onverwachte fout bij mapselectie: {ex.Message}");
+    //     }
+
+    // }
+
+    private async void SelectProjectFileInfo(ProjectFileInfo projectFileInfo)
+    {
+        selectedProjectFileInfo = projectFileInfo;
+        await LoadProjectAsync();
+        NavigationManager.NavigateTo("/Project/assemblages");
+    }
+
+    private async Task LoadProjectAsync()
+    {
+        if (selectedProjectFileInfo == null)
+        {
+            return;
+        }
+
+        await Task.Delay(10); // Simuleer een vertraging
+
+        ProjectEntity? project = FileService.LoadFromBase64<ProjectEntity>(selectedProjectFileInfo.Base64);
+
+        if (project != null)
+        {
+            project.InitAll();
+            ProjectStateService.SetProject(project);
+            ProjectStateService.SetProjectFileInfo(selectedProjectFileInfo);
+            ToastService.ShowToast(ToastIntent.Success, $"Project geladen \r\n{project.ProjectInfo}");
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenCprj(DriveItem driveItem)
+    {
+        Console.WriteLine($"Open: {driveItem.Name}");
+
+        // Hier kun je de logica toevoegen om het .cprj-bestand te openen
+        var projectFileInfo = await ProjectFileService.GetProjectFileInfo(driveItem.WebUrl);
+        if (projectFileInfo != null)
+        {
+            // laad het project uit de Base64 die in de ProjectFileInfo zit
+            ProjectEntity? project = FileService.LoadFromBase64<ProjectEntity>(projectFileInfo.Base64);
+            // cotroleer of het project niet null is
+            if (project == null)
+            {
+                ToastService.ShowError("Kan project niet laden.");
+                return;
+            }
+            ProjectStateService.SetProject(project); // stel het project in
+            ProjectStateService.SetProjectFileInfo(projectFileInfo); // en ook de ProjectFileInfo
+            NavigationManager.NavigateTo("/Project/assemblages"); // navigeer naar de projectpagina
+        }
+        else
+        {
+            ToastService.ShowError("Kan project-bestand niet vinden.");
+        }
+
+
+
+    }
+
+
+   
+}
+
+

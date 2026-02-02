@@ -1,0 +1,54 @@
+﻿@page "/Lab/protected"
+@using Construct.Application.GraphModels
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IGraphDriveService GraphDriveService
+
+<h3>Beveiligde pagina</h3>
+
+<!-- demo login -->
+@* <Giraffe.MgtLogin /> *@
+
+<!-- Selecteer source-->
+<Giraffe.DriveSourceSelector @bind-SelectedSource="@selectedSource"/>
+
+
+
+
+
+
+<!-- treeview -->
+<Construct.WebUI.Server.Components.Graph.DriveItemTreeView SelectedSource="@selectedSource" />
+
+
+@* <Construct.WebUI.Server.Components.Pages.File.SaveAs>
+
+</Construct.WebUI.Server.Components.Pages.File.SaveAs>
+
+<Giraffe.DriveTest /> *@
+
+
+
+
+
+@code {
+    private ClaimsPrincipal? user;
+    private AuthenticationState? authState;
+    private bool isAdmin = false;
+    private bool hasLicentie = false;
+    //private List<DriveItemNode> nodes = [];
+    private string selectedSource { get; set; } = "appfolder";
+
+    protected override async Task OnInitializedAsync()
+    {
+        //authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        //user = authState.User;
+
+        //isAdmin = user.IsInRole("Admin");
+        //hasLicentie = user.HasClaim("Licentie", "Vrij");
+
+        //nodes = await GraphDriveService.LoadDriveItemTreeAsync("appfolder");
+
+
+    }
+}

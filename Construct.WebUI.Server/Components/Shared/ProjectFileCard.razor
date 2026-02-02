@@ -1,0 +1,62 @@
+﻿
+<FluentCard style="width: 300px; height: 250px; margin: 0.5rem; display: flex; flex-direction: column; justify-content: space-between; position: relative; padding: 1rem;">
+
+   
+    <!-- Verwijderknop rechtsboven -->
+    <!-- Nu even disabled -->
+    <FluentButton 
+        Disabled=true
+        Appearance="Appearance.Stealth" style="position: absolute; top: 0.5rem; right: 0.5rem;"
+                  
+    @onclick="() => OnDelete.InvokeAsync(File)">
+        ❌
+    </FluentButton>
+
+   
+    @* <!-- Save-as knop -->
+    <FluentButton Appearance="Appearance.Stealth" style="position: absolute; top: 2.5rem; right: 0.5rem;" 
+                  @onclick="() => OnSaveAs.InvokeAsync(File)">
+        🧬
+    </FluentButton> *@
+
+
+
+    <!-- Bestandsinformatie -->
+    <div>
+        @* <p style="margin: 0;">📁 @File.FilePath</p> *@
+        <p style="margin: 0;">🔢 @File.Info.Nummer</p>
+        <p style="margin: 0;">🏗️ @File.Info.Naam</p>
+        <p style="margin: 0;">🌍 @File.Info.Plaatsnaam</p>
+        @* <p style="margin: 0;">🚧 @File.Info.Grondslagen.Betrouwbaarheidsklasse</p> *@
+        <p style="margin: 0;">💾 <TimeAgoComponent TargetTime="@File.LastModified" Interval="10000" /></p>
+        <p style="margin: 0;">💽 @File.SizeUserFriendly</p>
+    </div>
+
+    <!-- Grote Openen-knop onderaan -->
+    <FluentButton Appearance="Appearance.Accent" style="width: 100%; margin-top: 0.5rem;" 
+    @onclick="() => OnOpen.InvokeAsync(File)">
+        📂 Openen
+    </FluentButton>
+</FluentCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProjectFileInfo File { get; set; } = default!;
+
+    [Parameter] public EventCallback<ProjectFileInfo> OnDelete { get; set; }
+    [Parameter] public EventCallback<ProjectFileInfo> OnSaveAs { get; set; }
+    [Parameter] public EventCallback<ProjectFileInfo> OnOpen { get; set; }
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private async Task ConfirmDelete(ProjectFileInfo file)
+    {
+        if (await JS.InvokeAsync<bool>("confirm", $"Weet u zeker dat u '{file.FilePath}' wilt verwijderen?"))
+        {
+            await OnDelete.InvokeAsync(file);
+        }
+    }
+
+   
+
+}

@@ -1,0 +1,458 @@
+﻿@page "/Project/assemblages"
+@using Construct.Application.Interfaces
+@using Construct.Domain
+@inject IDialogService DialogService
+@inject IAssemblageService AssemblageService
+@inject IProjectService ProjectService
+@inject IProjectFileService ProjectFileService
+@inject IFileService FileService
+@inject IFileDownloadService FileDownloadService
+@inject IAppSettingService AppSettingService
+@inject IToastService ToastService
+@inject ILogService Log
+@inject IJSRuntime JS
+@inject IGraphDriveService GraphDriveService
+
+
+<AddAssemblage Visible="@_addButtonVisible"  
+               CreateAssemblageClicked="CreateAssemblage" 
+               MenuOpen="MenuOpen" />
+
+
+@* <FluentSwitch Value="_toonCardView"></FluentSwitch> Cardview: @_toonCardView *@
+
+
+@if (_geselecteerdeAssemblage != null &&
+_geselecteerdeAssemblage is SteekTrapEntity
+)
+{
+    <EditSteekTrap Visible="_wizardVisible" 
+    @bind-SteekTrap="@GeselecteerdeSteekTrap"
+    WizardClosed="WizardSteekTrapClosed"></EditSteekTrap>
+}
+
+
+@if (_geselecteerdeAssemblage != null)
+{
+    <EditAssemblage 
+        Visible="_wizardVisible"
+        @bind-Model="_geselecteerdeAssemblage"
+        EditorClosed="WizardSteekTrapClosed"></EditAssemblage>
+}
+
+
+
+<DataGridAssemblages 
+Items="@Items"
+Visible="@_datagridVisible"
+ToonCardView="@_toonCardView"
+SteekTrappen="@SteekTrappen"
+ViewItemClicked="ViewItem"
+EditItemClicked="EditItem"
+DeleteItemClicked="DeleteItem" />
+
+
+
+
+@code {
+    //[Parameter]
+    //public Kaskon.Toolbox.PrefabModels.Project ToolboxProject { get; set; } = new(); // Cascading Value vanuit MainLayout
+
+
+    [CascadingParameter] public ProjectEntity? ProjectEntity { get; set; }
+    [CascadingParameter] public IProjectStateService? ProjectState { get; set; }
+
+    private bool _toonCardView { get; set; } = !true;
+    private AssemblageEntity? _geselecteerdeAssemblage { get; set; } = null; // geselecteerde item (voor wizard) 
+    private SteekTrapEntity? _geselecteerdeSteekTrap { get; set; } = null;
+
+    public SteekTrapEntity? GeselecteerdeSteekTrap
+    {
+        get => _geselecteerdeSteekTrap;
+        set
+        {
+            if (_geselecteerdeSteekTrap != value)
+            {
+                _geselecteerdeSteekTrap = value;
+
+                // ✅ hier trigger je Bereken/BerekenEnValideer
+                //_geselecteerdeSteekTrap?.Doorbuiging.BerekenEnValideer();
+            }
+        }
+
+    }
+
+    public string BerekenDoorbuiging
+    {
+        get
+        {
+            if (_geselecteerdeSteekTrap == null) return "";
+            else
+            {
+
+                return _geselecteerdeSteekTrap.DoorbuigingValidatie.BerekenEnValideer().ToString();
+                
+                //return _geselecteerdeSteekTrap.Doorbuiging.BerekenEnValideer().ToString();
+            }
+        }
+
+
+
+    }
+
+    private bool _addButtonVisible { get; set; } = true;
+    private bool _datagridVisible { get; set; } = true;
+    private bool _addButtonOpen { get; set; } = false;
+    private bool _wizardVisible { get; set; } = false;
+
+    //private bool _wizardVisible{get{ return (!_datagridVisible && !_addButtonOpen); }}
+
+    private bool _saveToOneDrive { get; set; } = false;  // indien OneDrive gebruikt kan worden
+    private bool _saveToDownloadFolder { get; set; } = !true; // als je dit aanzet, wordt het bestand gedownload (elke keer bij afronden berekening)
+    private bool _saveToLocalFolder { get; set; } = false; // bij gebruik van locale folder.
+
+    private IQueryable<AssemblageViewModel>? Items;
+    private IQueryable<SteekTrapEntity>? SteekTrappen;
+
+    protected override void OnInitialized()
+    {
+        ProjectState.OnProjectChanged += OnProjectChangedHandler;
+
+        LaadItems();
+    }
+
+    private void OnProjectChangedHandler()
+    {
+        InvokeAsync(async () =>
+        {
+            await Task.Yield();   // zorgt dat Undo/Redo volledig klaar is
+            LaadItems();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        ProjectState.OnProjectChanged -= OnProjectChangedHandler;
+    }
+
+
+    private void LaadItems()
+    {
+        if (ProjectEntity == null) return;
+        var list = new List<AssemblageViewModel>();
+        var steekTrappen = new List<SteekTrapEntity>();
+        foreach (var entity in ProjectEntity.Assemblages)
+        {
+            // wat voor ding is het?
+            var ding = entity.GetType().Name;
+
+            list.Add(new AssemblageViewModel() { AssemblageEntity=entity, Guid = entity.Guid, Naam = entity.Naam, Merk = entity.Merk, MainPart = ding });
+            if (entity is SteekTrapEntity steekTrap)
+            {
+                //SteekTrapService service = new();
+               // _ = service.BerekenSteektrap(steekTrap);
+                steekTrappen.Add(steekTrap);
+            }
+        }
+        Items = list.AsQueryable().OrderBy(asmbly=>asmbly.Merk);
+        SteekTrappen = steekTrappen.AsQueryable();
+
+    }
+
+
+
+
+    private async void WizardSteekTrapClosed()
+    {
+        // toon weer het grid en de knop
+        _datagridVisible = _addButtonVisible = true;
+        _wizardVisible = false;
+
+
+        // opslaan (nieuw)
+        @if(ProjectState != null && 
+            //ProjectState.ProjectFileInfo != null &&
+            ProjectState.CurrentProject != null)
+        {
+            // maak de bytes (gecomprimeerd)
+
+            try
+            {
+                
+            
+        var bytes = await ProjectService.GetGzippedBytes(ProjectState.CurrentProject);
+            
+            // voor debug, gebruik niet gecomprimeerde versie
+            //bytes = await FileService.GetJsonBytesAsync(ProjectState.CurrentProject);
+            
+
+            // naar OneDrive.. bewaar code
+            if (_saveToOneDrive)
+            {
+                if (ProjectState.ProjectFileInfo == null)
+                {
+                    ToastService.ShowToast(ToastIntent.Error, "Kan project niet opslaan, omdat de projectfileinfo niet is ingesteld.");
+                    return;
+                }
+                await GraphDriveService.AutoSave(ProjectState.ProjectFileInfo, bytes);
+                ToastService.ShowToast(ToastIntent.Success, $"Project opgeslagen in OneDrive");
+            }
+
+            // sla op in de download folder
+            if (_saveToDownloadFolder)
+            {
+                //string fileName = ProjectState?.ProjectFileInfo?.FilePath ? ;
+                
+                string fileName = $"{ProjectState.CurrentProject.ProjectInfo.Nummer}-my-project-file.cprj";
+                string contentType = "application/octet-stream";
+                var binaryContent = bytes;
+                await FileDownloadService.DownloadAsync(fileName, contentType, binaryContent);
+                ToastService.ShowToast(ToastIntent.Success, $"Project opgeslagen in de download folder");
+            }
+
+            // sla op in de lokale folder
+            if (_saveToLocalFolder)
+            {
+                await ProjectFileService.AutoSave(JS, ProjectState.ProjectFileInfo);
+                ToastService.ShowToast(ToastIntent.Success, $"Project opgeslagen in lokale folder");
+            }
+
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+
+            // vroeger gingen we opslaan in de map die de gebruiker had gekozen (bewaar code)
+            //await ProjectFileService.AutoSave(JS, ProjectState.ProjectFileInfo);
+            //ToastService.ShowToast(ToastIntent.Success, $"Project opgeslagen");
+        }
+        else
+        {
+            // wat is er aan de hand?
+            if (ProjectState == null)
+            {
+                ToastService.ShowToast(ToastIntent.Error, "Kan project niet opslaan, omdat de projectstate niet is ingesteld.");
+                return;
+            }
+
+            if (ProjectState.ProjectFileInfo == null)
+            {
+                
+            }
+
+            if (ProjectState.CurrentProject == null)
+            {
+                ToastService.ShowToast(ToastIntent.Error, "Kan project niet opslaan, omdat het huidige project niet is ingesteld.");
+                return;
+            }
+
+
+
+            // dit gedeelte van de code weghalen als hierboven werkt
+            // opslaan van het project
+            var defaultSavePath = await AppSettingService.GetDefaultSavePathAsync();
+            string path = string.Empty;
+            if (defaultSavePath != null &&
+                ProjectState != null &&
+                ProjectState.CurrentProject != null &&
+                ProjectState.CurrentProject.ProjectInfo != null
+            )
+            {
+                path = Path.Combine(defaultSavePath, $"{ProjectState.CurrentProject.ProjectInfo.Nummer}.cprj");
+
+                await FileService.SaveAsync(path, ProjectState.CurrentProject);
+
+                ToastService.ShowToast(ToastIntent.Success, $"Project opgeslagen \r\n{path} ");
+
+            }
+        }
+
+
+
+
+        // map naar viewmodel
+        if (_geselecteerdeAssemblage != null && Items != null)
+        {
+            var viewModel = Items.FirstOrDefault(a => a.Guid == _geselecteerdeAssemblage.Guid);
+            if (viewModel != null)
+            {
+                viewModel.Naam = _geselecteerdeAssemblage.Naam;
+                viewModel.Merk = _geselecteerdeAssemblage.Merk;
+            }
+        }
+
+
+
+        // werk de lijst met viewmodels bij..
+        // if (_geselecteerdeSteekTrap != null && Items != null)
+        // {
+        //     var fod = Items.FirstOrDefault(x => x.Guid == _geselecteerdeSteekTrap.Guid);
+        //     if (fod != null)
+        //     {
+        //         fod.Naam = _geselecteerdeSteekTrap.Naam;
+        //         fod.Merk = _geselecteerdeSteekTrap.Merk;
+        //     }
+        // }
+    }
+
+
+    private async void ViewItem(AssemblageViewModel viewModel)
+    {
+        await DialogService.ShowInfoAsync(message: $"View clicked ({viewModel.Naam}) Implementatie");
+
+    }
+
+    private void EditItem(AssemblageViewModel viewModel)
+    {
+        var assemblage = ProjectEntity?.Assemblages.FirstOrDefault(x => x.Guid == viewModel.Guid);
+        if (assemblage != null)
+        {
+            _geselecteerdeAssemblage = assemblage;
+            if (assemblage is SteekTrapEntity steekTrap)
+            {
+                _geselecteerdeSteekTrap = steekTrap;
+
+
+                _geselecteerdeSteekTrap.IsAkkoord();
+
+            }
+
+            _datagridVisible = false;
+            _addButtonVisible = false;
+            _wizardVisible = true;
+        }
+    }
+
+
+    async Task HandleConfirmationResult(DialogResult dr)
+    {
+        if(!dr.Cancelled)
+        {
+            if (_geselecteerdeAssemblage != null && ProjectEntity != null)
+            {
+                //await AssemblageService.DeleteAsync(_geselecteerdeSteekTrap.Guid);
+                await ProjectService.VerwijderAssemblage(ProjectEntity, _geselecteerdeAssemblage.Guid);
+                ProjectState?.MarkDirty();
+                LaadItems();
+
+                //StateHasChanged();
+            }
+        }
+    }
+
+
+
+
+    private async void DeleteItem(AssemblageViewModel viewModel)
+    {
+        if (viewModel != null && ProjectEntity != null)
+        {
+            var assemblage = ProjectEntity.Assemblages.FirstOrDefault(x => x.Guid == viewModel.Guid);
+            if (assemblage != null)
+                _geselecteerdeAssemblage = assemblage;
+
+
+            // 1️⃣ Voor de wijziging snapshot maken
+            ProjectState?.Snapshot();
+
+            // verwijderen
+            var bericht = DialogService.ShowConfirmationAsync(this, HandleConfirmationResult, "Weet u dit zeker?", "Ja", "Cancel", $"Verwijder ({viewModel.Naam})");
+
+
+
+
+
+        }
+    }
+
+
+    private void UpdateSteekTrap(SteekTrapEntity steekTrap)
+    {
+        if (steekTrap != null && Items != null && ProjectEntity != null)
+        {
+            var list = Items.ToList(); 
+            ProjectEntity.Assemblages.Add(steekTrap);
+            list.Add(new AssemblageViewModel() { Guid = steekTrap.Guid, Naam = steekTrap.Naam, Merk = steekTrap.Merk });
+            Items = list.AsQueryable().OrderBy(a=>a.Merk);
+        }
+    }
+
+
+    private void CreateAssemblage(AssemblageEntity assemblageEntity)
+    {
+        if (assemblageEntity != null && Items != null && ProjectEntity != null)
+        {
+            Log.StartBusy($"Nieuw onderdeel ({assemblageEntity.Naam}) wordt aangemaakt");
+            StateHasChanged();
+            ProjectState?.Snapshot();
+
+
+            var list = Items.ToList();
+
+
+            // voeg toe aan project
+            ProjectEntity.Assemblages.Add(assemblageEntity);
+
+            // als het merk als bestaat dan (1) erachter
+            var bestaandeMerknamen = list.Where(a=> a.Merk is not null).Select(a => a.Merk).ToList();
+            if (bestaandeMerknamen.Any())
+            {
+                assemblageEntity.Merk = Construct.WebUI.Server.Helpers.FileNameHelper.GetUniqueFileName(assemblageEntity.Merk!, bestaandeMerknamen!);
+            }
+
+
+
+            list.Add(new AssemblageViewModel() { 
+                Guid = assemblageEntity.Guid, 
+                AssemblageEntity = assemblageEntity,
+                Naam = assemblageEntity.Naam, 
+                Merk = assemblageEntity.Merk, 
+                MainPart = assemblageEntity.GetType().Name });
+                Items = list.AsQueryable().OrderBy(a=>a.Merk);
+
+            _datagridVisible = true;
+            _addButtonVisible = true;
+
+
+            // // open de eigenschappen
+            // _geselecteerdeAssemblage = assemblageEntity;
+            // // maar welk scherm
+            // string type = _geselecteerdeAssemblage.GetType().Name.ToLower();
+            // switch (type)
+            // {
+            //     case "steektrapentity":
+            //         _geselecteerdeSteekTrap = (SteekTrapEntity)_geselecteerdeAssemblage;
+            //         _datagridVisible = false;
+            //         _addButtonVisible = false;
+            //         _wizardVisible = true;
+
+            //         var trapList = SteekTrappen?.ToList();
+            //         if (trapList != null)
+            //         {
+            //             trapList.Add(_geselecteerdeSteekTrap);
+            //             SteekTrappen = trapList.AsQueryable();
+            //         }
+            //         break;
+            // }
+
+            StateHasChanged();
+            Log.StopBusy($"{assemblageEntity.Merk} aangemaakt");
+
+        }
+    }
+
+    private void MenuOpen(bool menuOpen)
+    {
+        if (!_wizardVisible)
+            _datagridVisible = !menuOpen;
+
+        _addButtonOpen = menuOpen;
+    }
+
+
+
+
+
+}

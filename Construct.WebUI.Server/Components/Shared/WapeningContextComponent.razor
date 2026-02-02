@@ -1,0 +1,28 @@
+@using Eurocode.BetonConstructies
+@using System.Globalization
+
+@if (Model == null)
+{
+    <p>Geen wapening</p>
+}
+else
+{
+    <KaskonInputContainer Label="opgave wapening">
+        @if (AllowEditTekst)
+        {
+            <FluentTextField @bind-Value="Model.Tekst"></FluentTextField>
+        }
+        else
+        {
+            <FluentTextField ReadOnly="true" Value="@Model.Tekst"></FluentTextField>
+        }
+    </KaskonInputContainer>
+
+   
+}
+
+@code {
+    [Parameter] public WapeningContext? Model { get; set; }
+    [Parameter] public EventCallback<WapeningContext> ModelChanged { get; set; }
+    [Parameter] public bool AllowEditTekst { get; set; } = true;
+}

@@ -1,0 +1,132 @@
+@using ExportFactory.MigraDocContentModels
+@using Construct.WebUI.Server.Helpers
+
+@* Universele component voor het renderen van TableContent uit ExportFactory *@
+
+@if (Table != null)
+{
+    <div class="@ContainerCss" style="@ContainerStyle">
+        @if (!string.IsNullOrWhiteSpace(Title))
+        {
+            <h3>@Title</h3>
+        }
+        
+        <table class="@TableCss" style="@TableStyle">
+            @* Colgroup voor kolom breedtes *@
+            @if (Table.Headers.Any())
+            {
+                <colgroup>
+                    @foreach (var header in Table.Headers)
+                    {
+                        @if (UsePercentages)
+                        {
+                            <col style="width: @CalculatePercentage(header.CellContent.Width.Millimeter.ToString("0mm"))%" />
+                        }
+                        else
+                        {
+                            <col style="width: @header.CellContent.Width;" />
+                        }
+                    }
+                </colgroup>
+            }
+            
+            @if (!Table.HideHeaders)
+            {
+                <thead>
+                    <tr>
+                        @foreach (var header in Table.Headers)
+                        {
+                            <th>@((MarkupString)MarkdownHelper.ToInlineHtml(header.CellContent.Markdown))</th>
+                        }
+                    </tr>
+                </thead>
+            }
+            <tbody>
+                @foreach (var row in Table.Rows)
+                {
+                    <tr>
+                        @foreach (var cell in row)
+                        {
+                            <td>@((MarkupString)MarkdownHelper.ToInlineHtml(cell.Markdown))</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// De TableContent om te renderen (van ExportFactory)
+    /// </summary>
+    [Parameter, EditorRequired]
+    public TableContent? Table { get; set; }
+
+    /// <summary>
+    /// Optionele titel/heading boven de tabel
+    /// </summary>
+    [Parameter]
+    public string? Title { get; set; }
+
+    /// <summary>
+    /// CSS class voor de container div
+    /// </summary>
+    [Parameter]
+    public string ContainerCss { get; set; } = "table-wrapX";
+
+    /// <summary>
+    /// Inline style voor de container div
+    /// </summary>
+    [Parameter]
+    public string? ContainerStyle { get; set; } = "margin: 20px 0;";
+
+    /// <summary>
+    /// CSS class voor de table element
+    /// </summary>
+    [Parameter]
+    public string TableCss { get; set; } = "ec-table col-head";
+
+    /// <summary>
+    /// Inline style voor de table element
+    /// </summary>
+    [Parameter]
+    public string? TableStyle { get; set; } = "border:solid 1px #eee;";
+
+    /// <summary>
+    /// Voor print: gebruik mm/cm widths (false)
+    /// Voor scherm: gebruik percentages (true)
+    /// </summary>
+    [Parameter]
+    public bool UsePercentages { get; set; } = true;
+
+    /// <summary>
+    /// Totale breedte voor percentage berekening (182mm voor rapporten)
+    /// </summary>
+    [Parameter]
+    public double TotalWidthMM { get; set; } = 182.0;
+
+    private double CalculatePercentage(string width)
+    {
+        if (string.IsNullOrEmpty(width)) 
+            return 100.0 / (Table?.Headers.Count ?? 1);
+
+        // Parse "35mm", "6cm", etc.
+        var numericPart = new string(width.Where(c => char.IsDigit(c) || c == '.').ToArray());
+        
+        if (!double.TryParse(numericPart, System.Globalization.NumberStyles.Float, 
+            System.Globalization.CultureInfo.InvariantCulture, out double value))
+            return 100.0 / (Table?.Headers.Count ?? 1);
+
+        // Convert to mm
+        if (width.EndsWith("cm"))
+            value *= 10.0;
+        else if (width.EndsWith("mm"))
+            value *= 1.0;
+        else
+            return 100.0 / (Table?.Headers.Count ?? 1);
+
+        // Calculate percentage
+        return (value / TotalWidthMM) * 100.0;
+    }
+}

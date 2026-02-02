@@ -1,0 +1,327 @@
+﻿@using Construct.Domain.Common
+
+<h6>Algemene gegevens</h6>
+<table class="custom-data-table">
+    <tbody>
+        
+        @* <tr><td colspan="2"><h3>Algemene gegevens</h3></td></tr> *@
+
+        <tr><td>Betrouwbaarheidsklasse</td>    <td>@Model.ProjectInfo.Grondslagen.Betrouwbaarheidsklasse.ToString()</td></tr>
+        <tr><td>Gevolgklasse</td>              <td>@Model.ProjectInfo.Grondslagen.Gevolgklasse.ToString()</td></tr>
+        <tr><td>Ontwerplevensduur</td>         <td>@Model.ProjectInfo.Grondslagen.OntwerpLevensduur.GetOntwerplevensduurTekst()</td></tr>
+        <tr><td>Gebruiksklasse</td>         
+            <td style="line-height:1.28">@Model.GebruiksklasseUserFriendlyName <br/>
+                ├ q<sub>k</sub> = @Model.Krachten.Lijnlast_qk.ToString("0.00 kN/m²") <br />
+                └ Q<sub>k</sub> = @Model.Krachten.Puntlast_Qk.ToString("0.00 kN") 
+            </td>
+        </tr>
+        <tr><td>Betonsterkteklasse</td>        <td>@Model.Materiaal.UserFriendlyName</td></tr>
+        <tr><td>Betonstaal</td>                <td>@_betonstaal.BetonStaalKwaliteit</td></tr>
+        <tr><td>Milieuklasse</td>              <td>@Model.DekkingBoven.MilieuklassenUserFriendlyName</td></tr>
+        <tr><td>Dekking c<sub>nom</sub></td>   <td>@Model.DekkingBoven.DekkingNom.ToString("0 mm")</td></tr>
+        <tr><td>Dekking c<sub>prov</sub></td>  <td>@Model.DekkingBoven.DekkingToe.ToString("0 mm")</td></tr>
+    </tbody>
+</table>
+
+
+
+<h6>Afmetingen trap</h6>
+<table class="custom-data-table">
+    <tbody>
+        <tr><td>Schildikte</td><td>@Model.SchilDikte.ToString("0 mm")</td>         </tr>
+        <tr><td>Optrede</td><td>@Model.OptredeMaat.ToString("#.# mm")</td></tr>
+        <tr><td>Aantrede</td><td>@Model.AantredeMaat.ToString("0 mm")</td></tr>
+        <tr><td>Aantal optreden</td><td>@Model.OptredeAantal1.ToString("0 optreden")</td></tr>
+        
+        <tr><td>Breedte</td><td>@Model.Breedte.ToString("0 mm")</td></tr>
+        
+        <tr><td>L<sub>t</sub> grondvlak</td><td>@Model.LengteTotaal.ToString("0 mm")</td></tr>
+        <tr><td>Belasting afwerking</td><td>@Model.BelastingAfwerking.ToString("0.# kN/m²")</td></tr>
+
+
+        @if (Model.TandOpleggingBovenzijde != null)
+        {
+            <tr><td>Hoogte tand</td><td>@Model.TandOpleggingBovenzijde.TandHoogte.ToString("0 mm")</td></tr>
+            <tr><td>Lengte tand</td><td>@Model.TandOpleggingBovenzijde.TandLengte.ToString("0 mm")</td></tr>
+            <tr><td>Dikte hals</td><td>@Model.TandOpleggingBovenzijde.HalsDikte.ToString("0 mm")</td></tr>
+
+        }
+
+
+    </tbody>
+</table>
+
+<h6>Belastingen</h6>
+<table class="custom-data-table">
+    <tbody>
+        <tr><td>g<sub>g</sub> eigen gewicht</td><td>@Model.Krachten.Gk.ToString("0.00 kN/m²")</td></tr>
+        <tr><td>q<sub>k</sub> veranderlijk</td><td>@Model.Krachten.Lijnlast_qk.ToString("0.00 kN/m²")</td></tr>
+        <tr><td>Q<sub>k</sub> puntlast</td><td>@Model.Krachten.Puntlast_Qk.ToString("0.00 kN")</td></tr>
+    </tbody>
+</table>
+
+
+
+<h6>Krachten</h6>
+<table class="custom-data-table">
+    <tbody>
+        <tr>
+            <td>geval/combinatie</td>
+            <td>Moment [kNm/m¹]</td>
+            <td>Dwarskracht [kN/m¹]</td>
+        </tr>
+        
+        <tr>
+            <td>permanent</td>
+            <td>@Model.Krachten.Mk1.ToString("0.0")</td> 
+            <td>@Model.Krachten.Vk1.ToString("0.0")</td>  
+        </tr>
+
+        <tr>
+            <td>veranderlijk</td> 
+            <td>@(Math.Max(Model.Krachten.Mk2, Model.Krachten.Mk3).ToString("0.0"))</td>
+            <td>@(Math.Max(Model.Krachten.Vk2, Model.Krachten.Vk3).ToString("0.0"))</td>
+        </tr>
+        
+        
+        
+        <tr>
+            <td>fundamenteel</td>     
+            <td>@Model.Krachten.MEd.ToString("0.0")</td> 
+            <td>@Model.Krachten.VEd.ToString("0.0")</td>
+
+        </tr>
+        
+        <tr>
+            <td>quasi-blijvend</td>
+            <td>@Model.Krachten.Mqp.ToString("0.0")</td>
+            <td>@Model.Krachten.Vqp.ToString("0.0")</td>
+
+        </tr>
+
+        <tr>
+            <td>frequent</td>         
+            <td>@Model.Krachten.Mfreq.ToString("0.0")</td>
+            <td>@Model.Krachten.Vfreq.ToString("0.0")</td>
+
+        </tr>
+
+    </tbody>
+</table>
+
+
+@if (Model.MomentSchil != null)
+{
+    <h6>Momentwapening schil</h6>
+    <table class="custom-data-table">
+        <tbody>
+            <tr><td>M<sub>Ed</sub></td><td>@Model.MomentSchil.Snedekrachten?.My.ToString("0.# kNm/m¹")</td></tr>
+            <tr><td>nuttigde hoogte d</td><td>@Model.MomentSchil.D.ToString("0.# mm")</td></tr>
+            <tr><td>verhouding drukzone x/d</td><td>@Model.MomentSchil.XuD.ToString("0.####")</td></tr>
+            <tr><td>A<sub>s,req</sub></td><td>@Model.MomentSchil.AsRequired.ToString("0 mm²/m¹")</td></tr>
+            <tr><td>A<sub>s,prov</sub></td><td>@Model.MomentSchil.Wapening.GetUserFriendlyText("mm²/m¹", true)</td></tr>
+            @if (Model.MomentSchil.IsValidated)
+            {
+                <tr>
+                    <td colspan="3">
+                        <div class="success">Momentwapening akkoord</div>
+                    </td>
+                </tr>
+            }
+            else
+            {
+                <tr>
+                    <td colspan="3">
+                        <div class="error">Momentwapening niet akkoord
+                            <EurocodeMeldingenComponent Meldingen="Model.MomentSchil.Meldingen" />
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@if (Model.Scheurwijdte != null)
+{
+    <h6>Scheurwijdte</h6>
+    <ScheurwijdteSamenvattingComponent Model="Model.Scheurwijdte" />
+}
+
+@if (Model.DoorbuigingValidatie != null)
+{
+    <h6>Doorbuiging</h6>
+    <table class="custom-data-table">
+        <tbody>
+            <tr>
+                <th>Lengte [mm]</th> 
+                <th>Toets (combinatie)</th>
+                <th>w<sub>on,G</sub></th>
+                <th>w<sub>tot</sub></th>
+                <th>w<sub>c</sub></th>
+
+                <th>w<sub>max</sub></th>
+                <th>w<sub>bijk</sub></th>
+                <th>toel.</th>
+                <th>UC</th>
+            </tr>
+
+            @foreach (var db in Model.DoorbuigingValidatie.CombinatieContexts.Where(c=>c.CombinatieType != Eurocode.Belastingen.BelastingCombinatieTypeEnum.Blijvend))
+            {
+                var dbv = Model.DoorbuigingValidatie;
+                var isBijkomend = dbv.CombinatieTypeBijkomend == db.CombinatieType;
+                var isEind = dbv.CombinatieTypeEind == db.CombinatieType;
+
+                <tr>
+                    <td>@dbv.LengteMM.ToString("0")</td>
+                    <td>@(Model.DoorbuigingValidatie.CombinatieTypeEind == db.CombinatieType? "Eind": "Bijk") (@db.CombinatieType.GetDisplayShortName())</td>
+                    <td>
+                        @if (isBijkomend)
+                        {
+                            @dbv.W1.ToString("0.0")
+                        }
+                    </td>
+
+                    <td>@db.Wtot.ToString("0.0")</td> 
+
+                    <td>
+                        @if (isEind)
+                        {
+                            @dbv.Wc.ToString("0.0")
+                        }
+                    </td>
+
+                    <td title=@($"eind = {db.Wtot:0.0} + {dbv.Wc:0.0} = {db.Wmax:0.0 mm}")>
+                        
+                        @if (isEind)
+                        {
+                            @db.Wmax.ToString("0.0")
+                        }
+                    </td>
+
+                    <td title=@($"bijkomend = {db.Wtot:0.0} - {dbv.W1:0.0} = {db.Wbijk:0.0 mm}")>
+                        @if (isBijkomend)
+                        {
+                            @db.Wbijk.ToString("0.0");
+                        }
+                    </td>
+
+                    <td>@(Model.DoorbuigingValidatie.CombinatieTypeEind == db.CombinatieType ? Model.DoorbuigingValidatie.GrenswaardeEind.ToString("0.0") : Model.DoorbuigingValidatie.GrenswaardeBijkomend.ToString("0.0"))</td>
+                    
+                    <td>@(Model.DoorbuigingValidatie.CombinatieTypeEind == db.CombinatieType ? Model.DoorbuigingValidatie.UnityCheckEind.ToString("0.00") : Model.DoorbuigingValidatie.UnityCheckBijkomend.ToString("0.00"))</td>
+                </tr>
+
+            }
+
+            @if (Model.DoorbuigingValidatie.IsValidated)
+            {
+                <tr>
+                    <td colspan="9">
+                        <div class="success">Doorbuiging akkoord</div>
+                    </td>
+                </tr>
+            }
+            else
+            {
+                <tr>
+                    <td colspan="9">
+                        <div class="error">
+                            Er zijn waarschuwingen:
+                            <EurocodeMeldingenComponent Meldingen="Model.DoorbuigingValidatie.Meldingen" />
+                        </div>
+                    </td>
+                </tr>
+            }
+
+        </tbody>
+    </table>
+}
+
+@* @if (Model.Doorbuiging != null)
+{
+    <h6>Doorbuiging</h6>
+    <table class="custom-data-table">
+        <tbody>
+            <tr>
+                <td>zeeg</td><td>0 mm</td><td>zeeg niet van toepassing</td>
+            </tr>
+            <tr>
+                <td>w<sub>1</sub></td>
+                <td>@Model.DoorbuigingContext.W1.ToString("0.# mm")</td>
+            </tr>
+            <tr>
+                <td>w<sub>eind</sub></td>
+                <td>@Model.Doorbuiging.DoorbuigingEind.ToString("0.# mm")</td>
+                <td>toelaatbaar @Model.Doorbuiging.ToelaatbareDoorbuigingEind.ToString("0.0 mm")</td>
+                <td>(UC=@Model.Doorbuiging.UnityCheckDoorbuigingEind.ToString("0.00"))</td>
+            </tr>
+            <tr>
+                <td>w<sub>bijk</sub></td>
+                <td>@Model.Doorbuiging.DoorbuigingBijk.ToString("0.# mm")</td>
+                <td>toelaabaar @Model.Doorbuiging.ToelaatbareDoorbuigingBijk.ToString("0.0 mm")</td>
+                <td>(UC=@Model.Doorbuiging.UnityCheckDoorbuigingBijkomend.ToString("0.00"))</td>
+            </tr>
+
+            @if (Model.Doorbuiging.IsValidated)
+            {
+                <tr>
+                    <td colspan="4">
+                        <div class="success">Doorbuiging akkoord</div>
+                    </td>
+                </tr>
+            }
+            else
+            {
+                <tr>
+                    <td colspan="4">
+                        <div class="error">
+                            Doorbuiging niet akkoord
+                            <EurocodeMeldingenComponent Meldingen="Model.Doorbuiging.Meldingen" />
+                        </div>
+                    </td>
+                </tr>
+            }
+
+        </tbody>
+    </table>
+} *@
+
+
+@if (Model.TandOpleggingBovenzijde != null)
+{
+    <h6>Oplegneus</h6>
+    <TrapNeusComponent @bind-Model="Model.TandOpleggingBovenzijde" />
+}
+
+
+
+
+
+
+
+
+
+
+
+@code {
+    [Parameter, EditorRequired]
+    public SteekTrapEntity Model { get; set; }  
+    [Parameter]
+    public EventCallback<SteekTrapEntity> ModelChanged { get; set; }
+
+    private BetonContext? _beton
+    {
+        get
+        {
+            var beton = Model.Materiaal as BetonContext;
+            return beton;
+        }
+    }
+
+    private BetonStaalContext _betonstaal => _beton?.BetonStaal ?? new();
+
+
+
+}
+

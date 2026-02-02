@@ -1,0 +1,49 @@
+@using Construct.Domain.Entities
+@using Eurocode.BetonConstructies
+
+<div class="plaat-wapening-aanpassing">
+    <div class="alert alert-info mb-4">
+        <h5>Wapeningsaanpassing voor Bordes</h5>
+        <p class="mb-0">
+            Optimaliseer de wapening van basisstrook en versterkte strook op basis van berekende momentenlijnen.
+        </p>
+    </div>
+
+    @if(Bordes?.PlaatWapening != null)
+    {
+        foreach (var strook in Bordes.Stroken)
+        {
+            <h6 class="mt-4">Strook (@strook.Naam)</h6>
+            <StrookWapeningAanpassingComponent 
+                Strook="strook" 
+                OnWapeningChanged="HandleWapeningChanged" />
+        }
+    }
+
+   
+</div>
+
+@code {
+    [Parameter]
+    public BordesEntity? Bordes { get; set; }
+
+    [Parameter]
+    public EventCallback<BordesEntity> OnBordesChanged { get; set; }
+
+    private async Task HandleWapeningChanged(StrookEntity strook)
+    {
+        // Triggereer update van gehele bordes
+        if (Bordes != null)
+        {
+            await OnBordesChanged.InvokeAsync(Bordes);
+        }
+    }
+}
+
+<style>
+.plaat-wapening-aanpassing {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+}
+</style>

@@ -1,0 +1,249 @@
+﻿@using System.Globalization
+@using System.Text
+
+
+<svg width="100%" height="520"
+     viewBox="@($"{-Margin} {-Margin} {TotalWidth + 2 * Margin} {TotalHeight + 2 * Margin}")"
+     preserveAspectRatio="xMidYMid meet"
+     style="border:1px solid #ddd; background:white">
+    <!-- betonprofiel -->
+    <path d="@FullClosedPath"
+          fill="#d9d9d9"
+          stroke="#111"
+          stroke-width="1.5" />
+</svg>
+
+@code {
+    // ======= Invoer =======
+    [Parameter, EditorRequired] public SteekTrapEntity Trap { get; set; } 
+
+    // ======= Afgeleide maten & marge =======
+    private double Margin => 80; // tekenmarge rondom
+    private double Run => Trap.AantredeMaat;
+    private double Rise => Trap.OptredeMaat;
+    private int N => Trap.OptredeAantal1;
+    private double T => Trap.SchilDikte;
+
+    private double TotalWidth => N * Run + T;
+    private double TotalHeight => N * Rise + 2 * T;
+
+    // ======= Kern: opbouw polyline (bovenlooplijn zonder afrondingen) =======
+    // We tekenen de "bovenlooplijn" (binnencontour boven) als een zaagtand van linksboven naar rechtsbeneden.
+    // Start linksboven op hoogte = SchilDikte.
+    private List<Point> BuildTopPolyline()
+    {
+        var pts = new List<Point>();
+        double x = 0;
+        double y = T; // bovenplaat aan de achterkant (schil)
+        pts.Add(new(x, y));      // links-boven schil
+        x += T;                  // naar binnen tot begin van treden
+        pts.Add(new(x, y));
+
+        // zaagtand: N keer (horizontaal aantrede, dan verticaal omlaag optrede)
+        for (int i = 0; i < N; i++)
+        {
+            x += Run;
+            pts.Add(new(x, y));        // horizontale aantrede
+            y += Rise;
+            pts.Add(new(x, y));        // verticale optrede
+        }
+
+        // einde: rechtsbeneden bovenlooplijn
+        return pts;
+    }
+
+    // ======= Offset polyline (ondercontour-centrumlijn) =======
+    // Maakt overal een parallelle lijn op afstand "offset" (positief = normalen naar "links" van segmentrichting).
+    private List<Point> OffsetPolyline(IReadOnlyList<Point> poly, double offset)
+    {
+        var off = new List<Point>(poly.Count);
+
+        // Voor elk hoekpunt: snijpunt van de twee geoffsette lijnen
+        for (int i = 0; i < poly.Count; i++)
+        {
+            var pPrev = poly[Math.Max(i - 1, 0)];
+            var p = poly[i];
+            var pNext = poly[Math.Min(i + 1, poly.Count - 1)];
+
+            var n1 = NormalUnit(pPrev, p);   // normaal op segment (prev->p)
+            var n2 = NormalUnit(p, pNext);   // normaal op segment (p->next)
+            var l1 = OffsetLine(pPrev, p, n1, offset);
+            var l2 = OffsetLine(p, pNext, n2, offset);
+
+            // Intersectie van de twee geoffsette lijnen (robust voor colinear)
+            if (TryIntersect(l1, l2, out var ip))
+                off.Add(ip);
+            else
+            {
+                // fallback: verschuif het hoekpunt zelf met gemiddelde normaal
+                var nAvg = (n1 + n2).NormalizedSafe();
+                off.Add(p + nAvg * offset);
+            }
+        }
+        return off;
+    }
+
+    // ======= Path met fillets =======
+    // Bouwt een SVG-path uit een polyline met cirkelbogen (fillets) in hoeken met straal r.
+    // isClockwise: bepaalt boog "sweep" voor SVG (hier op basis van polyline-volgorde).
+    private string BuildFilletedPath(IReadOnlyList<Point> poly, double r, bool isClockwise)
+    {
+        if (poly.Count < 2) return string.Empty;
+        var sb = new StringBuilder();
+        var ci = CultureInfo.InvariantCulture;
+
+        // eerste punt
+        var p0 = poly[0];
+        sb.Append($"M {p0.X.ToString(ci)} {p0.Y.ToString(ci)} ");
+
+        for (int i = 1; i < poly.Count - 1; i++)
+        {
+            var a = poly[i - 1];
+            var b = poly[i];
+            var c = poly[i + 1];
+
+            var v1 = (b - a); var v2 = (c - b);
+            var u1 = v1.NormalizedSafe(); var u2 = v2.NormalizedSafe();
+
+            // binnenhoek halveringslijn; fillet chord-inkortingen
+            double theta = AngleBetween(u1, u2);                // signed hoek (rad), >0 bij linksaf
+            double alpha = Math.Abs(theta) / 2.0;
+            double t = r * Math.Tan(alpha);                     // offset langs beide benen
+
+            var pIn = b - u1 * t;                              // eind punt van eerste lijn
+            var pOut = b + u2 * t;                              // start punt van tweede lijn
+
+            // rechte lijn tot pIn
+            sb.Append($"L {pIn.X.ToString(ci)} {pIn.Y.ToString(ci)} ");
+
+            // boog bogen: straal r, grote-boog-flag=0, sweep bepaald door draai
+            int sweep = (theta > 0) ^ isClockwise ? 1 : 0;      // XOR i.v.m. SVG-oriëntatie y-down
+            sb.Append($"A {r.ToString(ci)} {r.ToString(ci)} 0 0 {sweep} {pOut.X.ToString(ci)} {pOut.Y.ToString(ci)} ");
+        }
+
+        // laatste segment naar eindpunt
+        var pLast = poly[^1];
+        sb.Append($"L {pLast.X.ToString(ci)} {pLast.Y.ToString(ci)} ");
+        return sb.ToString();
+    }
+
+    // ======= Complete gesloten vorm =======
+    // 1) Bovenlooplijn met r_top
+    // 2) Rechter kop (dikte T) naar beneden (loodrecht op laatste segment)
+    // 3) Ondercontour = offset van bovenlooplijn op afstand T, met r_onder
+    // 4) Linker kop terug omhoog om te sluiten
+    private string FullClosedPath
+    {
+        get
+        {
+            var ci = CultureInfo.InvariantCulture;
+
+            // 1) bovenlooplijn (links->rechts)
+            var top = BuildTopPolyline(); // zonder fillets
+            var topFillet = BuildFilletedPath(top, Trap.TopRadius, isClockwise: false);
+
+            // 2) rechter kop: van top-eindpunt loodrecht omlaag met afstand T
+            var endTop = top[^1];
+            var prevTop = top[^2];
+            var nEnd = NormalUnit(prevTop, endTop); // linksnormaal
+            var downVec = new Point(nEnd.Y, -nEnd.X); // normaal loodrecht op nEnd (90° cw)
+            var capRightEnd = endTop + downVec.NormalizedSafe() * T;
+
+            // 3) ondercontour = offset naar “onderzijde” (parallel met looplijn)
+            //    Omdat onze polyline links->rechts loopt en SVG y naar beneden toeneemt,
+            //    is "onder" een offset met +T in richting van de CW-normaal.
+            var bottom = OffsetPolyline(top, T * -1.0); // -1 of +1 hangt af van jouw lokale oriëntatie; dit is correct voor y-down zaagtand
+            var bottomRev = bottom.AsEnumerable().Reverse().ToList(); // we willen terugtekenen van rechts->links
+            var bottomFillet = BuildFilletedPath(bottomRev, Trap.BottomRadius, isClockwise: true);
+
+            // 4) linker kop: van bottom-start terug omhoog naar top-start
+            var startTop = top[0];
+            var firstTop = top[1];
+            var nStart = NormalUnit(startTop, firstTop); // linksnormaal aan start
+            var upVec = new Point(-nStart.Y, nStart.X);  // 90° ccw
+            var capLeftStart = startTop + upVec.NormalizedSafe() * T;
+
+            // === Path samenstellen ===
+            var sb = new StringBuilder();
+            // start exact op top-start
+            sb.Append($"M {startTop.X.ToString(ci)} {startTop.Y.ToString(ci)} ");
+            // bovenloop met kleine fillets
+            sb.Append(topFillet);
+
+            // rechter kop
+            sb.Append($"L {capRightEnd.X.ToString(ci)} {capRightEnd.Y.ToString(ci)} ");
+
+            // ondercontour met grote fillets (terug naar links)
+            sb.Append(bottomFillet);
+
+            // linker kop terug naar top-start
+            sb.Append($"L {capLeftStart.X.ToString(ci)} {capLeftStart.Y.ToString(ci)} Z");
+
+            return sb.ToString();
+        }
+    }
+
+    // ======= Kleine geometry helpers =======
+    private readonly struct Point
+    {
+        public readonly double X, Y;
+        public Point(double x, double y) { X = x; Y = y; }
+        public static Point operator +(Point a, Point b) => new(a.X + b.X, a.Y + b.Y);
+        public static Point operator -(Point a, Point b) => new(a.X - b.X, a.Y - b.Y);
+        public static Point operator *(Point a, double s) => new(a.X * s, a.Y * s);
+        public double Len() => Math.Sqrt(X * X + Y * Y);
+        public Point NormalizedSafe() { var l = Len(); return l > 1e-9 ? new(X / l, Y / l) : new(0, 0); }
+    }
+
+    private static double Dot(in Point a, in Point b) => a.X * b.X + a.Y * b.Y;
+    private static double Cross(in Point a, in Point b) => a.X * b.Y - a.Y * b.X;
+
+    // Unit "links-normaal" op segment (a->b) in SVG (y-down). Voor horizontaal rechts (1,0) => (0,1) (dus "naar beneden").
+    private static Point NormalUnit(in Point a, in Point b)
+    {
+        var v = b - a;
+        var l = v.Len();
+        if (l < 1e-9) return new(0, 0);
+        var nx = -v.Y / l;
+        var ny = v.X / l;
+        return new(nx, ny);
+    }
+
+    // Offset-lijn representatie: punt en richting
+    private readonly struct Line { public readonly Point P, D; public Line(Point p, Point d) { P = p; D = d; } }
+
+    private static Line OffsetLine(in Point a, in Point b, in Point nUnit, double d)
+    {
+        var dir = (b - a).NormalizedSafe();
+        var pShift = a + nUnit * d;
+        return new Line(pShift, dir);
+    }
+
+    private static bool TryIntersect(in Line l1, in Line l2, out Point ip)
+    {
+        // l1: P1 + t*D1 ; l2: P2 + u*D2
+        var p = l1.P; var r = l1.D;
+        var q = l2.P; var s = l2.D;
+        var rxs = Cross(r, s);
+        var qmp = q - p;
+        if (Math.Abs(rxs) < 1e-12) // evenwijdig
+        {
+            ip = new Point(double.NaN, double.NaN);
+            return false;
+        }
+        var t = Cross(qmp, s) / rxs;
+        ip = p + r * t;
+        return true;
+    }
+
+    private static double AngleBetween(in Point u, in Point v)
+    {
+        // signed angle u->v, y-down coördinaat! (maar teken blijft bruikbaar voor sweep-logica)
+        var dot = Math.Clamp(Dot(u, v), -1.0, 1.0);
+        var ang = Math.Acos(dot);
+        var s = Cross(u, v);
+        return s >= 0 ? ang : -ang;
+    }
+
+   
+}

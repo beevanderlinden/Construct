@@ -1,0 +1,94 @@
+@using System
+@using Eurocode.BetonConstructies
+
+@if (Model == null)
+{
+    <p>Geen plaatwapening</p>
+}
+else
+{
+    <div class="table-wrap">
+    <table class="ec-table col-head">
+        <thead>
+            <tr>
+                <th>Positie</th>
+                <th>Hoofdwapening</th>
+                <th>Verdeelwapening</th>
+                <th>Hoofdwap. in 1e laag?</th>
+            </tr>
+        </thead>
+        <tbody>
+            @RenderPosRow(Model.Boven, "Boven", "Boven", 1)
+            @RenderPosRow(Model.Onder, "Onder", "Onder", 1)
+        </tbody>
+    </table>
+    </div>
+}
+
+@code {
+    [Parameter] public PlaatWapening? Model { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+    // Support @bind-Model
+    [Parameter] public EventCallback<PlaatWapening?> ModelChanged { get; set; }
+
+    RenderFragment RenderPosRow(PlaatWapeningGroep? groep, string positie, string vlak, int laag) => @<tr>
+        <td>@positie</td>
+        @{
+            var basis = groep?.BasisWapening;
+            var verdeel = groep?.VerdeelWapening;
+        }
+        <td>
+            <FluentTextField Value="@(basis?.Tekst ?? string.Empty)" ValueChanged="@(v => SetHoofdTekst(groep, v))" />
+        </td>
+        <td>
+            <FluentTextField Value="@(verdeel?.Tekst ?? string.Empty)" ValueChanged="@(v => SetVerdeelTekst(groep, v))" />
+        </td>
+        <td>
+            @if (groep != null)
+            {
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="checkbox" checked="@(groep.LaagHoofdwapening == 1)" @onchange="@(e => ToggleLaagHoofdCheckbox(groep, e))" />
+                </div>
+            }
+        </td>
+    </tr>;
+
+    void SetHoofdTekst(PlaatWapeningGroep? groep, string tekst)
+    {
+        if (groep == null) return;
+        if (groep.BasisWapening == null) groep.BasisWapening = new WapeningContext();
+        groep.BasisWapening.Tekst = tekst;
+        groep.BasisWapening.SetZRef();
+        OnChanged.InvokeAsync();
+        ModelChanged.InvokeAsync(Model);
+    }
+
+    void SetVerdeelTekst(PlaatWapeningGroep? groep, string tekst)
+    {
+        if (groep == null) return;
+        if (groep.VerdeelWapening == null) groep.VerdeelWapening = new WapeningContext();
+        groep.VerdeelWapening.Tekst = tekst;
+        groep.VerdeelWapening.SetZRef();
+        OnChanged.InvokeAsync();
+        ModelChanged.InvokeAsync(Model);
+    }
+
+    void SetLaagHoofd(PlaatWapeningGroep groep, int laag)
+    {
+        if (groep == null) return;
+        groep.LaagHoofdwapening = laag;
+        // domain logic updates dekkingen
+        OnChanged.InvokeAsync();
+        ModelChanged.InvokeAsync(Model);
+    }
+
+    void ToggleLaagHoofdCheckbox(PlaatWapeningGroep groep, ChangeEventArgs e)
+    {
+        if (groep == null) return;
+        bool isChecked = false;
+        try { isChecked = Convert.ToBoolean(e.Value); } catch { isChecked = e.Value != null; }
+        groep.LaagHoofdwapening = isChecked ? 1 : 2;
+        OnChanged.InvokeAsync();
+        ModelChanged.InvokeAsync(Model);
+    }
+}

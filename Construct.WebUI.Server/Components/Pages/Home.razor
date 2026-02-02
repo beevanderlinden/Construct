@@ -1,0 +1,63 @@
+﻿@page "/"
+@attribute [Authorize]
+@using Construct.Domain
+@using Construct.WebUI.Server.Components.Pages.Project
+@inject IJSRuntime JS
+@inject IProjectStateService ProjectState
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Home</PageTitle>
+
+<h1>Construct</h1>
+
+Welkom bij Construct. Engineer hier uw prefab betonelementen.
+
+<h2>Snelle stappen</h2>
+
+<FluentButton OnClick="NaarNieuwProject">Nieuw project</FluentButton>
+<FluentButton OnClick="NaarOpenProject">Open project</FluentButton>
+@* <FluentButton OnClick="LaadProjectVanLocalStorage">Ga verder waar ik gebleven was</FluentButton> *@
+
+@code {
+    private void NaarNieuwProject()
+    {
+        NavigationManager.NavigateTo("/File/newProjectSaveFile");
+    }
+
+    private void NaarOpenProject()
+    {
+        NavigationManager.NavigateTo("/File/open");
+    }
+
+    // Dit werkt niet, nakijken.
+    private async Task LaadProjectVanLocalStorage()
+    {
+        try
+        {
+            if (ProjectState is null)
+            {
+                ToastService.ShowError("Geen projectstate aanwezig");
+                return;
+            }
+
+            await ProjectState?.LoadProjectFromLocalStorageAsync();
+
+
+            
+
+            
+
+            // Ga naar projectpagina
+            //NavigationManager.NavigateTo("/Project/info");
+        }
+        catch (JSDisconnectedException)
+        {
+            ToastService.ShowError("Geen verbinding aanwezig,De applicatie is nog aan het verbinden met de server. Probeer het over enkele seconden opnieuw. ");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Er ging iets mis: {ex.Message}");
+        }
+    }
+}

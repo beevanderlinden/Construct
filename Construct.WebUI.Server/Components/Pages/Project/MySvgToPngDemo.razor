@@ -1,0 +1,27 @@
+﻿@inject IJSRuntime JS
+
+<button @onclick="MaakPng">Maak PNG</button>
+
+@code {
+    private async Task MaakPng()
+    {
+        string svgXml = @"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>
+            <circle cx='100' cy='100' r='80' fill='lightblue' stroke='black' stroke-width='4'/>
+            <text x='100' y='110' text-anchor='middle' font-size='24' font-family='Arial'>Hallo!</text>
+        </svg>";
+
+        try
+        {
+            // Dit geeft een PNG terug als base64 string
+            var pngBase64 = await JS.InvokeAsync<string>("svgHelpers.renderSvgToPng", svgXml, 400, 400);
+
+            // Preview toevoegen aan pagina (optioneel)
+            var dataUrl = $"data:image/png;base64,{pngBase64.Split(',')[1]}";
+            await JS.InvokeVoidAsync("eval", $"var img = document.createElement('img'); img.src = '{dataUrl}'; document.body.appendChild(img);");
+        }
+        catch (JSException ex)
+        {
+            Console.WriteLine($"JS interop error: {ex.Message}");
+        }
+    }
+}

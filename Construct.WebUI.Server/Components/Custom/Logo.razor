@@ -1,0 +1,36 @@
+﻿@inject ILogoService LogoService
+
+<img src="@LogoUrl" class="@CssClass" style="@Style" alt="@AltText" />
+
+@code {
+    /// <summary>
+    /// E-mail van gebruiker, bijvoorbeeld ik@kaskon.nl
+    /// </summary>
+    [Parameter] public string? Email { get; set; }
+
+    /// <summary>
+    /// Alternatieve manier om logo te kiezen op basis van domein, bv ah.nl
+    /// </summary>
+    [Parameter] public string? Domain { get; set; }
+
+    /// <summary>
+    /// Optionele CSS class
+    /// </summary>
+    [Parameter] public string? CssClass { get; set; }
+
+    /// <summary>
+    /// Optionele inline style
+    /// </summary>
+    [Parameter] public string? Style { get; set; }
+
+    /// <summary>
+    /// Alt tekst
+    /// </summary>
+    [Parameter] public string? AltText { get; set; } = "Logo";
+
+    private string LogoUrl => !string.IsNullOrEmpty(Email)
+        ? LogoService.FindLogoByEmail(Email)
+        : !string.IsNullOrEmpty(Domain)
+            ? LogoService.FindLogoByDomain(Domain)
+            : "/images/logos/defaultlogo.png";
+}

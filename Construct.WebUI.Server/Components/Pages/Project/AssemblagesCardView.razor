@@ -1,0 +1,69 @@
+﻿@inject IDialogService DialogService
+
+@if (ProjectState != null && ProjectState.CurrentProject != null)
+{
+    if (Assemblages.Count == 0)
+    {
+        <p>Geen assemblages...</p>
+    }
+
+    <div class="assemblage-grid">
+
+    
+    
+    @foreach (var t in Steektrappen)
+    {
+        <FluentCard class="assemblage-card" >
+                <div class="assemblage-card-header">
+                    @t.Merk
+                </div>
+            <div class="assemblage-svg-container">
+                <TrapSvg Model="t" ToonMaatlijnen="false" Style="height:200px;"/>
+            </div>
+            <div class="assemblage-card-footer">
+                <FluentButton Appearance=Appearance.Accent OnClick="() => EditEntity(t)">
+                    Openen
+                </FluentButton>
+            </div>
+        </FluentCard>
+
+    }
+
+    </div>
+
+}
+else
+{
+    <p>Geen project geladen...</p>
+}
+
+
+@code {
+    [CascadingParameter] public IProjectStateService? ProjectState { get; set; }
+    [Parameter] public EventCallback<AssemblageEntity> EditEntityClicked{ get; set; }
+
+    private List<AssemblageEntity> Assemblages = [];
+    private List<SteekTrapEntity> Steektrappen = [];
+    protected override void OnInitialized()
+    {
+        Assemblages = ProjectState?.CurrentProject?.Assemblages ?? [];
+        Steektrappen = Assemblages.OfType<SteekTrapEntity>().ToList();
+        base.OnInitialized();
+    }
+
+
+    private async void EditEntity(AssemblageEntity entity)
+    {
+        await EditEntityClicked.InvokeAsync(entity);
+    }
+
+    private async Task OpenAssemblage(AssemblageEntity assemblage)
+    {
+        // voorbeeldactie
+
+
+        await DialogService.ShowInfoAsync($"Assemblage openen: {assemblage.Naam}", "Nog te implementeren...");
+    }
+
+
+}

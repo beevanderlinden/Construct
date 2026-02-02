@@ -1,0 +1,106 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using CommonLibrary.Models
+@using Profielen.Parametrisch
+@implements IDialogContentComponent<BaseProfiel>
+
+<!-- Header -->
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.WindowApps())" />
+        <FluentLabel Typo="Typography.PaneHeader">
+            @Dialog.Instance.Parameters.Title
+        </FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+<!-- Body -->
+<FluentDialogBody>
+
+
+    <EditForm EditContext="@_editContext" FormName="simple_register">
+        <DataAnnotationsValidator />
+
+        <FluentLabel Style="margin-bottom: 16px;">
+            Kies type (HEA, HEB, HEM, K, L, T, UNP) en formaat.
+        </FluentLabel>
+
+        <FluentCheckbox @bind-Checked="_isParametrisch">
+            Parametrisch profiel</FluentCheckbox>
+
+        @if (_isParametrisch)
+        {
+            <FluentNumberField @bind-Value="((ParametrischProfielContext)Content).B"
+                               Label="Breedte B (mm)"
+                               Step="10"
+                               Min="5"
+                                />
+
+            <FluentNumberField @bind-Value="((ParametrischProfielContext)Content).H"
+                               Label="Hoogte H (mm)"
+                               Step="10"
+                               Min="5" />
+
+        }
+
+       <p>Profiel : @Content.Naam</p>
+
+        <div style="color: var(--error);">
+            <FluentValidationSummary />
+        </div>
+    </EditForm>
+</FluentDialogBody>
+
+<!-- Footer -->
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Accent"
+                  Disabled="@(!_editContext.Validate())"
+                  OnClick="@SaveAsync">
+        Save
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Neutral"
+                  OnClick="@CancelAsync">
+        Cancel
+    </FluentButton>
+</FluentDialogFooter>
+
+@code
+{
+    private EditContext _editContext = default!;
+    private bool _isParametrisch = false;
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    [Parameter]
+    public BaseProfiel Content { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        _editContext = new EditContext(Content);
+        if (Content is ParametrischProfielContext parametrischProfiel)
+        {
+            _isParametrisch = true;
+        }
+        else {
+            _isParametrisch = false;
+        }
+
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_editContext.Validate())
+        {
+            await Dialog.CloseAsync(Content);
+        }
+    }
+
+    private async Task CancelAsync()
+    {
+        await Dialog.CancelAsync();
+    }
+
+
+
+    
+}

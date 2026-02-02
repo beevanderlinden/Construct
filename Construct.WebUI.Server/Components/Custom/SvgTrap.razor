@@ -1,0 +1,75 @@
+﻿@page "/trap"
+@using System.Globalization
+@using Construct.Application.Services
+
+<svg width="800" height="600"
+     viewBox="-50 -50 @(TotaleBreedte + 100) @(TotaleHoogte + 100)"
+     xmlns="http://www.w3.org/2000/svg">
+
+    <!-- Trapvorm -->
+    <path d="@Path"
+          fill="lightgray"
+          stroke="black"
+          stroke-width="1" />
+</svg>
+
+@code {
+
+
+    [Parameter] public SteekTrapEntity Trap { get; set; } = new();
+
+    private BoundingBox bb = new();
+
+
+    double Radius = 40; // mm afronding onder
+    double TotaleHoogte => Trap.OptredeAantal1 * Trap.OptredeMaat + Trap.SchilDikte;
+    double TotaleBreedte => Trap.OptredeAantal1 * Trap.AantredeMaat + Trap.SchilDikte;
+
+    string Path => TrapSvgGenerator.GenerateTrapPath(Trap, bb);
+
+    string TrapPath => BuildPath();
+
+
+
+
+    string BuildPath()
+    {
+        var sb = new System.Text.StringBuilder();
+
+        // start links onder, maar met afrondingsstraal
+        sb.Append($"M {Radius.ToString(CultureInfo.InvariantCulture)},{TotaleHoogte}");
+
+        // boog naar links onder hoekpunt
+        sb.Append($" A {Radius},{Radius} 0 0 0 0,{TotaleHoogte - Radius}");
+
+        // opwaarts langs linkerrand
+        sb.Append($" V {Trap.SchilDikte}");
+
+        // horizontaal naar eerste aantrede
+        sb.Append($" H {Trap.AantredeMaat}");
+
+        // de treden tekenen
+        for (int i = 1; i < Trap.OptredeAantal1; i++)
+        {
+            double x = i * Trap.AantredeMaat;
+            double y = TotaleHoogte - Trap.SchilDikte - i * Trap.OptredeMaat;
+
+            sb.Append($" V {y}");
+            sb.Append($" H {x + Trap.AantredeMaat}");
+        }
+
+        // laatste optrede naar boven
+        sb.Append($" V {Trap.SchilDikte}");
+
+        // rechts naar beneden tot afronding
+        sb.Append($" H {TotaleBreedte - Radius}");
+
+        // afrondingsboog rechtsonder
+        sb.Append($" A {Radius},{Radius} 0 0 0 {TotaleBreedte},{Trap.SchilDikte + Radius}");
+
+        // terug naar begin
+        sb.Append(" Z");
+
+        return sb.ToString();
+    }
+}

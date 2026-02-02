@@ -1,0 +1,92 @@
+﻿@using Construct.Application.Interfaces
+@inject IFileService FileService
+@inject IProjectStateService ProjectState
+@inject IProjectFileService ProjectFileService
+@inject IToastService ToastService
+@inject IJSRuntime JS
+
+
+@if (ProjectState.CurrentProject == null)
+{
+    <p>Er is geen project aanwezig.</p>
+    <Construct.WebUI.Server.Components.Pages.File.NewFile>
+
+    </Construct.WebUI.Server.Components.Pages.File.NewFile>
+}
+
+@if (ProjectState.ProjectFileInfo == null)
+{
+    <p>Er is geen projectFileInfo aanwezig. </p>
+    <SaveAsComponent></SaveAsComponent>
+}
+
+
+
+
+@code {
+
+    //string? defaultSavePath;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+
+            var fileName = "autoSave.cprj";
+            
+         
+            if (ProjectState.ProjectFileInfo != null)
+            {
+                fileName = ProjectState.ProjectFileInfo.FilePath;
+            }
+
+            var base64 = string.Empty;
+
+
+            if (ProjectState.CurrentProject != null)
+            {
+                base64 = FileService.GetBase64<ProjectEntity>(ProjectState.CurrentProject);
+
+
+            }
+
+            await PerformAutoSave(fileName, base64);
+
+            //defaultSavePath = await AppSettingService.GetDefaultSavePathAsync();
+            StateHasChanged(); // handmatig her-renderen omdat we async werken
+
+
+
+
+        }
+    }
+
+
+    private async Task PerformAutoSave(string fileName, string base64)
+    {
+        try
+        {
+
+
+
+            await ProjectFileService.AutoSave(JS, fileName, base64);
+
+            ToastService.ShowToast(ToastIntent.Success, $"Project automatisch opgeslagen.");
+
+
+        }
+        catch (JSException jsEx) when (jsEx.Message.Contains("The user aborted"))
+        {
+            // Optioneel: laat de gebruiker weten dat er niets is geselecteerd
+            Console.WriteLine("Gebruiker heeft selectie geannuleerd.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Onverwachte fout bij mapselectie: {ex.Message}");
+        }
+
+    }
+
+
+   
+}

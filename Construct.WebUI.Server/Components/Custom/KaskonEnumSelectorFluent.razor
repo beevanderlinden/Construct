@@ -1,0 +1,102 @@
+﻿@using System.Reflection
+@typeparam TEnum where TEnum : struct, Enum
+
+<FluentSelect TOption="Option<int>"
+              OptionText="@(i => i.Text)"
+              OptionValue="@(i => i.Value.ToString())"
+              OptionDisabled="@(i => i.Disabled)"
+              @bind-Value="SelectedValue"
+              Label="@Label"
+              Disabled="@DisabledOrReadOnly"
+              Placeholder="@Placeholder"
+              @onchange="OnSelectedChanged">
+    @if (AllowNull)
+    {
+        <FluentOption Value="">-- Selecteer --</FluentOption>
+    }
+
+    @foreach (var option in EnumOptions)
+    {
+        <FluentOption Value="@option.Value" Disabled="@option.Disabled">@option.Text</FluentOption>
+    }
+</FluentSelect>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Placeholder { get; set; } = "-- Kies een optie --";
+    [Parameter] public TEnum? SelectedEnumValue { get; set; }
+    [Parameter] public EventCallback<TEnum?> SelectedEnumValueChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public bool ReadOnly { get; set; } = false;
+    [Parameter] public TEnum[] ExcludeEnumItems { get; set; } = Array.Empty<TEnum>();
+    [Parameter] public TEnum[] DisabledEnumItems { get; set; } = Array.Empty<TEnum>();
+    [Parameter] public bool AllowNull { get; set; } = true;
+
+    private bool DisabledOrReadOnly => Disabled || ReadOnly;
+
+    private string? SelectedValue
+    {
+        get => SelectedEnumValue?.ToString();
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                SelectedEnumValue = null;
+                SelectedEnumValueChanged.InvokeAsync(null);
+                return;
+            }
+
+            if (Enum.TryParse<TEnum>(value, out var result))
+            {
+                SelectedEnumValue = result;
+                SelectedEnumValueChanged.InvokeAsync(result);
+            }
+        }
+    }
+
+    private List<Option<TEnum>> EnumOptions { get; set; } = new();
+
+    protected override void OnParametersSet()
+    {
+        EnumOptions = Enum.GetValues(typeof(TEnum))
+                          .Cast<TEnum>()
+                          .Where(e => !ExcludeEnumItems.Contains(e))
+                          .Select(e => new Option<TEnum>
+                          {
+                              Value = e.ToString(),
+                              Text = GetEnumText(e),
+                              Disabled = DisabledEnumItems.Contains(e)
+                          })
+                          .ToList();
+    }
+
+    private void OnSelectedChanged(ChangeEventArgs e)
+    {
+        SelectedValue = e.Value?.ToString();
+    }
+
+    private string GetEnumText(TEnum value)
+    {
+        var type = typeof(TEnum);
+        var memInfo = type.GetMember(value.ToString());
+        if (memInfo.Length > 0)
+        {
+            var displayAttr = memInfo[0].GetCustomAttribute<System.ComponentModel.DataAnnotations.DisplayAttribute>();
+            if (displayAttr != null && !string.IsNullOrWhiteSpace(displayAttr.Name))
+                return displayAttr.Name;
+
+            var descAttr = memInfo[0].GetCustomAttribute<System.ComponentModel.DescriptionAttribute>();
+            if (descAttr != null && !string.IsNullOrWhiteSpace(descAttr.Description))
+                return descAttr.Description;
+        }
+
+        return value.ToString();
+    }
+
+    private class Option<T>
+    {
+        public string Value { get; set; } = string.Empty;
+        public string Text { get; set; } = string.Empty;
+        public bool Disabled { get; set; }
+    }
+}

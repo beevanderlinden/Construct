@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\Eurocode1.Belastingen\Eurocode1.Belastingen.csproj" />
+    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\Eurocode2.BetonConstructies\Eurocode2.BetonConstructies.csproj" />
+    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Profielen\StaalProfielen\StaalProfielen.csproj" />
+  </ItemGroup>
+
+</Project>

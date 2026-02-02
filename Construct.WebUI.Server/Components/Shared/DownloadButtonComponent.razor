@@ -1,0 +1,47 @@
+﻿@using System.Text
+@using Construct.Application.Interfaces
+@inject IFileDownloadService FileDownloadService
+
+<FluentButton Disabled="Disabled || _isDownloading" OnClick="DownloadAsync">
+    @if (_isDownloading)
+    {
+        <FluentProgressRing Size="ProgressRingSize.ExtraSmall" Style="margin-right: 0.5rem;" />
+    }
+    @ButtonText
+</FluentButton>
+
+@code {
+    [Parameter] public string FileName { get; set; } = "Download.txt";
+    [Parameter] public string ContentType { get; set; } = "text/plain";
+    [Parameter] public string? StringContent { get; set; }
+    [Parameter] public byte[]? BinaryContent { get; set; }
+    [Parameter] public Encoding Encoding { get; set; } = Encoding.UTF8;
+    [Parameter] public string ButtonText { get; set; } = "Download";
+    [Parameter] public bool Disabled { get; set; } = false;
+
+    private bool _isDownloading = false;
+
+    private async Task DownloadAsync()
+    {
+        _isDownloading = true;
+        try
+        {
+            if (BinaryContent != null)
+            {
+                await FileDownloadService.DownloadAsync(FileName, ContentType, BinaryContent);
+            }
+            else if (!string.IsNullOrEmpty(StringContent))
+            {
+                await FileDownloadService.DownloadStringAsync(FileName, ContentType, StringContent, Encoding);
+            }
+            else
+            {
+                Console.Error.WriteLine("Geen content opgegeven voor download.");
+            }
+        }
+        finally
+        {
+            _isDownloading = false;
+        }
+    }
+}

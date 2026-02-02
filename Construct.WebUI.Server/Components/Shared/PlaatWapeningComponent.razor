@@ -1,0 +1,29 @@
+@using Eurocode.BetonConstructies
+
+@if (Model == null)
+{
+    <p>Geen plaatwapening</p>
+}
+else
+{
+    <h3>Boven</h3>
+    <PlaatWapeningGroepComponent Model="Model.Boven" />
+
+    <h3>Onder</h3>
+    <PlaatWapeningGroepComponent Model="Model.Onder" />
+}
+
+@code {
+    /// <summary>
+    /// Het plaatwapening model dat bevat de bovenzijde (Boven) en onderzijde (Onder) wapeninggroepen.
+    /// </summary>
+    [Parameter] 
+    public PlaatWapening? Model { get; set; }
+
+    /// <summary>
+    /// Callback die wordt aangeroepen wanneer het plaatwapening model is gewijzigd.
+    /// Wordt gebruikt voor two-way data binding via @bind-Model.
+    /// </summary>
+    [Parameter] 
+    public EventCallback<PlaatWapening> ModelChanged { get; set; }
+}

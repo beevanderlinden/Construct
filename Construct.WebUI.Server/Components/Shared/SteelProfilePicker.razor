@@ -1,0 +1,38 @@
+﻿@using CommonLibrary.Interfaces
+@using CommonLibrary.Models
+@inject IDialogService DialogService
+
+<FluentButton Appearance="Appearance.Accent" OnClick="@EditAsync">Bijwerken</FluentButton>
+
+<p>Profiel: @Profiel?.Naam</p>
+
+@code
+{
+    [Parameter] public BaseProfiel? Profiel { get; set; } 
+    [Parameter] public EventCallback<BaseProfiel> ProfielChanged { get; set; }
+
+
+    private async Task EditAsync()
+    {
+        // Create a new instance of DialogData
+        // to allow the user to cancel the update
+        var data = Profielen.Staal.Doorsneden.HEA100;
+
+        var dialog = await DialogService.ShowDialogAsync<SteelProfileDialog>(data, new DialogParameters()
+        {
+            Height = "400px",
+            Title = $"Profiel keuze",
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+        });
+
+        var result = await dialog.Result;
+        if (!result.Cancelled && result.Data != null)
+        {
+            Profiel = (BaseProfiel)result.Data;
+            await ProfielChanged.InvokeAsync(Profiel);
+        }
+
+    }
+
+}

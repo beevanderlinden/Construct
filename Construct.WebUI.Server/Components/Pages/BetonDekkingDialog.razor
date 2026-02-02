@@ -1,0 +1,83 @@
+﻿@implements IDialogContentComponent<Eurocode.BetonConstructies.BetonDekkingContext>
+
+@* Header *@
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.ContentSettings())" />
+        <FluentLabel Typo="Typography.PaneHeader">
+            @Dialog.Instance.Parameters.Title
+        </FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+@* Footer *@
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Accent" OnClick="@SaveAsync">Save</FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync">Cancel</FluentButton>
+</FluentDialogFooter>
+
+@* Body *@
+<FluentDialogBody>
+
+    
+    <FluentTextField Value="@Content.Beton.BetonSterkteKlasseGebruiksvriendelijkeNaam" ReadOnly="true" Appearance="FluentInputAppearance.Filled">Betonsterkteklasse (C)</FluentTextField>
+    <FluentTextField Value="@Content.OntwerpLevensduur.ToString()" ReadOnly="true" Appearance="FluentInputAppearance.Filled">Ontwerplevensduur [jaren]</FluentTextField>
+    <FluentTextField Value="@Content.MilieuklassenUserFriendlyName" ReadOnly="true" Appearance="FluentInputAppearance.Filled">Milieuklasse(n)</FluentTextField>
+
+
+    <div><FluentCheckbox @bind-Value="@Content.IsKwaliteitsBeheersing" Disabled="true">Kwaliteitsbeheersing?</FluentCheckbox></div>
+    <div><FluentCheckbox @bind-Value="@Content.IsPlaatGeometrie" Disabled="true">Plaatgeometrie?</FluentCheckbox></div>
+    
+    <FluentTextField Value="@Content.Constructieklasse.UserFriendlyName" ReadOnly="true" Appearance="FluentInputAppearance.Filled">Constructieklasse (S)</FluentTextField>
+
+
+
+    <div><FluentCheckbox @bind-Value="@Content.GestortTegenBestaandBeton" Disabled="true">Gestort tegen bestaand beton</FluentCheckbox></div>
+    <FluentSelectEnum Disabled="true" Label="Ondergrond" TEnum="Eurocode.BetonConstructies.BetonDekkingContext.BetonStortOndergrondEnum" @bind-EnumSelectedValue="@Content.BetonStortOndergrond" />
+    <FluentSelectEnum Disabled="true" Label="Afwerking" TEnum="Eurocode.BetonConstructies.BetonDekkingContext.BetonAfwerkingOppervlakEnum" @bind-EnumSelectedValue="@Content.BetonAfwerkingOppervlak" />
+
+    <FluentTextField Value="@Content.DekkingMinDuurzaamheid.ToString("0")" ReadOnly="true" Appearance="FluentInputAppearance.Filled">c,min,dur [mm]</FluentTextField>
+    <FluentTextField Value="@Content.DekkingMin.ToString("0")" ReadOnly="true" Appearance="FluentInputAppearance.Filled">c,min[mm]</FluentTextField>
+    <FluentTextField Value="@Content.DekkingToeslagUitvoeringsToleranties.ToString("0")" ReadOnly="true" Appearance="FluentInputAppearance.Filled">Δc,dev[mm]</FluentTextField>
+
+    <FluentTextField Value="@Content.DekkingNom.ToString("0")">c,nom [mm]</FluentTextField>
+    <FluentNumberField @bind-Value="@Content.GrootsteKorrelDiameter" Step="0.5">Korreldiameter [mm]</FluentNumberField>
+    
+    @if (Content.BetonStortOndergrond == BetonDekkingContext.BetonStortOndergrondEnum.Werkvloer)
+    {
+        <FluentTextField Value="@Content.BetonDekkingFactorK1.ToString("0.0")" ReadOnly="true" Appearance="FluentInputAppearance.Filled">k1 [mm]</FluentTextField>
+    }
+
+    @if (Content.BetonStortOndergrond == BetonDekkingContext.BetonStortOndergrondEnum.OpOfTegenGrond)
+    {
+        <FluentTextField Value="@Content.BetonDekkingFactorK2.ToString("0.0")" ReadOnly="true" Appearance="FluentInputAppearance.Filled">k2 [mm]</FluentTextField>
+    }
+
+
+
+
+
+
+
+
+</FluentDialogBody>
+
+
+@code {
+    [Parameter]
+    public Eurocode.BetonConstructies.BetonDekkingContext Content { get; set; } = default!;
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    private async Task SaveAsync()
+    {
+        await Dialog.CloseAsync(Content);
+    }
+
+    private async Task CancelAsync()
+    {
+        await Dialog.CancelAsync();
+    }
+
+}

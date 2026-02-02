@@ -1,0 +1,55 @@
+@using Eurocode.BetonConstructies
+
+@if (Model == null)
+{
+    <p>Geen plaatwapening groep</p>
+}
+else
+{
+    <div>
+        <KaskonInputContainer Label="wapening in 1e laag?">
+            <FluentCheckbox Value="HoofdwapeningLigtInEersteLaag" ValueChanged="ToggleLaag" />
+        </KaskonInputContainer>
+        
+        <WapeningContextComponent Model="Model.BasisWapening" AllowEditTekst="true" />
+        <WapeningContextComponent Model="Model.VerdeelWapening" AllowEditTekst="true" />
+
+        @* Visualisatie van alleen de basiswapening (optioneel) *@
+        <div style="margin-top:8px;">
+            <BaseWapeningView Model="Model?.BasisWapening" />
+        </div>
+
+    </div>
+   
+
+
+   
+}
+
+@code {
+    [Parameter] public PlaatWapeningGroep? Model { get; set; }
+    [Parameter] public EventCallback<PlaatWapeningGroep> ModelChanged { get; set; }
+
+    private bool HoofdwapeningLigtInEersteLaag { get; set; }
+
+    private void ToggleLaag(bool value)
+    {
+        HoofdwapeningLigtInEersteLaag = value;
+        SelectedLaag = HoofdwapeningLigtInEersteLaag ? 1 : 2;
+        
+        if(Model != null) 
+            Model.LaagHoofdwapening = SelectedLaag;
+    }
+
+    private int SelectedLaag
+    {
+        get => Model?.LaagHoofdwapening ?? 1;
+        set
+        {
+            if (Model != null)
+            {
+                Model.LaagHoofdwapening = value;
+            }
+        }
+    }
+}

@@ -1,0 +1,105 @@
+﻿@inject IJSRuntime JS
+
+<h3>Projectbestanden laden</h3>
+
+@if (!string.IsNullOrEmpty(Foutmelding))
+{
+    <div class="alert alert-danger">@Foutmelding</div>
+}
+@if (!string.IsNullOrEmpty(Melding))
+{
+    <div class="alert alert-info">@Melding</div>
+}
+
+<button class="btn btn-primary" @onclick="SelecteerEnOpslaanMap">Selecteer map (eenmalig)</button>
+<button class="btn btn-secondary" @onclick="HerstelGekozenMap">Herstel map (sessie/start)</button>
+<button class="btn btn-success" @onclick="LeesBestanden">Lees .cprj bestanden</button>
+
+@if (Projecten?.Any() == true)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Naam</th>
+                <th>Grootte (bytes)</th>
+                <th>Laatste wijziging</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Projecten)
+            {
+                <tr>
+                    <td>@p.Name</td>
+                    <td>@p.Size</td>
+                    <td>@p.LastModified?.ToLocalTime().ToString("g")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    public class ProjectFileInfo
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Base64 { get; set; } = string.Empty;
+        public long Size { get; set; }
+        public DateTimeOffset? LastModified { get; set; }
+    }
+
+    private List<ProjectFileInfo> Projecten = new();
+    private string? Foutmelding;
+    private string? Melding;
+
+    private async Task SelecteerEnOpslaanMap()
+    {
+        try
+        {
+            Foutmelding = null;
+            var ok = await JS.InvokeAsync<bool>("window.dirInterop.requestPersistentStorage");
+            if (!ok)
+            {
+                Foutmelding = "Kan geen permanente opslag aanvragen.";
+                return;
+            }
+
+            await JS.InvokeVoidAsync("window.dirInterop.selectAndStoreDirectory");
+            Melding = "Map succesvol gekozen en opgeslagen.";
+        }
+        catch (Exception ex)
+        {
+            Foutmelding = $"Fout bij selecteren map: {ex.Message}";
+        }
+    }
+
+    private async Task HerstelGekozenMap()
+    {
+        try
+        {
+            Foutmelding = null;
+            var ok = await JS.InvokeAsync<bool>("window.dirInterop.restoreDirectory");
+            Melding = ok ? "Map hersteld uit vorige sessie." : "Geen opgeslagen map gevonden of toegang geweigerd.";
+        }
+        catch (Exception ex)
+        {
+            Foutmelding = $"Fout bij herstellen map: {ex.Message}";
+        }
+    }
+
+    private async Task LeesBestanden()
+    {
+        try
+        {
+            Foutmelding = null;
+            Melding = null;
+
+            var bestanden = await JS.InvokeAsync<List<ProjectFileInfo>>("window.dirInterop.openDirectoryAndReadCprjFiles");
+            Projecten = bestanden.OrderByDescending(b => b.LastModified).ToList();
+            Melding = $"{Projecten.Count} .cprj bestand(en) gevonden.";
+        }
+        catch (Exception ex)
+        {
+            Foutmelding = $"Fout bij lezen bestanden: {ex.Message}";
+        }
+    }
+}

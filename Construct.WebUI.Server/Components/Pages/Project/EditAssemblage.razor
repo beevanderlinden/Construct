@@ -1,0 +1,262 @@
+﻿@using Construct.Application.Interfaces.Beam
+
+
+@if (Visible && Model != null)
+{
+    <CascadingValue Value="(Action)(() => StateHasChanged())">
+
+        <FluentSplitter Orientation="Orientation.Horizontal" BarSize="8" Panel1MinSize="300px" Panel2MinSize="300px">
+            <Panel1>
+                <div class="left-column full-height">
+
+                    <FluentButton 
+                        Appearance="Appearance.Accent" 
+                        OnClick="OnFinishedAsync" 
+                        IconStart="@(new Icons.Regular.Size20.ArrowEnter())">
+                        Afronden
+                    </FluentButton>
+
+                    <FluentTabs ActiveTabId="@ActiveTabId"
+                                ActiveTabIdChanged="ChangeTabId"
+                                Style="width:100%; height:100%;"
+                                Orientation="Orientation.Horizontal">
+
+                        <FluentTab Id="tab-Info" Label="info">
+                            <Header><FluentIcon Value="@(new Icons.Regular.Size32.BarcodeScanner())" />info</Header>
+                            <Content>
+                                <AssemblageInfoComponent1 @bind-Model="Model" />
+                            </Content>
+                        </FluentTab>
+
+                        <FluentTab Label="geometrie">
+                            <Header>
+                                <FluentIcon Value="@(new Icons.Regular.Size32.Ruler())" />geometrie
+                            </Header>
+                            <Content>
+                                @if (Model is BordesEntity bordes)
+                                {
+                                    <EditBordesGeometry Model="bordes" />
+                                }
+                                else if (Model is SteekTrapEntity steektrap)
+                                {
+                                    <p>Hier steektrap geometrie component</p>
+                                }
+                                else if (Model is LiggerEntity ligger)
+                                {
+                                    <Construct.WebUI.Server.Components.Beam.BeemLoadCases Beam="ligger.Beam"/>
+
+                                   @*  foreach (var bg in ligger.Beam.LoadContext.BelastingGevallen)
+                                    {
+                                        
+                                        <Construct.WebUI.Server.Components.Beam.BeemLoadCase Beam="@ligger.Beam"
+                                                                                             LoadCase="bg" />
+                                    } *@
+
+
+                                    
+                                }
+
+
+                            </Content>
+                        </FluentTab>
+
+                        @if (Model is BordesEntity bordes)
+                        {
+                            <FluentTab Label="platen">
+                                <Header><FluentIcon Value="@(new Icons.Regular.Size32.Clipboard())" />platen</Header>
+                                <Content>
+
+                                    <PlaatWapeningTabelPosComponent @bind-Model="@bordes.PlaatWapening" />
+
+                                    <p>Plaatwapening: @bordes.PlaatWapening</p>
+                                    <p>Boven basis: @bordes.PlaatWapening?.Boven?.BasisWapening.Tekst</p>
+                                    <p>Boven bijleg: n.v.t.</p>
+
+                                    @if(bordes.PlaatWapening?.Onder is PlaatWapeningGroep g)
+                                    {
+                                        <p>basis: @g.BasisWapening.Tekst (@g.BasisWapening.AsBasis.ToString("0 mm²") = @g.BasisWapening.As.ToString("0 mm²"))</p>
+                                        <p>bijleg?: n.v.t.</p>
+
+                                    }
+
+                                    <p>Onder basis: @bordes.PlaatWapening?.Onder?.BasisWapening.Tekst</p>
+                                    <p>Onder bijleg: n.v.t.</p>
+                                    <p>Onder laag hoofdwap.: @bordes.PlaatWapening?.Onder?.LaagHoofdwapening</p>
+                                    <p>Onder c<sub>onder,laag1</sub> : @bordes.PlaatWapening?.Onder?.Dekking.DekkingToe.ToString("0 mm")</p>
+                                    <p>Onder c<sub>onder,laag2</sub> : @bordes.PlaatWapening?.Onder?.Dekking.DekkingToe.ToString("0 mm")</p>
+
+                                    <p>Onder Ø<sub>EQ</sub> : @bordes.PlaatWapening?.Onder?.BasisWapening.GemiddeldeDiameter.ToString("0.# mm")</p>
+                                    <p>Onder Ø<sub>verdeel</sub> : @bordes.PlaatWapening?.Onder?.DiameterVerdeel.ToString("0.# mm")</p>
+
+
+
+                                    <p>Plaatwapening @bordes.PlaatWapening</p>
+
+                                </Content>
+                            </FluentTab>
+                        }
+
+                        <FluentTab Label="toetsen">
+                            <Header><FluentIcon Value="@(new Icons.Regular.Size32.CheckmarkCircle())" />toetsing</Header>
+                            <Content>
+                                @foreach (var t in Model.Toetsen)
+                                {
+                                    <EurocodeRazorClassLibrary.Shared.MyGridFor Model="t" />
+                                }
+                            </Content>
+                        </FluentTab>
+
+                       
+
+                        @if (Model.Stroken.Any())
+                        {
+                            <FluentTab Label="stroken">
+                                <Header> <FluentIcon Value="@(new Icons.Regular.Size32.MoreHorizontal())" />stroken</Header>
+                                <Content>
+
+                                    <FluentButton OnClick="Model.Bijwerken">Assemblage (@Model.GetType()).Bijwerken</FluentButton>
+
+                                    <FluentAccordion ActiveId="@activeId" OnAccordionItemChange="HandleOnAccordionItemChange">
+
+                                   
+
+
+                                    @foreach (var s in Model.Stroken)
+                                    {
+                                        <FluentAccordionItem Id="@s.Id" Heading="@s.Naam">
+                                             <Construct.WebUI.Server.Components.Beam.BeemLoadCases Beam="s.Beam" />
+                                         </FluentAccordionItem>
+                                    }
+                                    </FluentAccordion>
+                                </Content>
+                            </FluentTab>
+                        }
+                    </FluentTabs>
+                </div>
+            </Panel1>
+
+            <Panel2>
+                <div class="picture-column">
+                    <div style="font-weight:600; font-size:1em; text-align:center;">
+                        @Model.Merk
+                    </div>
+                    <AssemblageSvg @bind-Model=Model Style="width:auto; height:auto; border:solid 0px;" ToonDownloadButtons="!true" />
+
+                    @* <StrookSvg @bind-Strook="SelectedStrook" Style="width:auto; height:auto; border: solid 1px red;" /> *@
+
+                    @if (SelectedStrook != null)
+                    {
+                        <span>@SelectedStrook.Naam</span>
+                        
+                    }
+
+                </div>
+            </Panel2>
+        </FluentSplitter>
+
+       
+
+
+    
+       
+    </CascadingValue>
+
+}
+
+
+@code {
+    [Parameter, EditorRequired] public AssemblageEntity? Model { get; set; }
+    [Parameter] public bool Visible { get; set; } 
+    [Parameter] public EventCallback<AssemblageEntity> ModelChanged { get; set; }
+    [Parameter] public EventCallback<bool> EditorClosed{ get; set; }
+    [Parameter] public string ActiveTabId { get; set; } = "tab-1";
+
+    private StrookEntity? _selectedStrook;
+    public StrookEntity? SelectedStrook
+    {
+        get => _selectedStrook;
+        set
+        {
+            _selectedStrook = value;
+            StateHasChanged();
+        }
+    }
+
+
+    //public StrookEntity? SelectedStrook { get; set; }
+
+    string activeId = "accordion-1";
+    FluentAccordionItem? changed;
+
+    private void HandleOnAccordionItemChange(FluentAccordionItem item)
+    {
+        changed = item;
+        SelectedStrook = Model?.Stroken.FirstOrDefault(s => s.Id == item.Id);
+    }
+
+
+
+    private string GetToonStrookButtonTekst(StrookEntity? strook)
+    {
+        {
+            string knoptekst = "toon strook";
+
+            if (strook == null) knoptekst = "toon strook";
+            if (strook != null && strook.Naam == SelectedStrook?.Naam) knoptekst = "verberg strook";
+
+
+
+            return knoptekst;
+        }
+    }
+    private void ToonStrook(StrookEntity? strook)
+    {
+        if (SelectedStrook != null && strook?.Naam == SelectedStrook.Naam)
+        {
+            SelectedStrook = null;
+        }
+
+        else
+        {
+            SelectedStrook = strook;
+        }
+       
+    }
+
+    async Task OnFinishedAsync()
+    {
+        await ModelChanged.InvokeAsync(Model);
+        await EditorClosed.InvokeAsync(true); // geef door dat de editor gesloten is.
+        Visible = false; // verberg de wizard
+    }
+
+    private async Task HandleBordesChanged(BordesEntity bordes)
+    {
+        if (Model != null)
+        {
+            await ModelChanged.InvokeAsync(Model);
+            StateHasChanged();
+        }
+    }
+    
+    async Task ChangeTabId(string tabId)
+    {
+        ActiveTabId = tabId;
+    }
+
+     
+
+
+
+    // tijdelijk verwijderen na succes
+    //private BordesEntity? _bordes;
+    //private Construct.Application.Interfaces.Beam.SimpleBeam? _simpleBeam;
+
+    protected override void OnParametersSet()
+    {
+        
+    }   
+
+
+
+}

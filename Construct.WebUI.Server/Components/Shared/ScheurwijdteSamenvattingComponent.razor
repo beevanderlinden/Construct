@@ -1,0 +1,80 @@
+﻿@if (Model == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <table class="custom-data-table">
+        <tbody>
+            <tr>
+                <td><i>M</i><sub>E;freq</sub></td>
+                <td>@Model.Snedekrachten?.My.ToString("#.# kNm/m¹")</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><i>σ</i><sub>s</sub></td>
+                <td>@Model.StaalspanningOptredend.ToString("0.# N/mm²")</td>
+                <td>optredende staalspanning</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><i>s</i><sub>r,max</sub></td>
+                <td>@Model.SrMax.ToString("0.0 mm")</td>
+                <td></td>
+                <td>@Model.GebruiktArtikel</td>
+            </tr>
+            <tr>
+                <td><i>ε</i><sub>sm</sub>-ε<sub>cm</sub></td>
+                <td>@Model.EpsSmMinusEpsCm.ToString("0.00000")</td>
+                <td></td>
+                <td>(7.9)</td>
+            </tr>
+            <tr>
+                <td><i>w</i><sub>max</sub></td>
+                <td>@Model.ScheurwijdteMax.ToString("0.### mm")</td>
+                <td>grenswaarde voor de berekende scheurwijdte</td>
+                <td>Tabel 7.1N</td>
+            </tr>
+            <tr>
+                <td><i>w</i><sub>k</sub></td>
+                <td>@Model.Wk.ToString("0.### mm")</td>
+                <td>
+                    <i>w</i><sub>k</sub> = <i>s</i><sub>r,max</sub> (<i>ε</i><sub>sm</sub> - <i>ε</i><sub>cm</sub>)
+                </td>
+                <td>(7.8)</td>
+            </tr>
+            @if (Model.IsValidated)
+            {
+                <tr>
+                    <td colspan="4">
+                        <div class="success">
+                            Scheurwijdte akkoord
+                        </div>
+                    </td>
+                </tr>
+            }
+            else
+            {
+                <tr>
+                    <td colspan="4">
+                        <div class="warning">
+                            Let op! Scheurwijdte niet akkoord
+                            <EurocodeMeldingenComponent Meldingen="Model.Meldingen" />
+                        </div>
+                    </td>
+                </tr>
+            }
+            <tr>
+            </tr>
+        </tbody>
+    </table>
+}
+
+
+
+@code {
+    [Parameter, EditorRequired] public ScheurwijdteContext Model { get; set; } 
+    [Parameter] public EventCallback<ScheurwijdteContext> ModelChanged { get; set; }
+
+
+}

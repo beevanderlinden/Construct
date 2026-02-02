@@ -1,0 +1,137 @@
+﻿@page "/example-form"
+@inject IDialogService DialogService
+@inject IToastService ToastService
+@inject IMessageService MessageService
+
+<h3>FormExamples</h3>
+<p>Hieronder een voorbeeld van de gebruikte styling en controls in een form</p>
+
+<h1>heading 1</h1>
+<h2>heading 2</h2>
+<h3>heading 3</h3>
+<h4>heading 4</h4>
+<h5>heading 5</h5>
+<h6>heading 6</h6>
+
+
+<FluentDivider></FluentDivider>
+
+<FluentCard>
+    <h6>TextField</h6>
+    <FluentTextField @bind-Value=txtValue1 Label="Standaard" Placeholder="Placeholder"></FluentTextField>
+    <FluentTextField @bind-Value=txtValue2 Label="Met icoon">
+        <FluentIcon Value="@(new Icons.Regular.Size20.PersonInfo())" Color="@Color.Neutral" Slot="start" />
+    </FluentTextField>
+
+    <FluentDivider>Divider</FluentDivider>
+    <h6>Checkbox</h6>
+    @* <FluentCheckbox @bind-CheckState=chkValue1 Label="bool?"></FluentCheckbox> *@
+    <FluentCheckbox @bind-Value=chkValue2 Label="bool"></FluentCheckbox>
+
+    <FluentDivider></FluentDivider>
+    <h6>Combobox met strings</h6>
+    <FluentCombobox Items=@stringOptions
+                    OptionText="@(i => i.Text)"
+                    OptionValue="@(i => i.Value)"
+                    OptionSelected="@(i => i.Selected)"
+                    @bind-SelectedOption="@selectedStringOption"
+                    @bind-Value="@stringValue" />
+
+                    <div>
+                        SelectedValue : @stringValue
+                    </div>
+
+    <h6>Combobox met integers</h6>
+    <FluentCombobox Items=@intOptions
+                    TOption="Option<int>"
+                    OptionText="@(i => i.Text)"
+                    OptionValue="@(i => i.Value.ToString())"
+                    OptionDisabled="@(i => i.Disabled)"
+                    @bind-SelectedOption="@selectedIntOption"
+                    @bind-Value="@intValue" />
+
+
+
+    <FluentIcon Value="@(new Icons.Regular.Size20.Settings())"
+                Color="Color.Accent"
+                OnClick="@ShowSettingAsync" />
+   
+
+    <FluentButton @onclick="@ShowToast" Appearance="Appearance.Accent">Show Toast</FluentButton>
+    <FluentButton @onclick="@ShowMessageBar" Appearance="Appearance.Accent">Show MessageBar</FluentButton>
+
+
+    <FluentIcon Id="myFirstButton" Icon="Icons.Regular.Size24.Notepad" />
+    <FluentTooltip Anchor="myFirstButton">
+        Hello World <br />
+        It is a <i>small</i> tootip.
+    </FluentTooltip>
+
+</FluentCard>
+
+
+   
+
+
+
+
+
+
+@code {
+    string? txtValue1, txtValue2;
+    //bool? chkValue1;
+    bool chkValue2;
+    string?[] selectValues = ["1", "2"];
+
+    string? stringValue;
+    Option<string> selectedStringOption = default!;
+    string? intValue;
+    Option<int>? selectedIntOption;
+
+    List<Option<string>> stringOptions = new()
+        {
+            { new Option<string> { Value = "1", Text = "One" } },
+            { new Option<string> { Value = "2", Text = "Two", Selected = true} },
+            { new Option<string> { Value = "3", Text = "Three" } }
+
+        };
+
+    List<Option<int>> intOptions = new()
+        {
+            { new Option<int> { Value = 1, Text = "1", Disabled = true } },
+            { new Option<int> { Value = 2, Text = "2" } },
+            { new Option<int> { Value = 3, Text = "3" } }
+
+        };
+
+    private async Task ShowSettingAsync()
+    {
+        await DialogService.ShowPanelAsync<Pages.Settings>(new DialogParameters()
+            {
+                Title = "Settings",
+                Alignment = HorizontalAlignment.Right,
+                SecondaryAction = null
+            });
+    }
+
+
+    void ShowToast()
+    {
+        Random rnd = new();
+        var intent = Enum.GetValues<ToastIntent>()[rnd.Next(10)];
+        var message = $"Simple Toast Example";
+        ToastService.ShowToast(intent, message);
+    }
+
+    async Task ShowMessageBar()
+    {
+        var message = $"Simple message";
+        var type = MessageIntent.Info;
+        await MessageService.ShowMessageBarAsync(message, type);
+    }
+   
+
+
+
+
+}

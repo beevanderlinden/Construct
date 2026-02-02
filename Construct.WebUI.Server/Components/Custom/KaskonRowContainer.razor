@@ -1,0 +1,22 @@
+﻿<div class="input-container" style="@DesktopGridStyle">
+    <div class="label-prefix">
+        <div class="label-part">@Label</div>
+        <div class="prefix-part">@Prefix</div>
+    </div>
+
+    <div class="input full">@ChildContent</div>
+
+    
+</div>
+
+@code {
+    [Parameter] public RenderFragment? Label { get; set; }
+    [Parameter] public RenderFragment? Prefix { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Suffix { get; set; }
+
+    private string DesktopGridStyle
+        => Suffix != null
+           ? "grid-template-columns: 50% 37.5% 12.5%;"
+           : "grid-template-columns: 50% 50%;";
+}

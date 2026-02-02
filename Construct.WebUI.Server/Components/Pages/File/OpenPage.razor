@@ -1,0 +1,160 @@
+﻿@page "/File/open"
+@using System.Diagnostics
+@inject NavigationManager NavigationManager
+@inject IFileService FileService
+@inject IProjectStateService ProjectStateService
+@inject IToastService ToastService
+@inject IGraphDriveService GraphDriveService
+@inject GraphServiceClient _graphClient
+@inject ILogService Log
+@* <CprjFiles/> *@
+
+
+
+@if (GebruikAppFolder)
+{
+    <ProjectCardList ProjectFileInfos="projectFileInfos"
+                     OnSelectedProjectFileInfoChanged="SelectProjectFileInfo" />
+    <h1>Projecten in de App Folder</h1>
+    <p>Folder: @folder</p>
+    <p>Aantal projecten: @projectFileInfos.Count</p>
+}
+
+
+
+<UploadProjectFileComponent Accept=".cprj, .json, .csf"
+                    MaxFileSize="@(50 * 1024 * 1024)"
+                    OnFileUploaded="@HandleFileBytes"
+                    OnFileNameUploaded="@HandleFileName" />
+
+@if (UploadedName != null)
+{
+    <p>Bestand: @UploadedName (@(UploadedData?.Length ?? 0) bytes)</p>
+}
+
+
+
+
+
+
+@code {
+    private string folder = "Mijn Projecten";
+    private List<ProjectFileInfo> projectFileInfos { get; set; } = [];
+    private ProjectFileInfo? selectedProjectFileInfo;
+
+    private bool GebruikAppFolder = false;
+
+    // Deze variabelen worden gebruikt om de geüploade bestandsnaam en data op te slaan
+    private string? UploadedName;
+    private byte[]? UploadedData;
+
+    private Task HandleFileBytes(byte[] bytes)
+    {
+
+        UploadedData = bytes;
+        // hier verwerk je de bytes
+        Log.StartBusy($"Ontvangen {bytes.Length} bytes");
+        Stopwatch stopwatch = new();
+        stopwatch.Start();
+
+        // zet de bytes om naar een project
+        LoadProjectFromBytes(bytes);
+
+
+        stopwatch.Stop();
+
+        // simuleer langer laden, dit verbeterd de gebruikers-ervaring
+        if (stopwatch.ElapsedMilliseconds < 500)
+        {
+            Task.Delay(400);
+        }
+
+
+
+        Log.WriteLine($"Project ingeladen");
+        Log.StopBusy();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleFileName(string name)
+    {
+        UploadedName = name;
+        Console.WriteLine($"Bestandsnaam: {name}");
+        return Task.CompletedTask;
+    }
+
+
+
+
+
+    protected override async void OnInitialized()
+    {
+        if(GebruikAppFolder)
+
+        {
+            var rootNodes = await GraphDriveService.GetRootNodesAsyc("appfolder");
+
+            var projectFolder = rootNodes.FirstOrDefault(node => 
+                node.IsFolder && 
+                node.Item.Name == "Mijn Projecten");
+
+            if (projectFolder != null)
+            {
+                projectFileInfos = await GraphDriveService.GetProjectFileInfosByParentFolder(projectFolder.Item);
+            }
+
+
+            StateHasChanged();      
+        }
+
+
+
+
+    }
+
+    private async void SelectProjectFileInfo(ProjectFileInfo projectFileInfo)
+    {
+        selectedProjectFileInfo = projectFileInfo;
+        await LoadProjectAsync();
+        NavigationManager.NavigateTo("/Project/assemblages");
+    }
+
+    private async Task LoadProjectAsync()
+    {
+        if (selectedProjectFileInfo == null)
+        {
+            return;
+        }
+
+        await Task.Delay(10); // Simuleer een vertraging
+
+        ProjectEntity? project = FileService.LoadFromBase64<ProjectEntity>(selectedProjectFileInfo.Base64);
+
+        if (project != null)
+        {
+            project.InitAll();
+            ProjectStateService.SetProject(project);
+            ProjectStateService.SetProjectFileInfo(selectedProjectFileInfo);
+            ToastService.ShowToast(ToastIntent.Success, $"Project geladen \r\n{project.ProjectInfo}");
+            StateHasChanged();
+        }
+    }
+
+    private Task LoadProjectFromBytes(byte[] bytes)
+    {
+        ProjectEntity? project = FileService.LoadFromBytes<ProjectEntity>(bytes);
+        if (project != null)
+        {
+            project.InitAll();
+            ProjectStateService.SetProject(project);
+
+            
+
+            ToastService.ShowToast(ToastIntent.Success, $"Project geladen \r\n{project.ProjectInfo}");
+            StateHasChanged();
+        }
+        NavigationManager.NavigateTo("/Project/assemblages");
+        return Task.CompletedTask;
+    }
+
+}

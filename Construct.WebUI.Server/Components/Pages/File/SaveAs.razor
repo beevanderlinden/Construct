@@ -1,0 +1,153 @@
+﻿@page "/File/save-as"
+@using System.IO.Compression
+@using Construct.Application.Interfaces
+@using Microsoft.Graph.Drives.Item.Items.Item.CreateUploadSession
+@using Construct.Domain.Common
+@inject IProjectStateService ProjectStateService
+@inject IProjectFileService ProjectFileService
+@inject IProjectService ProjectService
+@inject IToastService ToastService
+@inject IJSRuntime JS
+@inject GraphServiceClient GraphClient
+
+@* <h3>SaveAs</h3>
+
+
+
+<FluentButton OnClick="SlaProjectOpAls">Save As</FluentButton> *@
+
+<DriveTest 
+    @bind-MapNaam="@folderNaam"
+    @bind-BestandNaam="@bestandsNaam"
+    @bind-Bytes="@bytes" />
+    
+
+
+
+
+@code {
+    private string folderNaam { get; set; } = "Mijn Projecten";
+    private string bestandsNaam { get; set; } = "8080.cprj";
+    private byte[] bytes { get; set; } = [];
+
+    protected override async void OnInitialized()
+    {
+        if (ProjectStateService?.ProjectFileInfo?.Info != null)
+        {
+
+            bestandsNaam = ProjectStateService.ProjectFileInfo.Info.Nummer + ".cprj";
+            bytes = await GetBytesFromProjectAsync();
+        }
+
+
+        //base.OnInitialized();
+    }
+
+    string fileName = "test.cprj";
+    private async Task SlaProjectOpAls()
+    {
+        if (ProjectStateService.CurrentProject != null)
+        {
+            await SlaCprjBestandOp(fileName);
+            ToastService.ShowSuccess($"Project opgeslagen als {fileName}");
+        }
+        else
+        {
+            ToastService.ShowError("Geen project geladen, kan niet opslaan.");
+
+        }
+
+    }
+
+    private async Task<byte[]> GetBytesFromProjectAsync()
+    {
+        if (ProjectStateService.CurrentProject == null)
+            return Array.Empty<byte>();
+
+        return await ProjectService.GetGzippedBytes(ProjectStateService.CurrentProject);
+
+        // hieronder oude code (verwijder als bovenstaand werkt)
+        //var jsonBase64Zipped = await ProjectService.GetGzippedJsonBase64Async(ProjectStateService.CurrentProject);
+        //return Convert.FromBase64String(jsonBase64Zipped); // ✅ Dit geeft echte GZip-bytes
+    }
+
+   
+
+    private async Task SlaCprjBestandOp(string fileName)
+    {
+        if (ProjectStateService.CurrentProject == null) return;
+       
+
+        var jsonBase64Zipped = await ProjectService.GetGzippedJsonBase64Async(ProjectStateService.CurrentProject);
+        
+        await JS.InvokeVoidAsync("dirInterop.saveCprjFile", fileName, jsonBase64Zipped);
+    }
+
+    private async Task SlaCprjBestandOpNaarDriveAsync(string fileName)
+    {
+        if (ProjectStateService.CurrentProject == null)
+            return;
+
+        var base64 = await ProjectService.GetGzippedJsonBase64Async(ProjectStateService.CurrentProject);
+        var bytes = Convert.FromBase64String(base64);
+        using var stream = new MemoryStream(bytes);
+
+        try
+        {
+            // Haal de OneDrive van de ingelogde gebruiker op
+            var myDrive = await GraphClient.Me.Drive.GetAsync();
+            if (myDrive == null || string.IsNullOrEmpty(myDrive.Id))
+            {
+                Console.WriteLine("Drive is niet beschikbaar.");
+                return;
+            }
+
+            // Stel upload-instellingen in (optioneel: metadata)
+            var uploadProps = new DriveItemUploadableProperties
+            {
+                AdditionalData = new Dictionary<string, object>
+            {
+                { "@microsoft.graph.conflictBehavior", "replace" } // overschrijf indien nodig
+            }
+            };
+
+            // Maak uploadsessie aan (let op: body is vereist!)
+            var uploadSession = await GraphClient.Drives[myDrive.Id]
+                .Root
+                .ItemWithPath(fileName)
+                .CreateUploadSession
+                .PostAsync(new CreateUploadSessionPostRequestBody
+                {
+                    Item = uploadProps
+                });
+
+            if (uploadSession == null)
+            {
+                Console.WriteLine("Uploadsessie kon niet worden aangemaakt.");
+                return;
+            }
+
+            // Upload bestand (max 60 MB in één keer, anders chunked upload)
+            var uploadTask = new LargeFileUploadTask<DriveItem>(uploadSession, stream);
+            var uploadResult = await uploadTask.UploadAsync();
+
+            if (uploadResult.UploadSucceeded)
+            {
+                Console.WriteLine($"Bestand succesvol geüpload: {uploadResult.ItemResponse?.Name}");
+            }
+            else
+            {
+                Console.WriteLine("Upload mislukt.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Fout tijdens upload: {ex.Message}");
+        }
+    }
+
+
+
+
+
+}

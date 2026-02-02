@@ -1,0 +1,166 @@
+﻿@page "/example-wizard"
+
+@using System.ComponentModel.DataAnnotations
+
+@inherits Microsoft.AspNetCore.Components.ComponentBase
+
+@inject IDialogService DialogService
+
+<FluentWizard StepperPosition="StepperPosition.Left"
+              StepSequence="@WizardStepSequence.Visited"
+              DisplayStepNumber="@(WizardStepStatus.Current | WizardStepStatus.Next)"
+              Border="WizardBorder.All"
+              StepTitleHiddenWhen="@GridItemHidden.XsAndDown"
+              Height="auto"
+              Style="min-height: 300px;"
+              OnFinish="@OnFinishedAsync">
+
+    <Steps>
+
+        <FluentWizardStep Label="Persoonsgegevens"
+                          OnChange="@OnStepChange">
+            <FluentEditForm Model="_formData1" FormName="personalInfo" OnValidSubmit="OnValidSubmit" OnInvalidSubmit="OnInvalidSubmit">
+                <DataAnnotationsValidator />
+                <FluentStack Orientation="Orientation.Vertical">
+                    <FluentTextField Placeholder="Voornaam"     @bind-Value="_formData1.FirstName" />
+                    <FluentTextField Placeholder="Achternaam"   @bind-Value="_formData1.LastName" />
+                </FluentStack>
+                <FluentValidationSummary style="color:darkred" />
+            </FluentEditForm>
+        </FluentWizardStep>
+
+        <FluentWizardStep Label="Adres informatie"
+                          OnChange="@OnStepChange">
+            <FluentEditForm Model="_formData2" FormName="addressInfo" OnValidSubmit="OnValidSubmit" OnInvalidSubmit="OnInvalidSubmit">
+                <DataAnnotationsValidator />
+                <FluentStack Orientation="Orientation.Vertical">
+                    <FluentTextField Placeholder="Adresregel 1"     @bind-Value="_formData2.AddressLine1"   />
+                    <FluentTextField Placeholder="Adresregel 2"     @bind-Value="_formData2.AddressLine2" />
+                    <FluentTextField Placeholder="Stad"             @bind-Value="_formData2.City" />
+                    <FluentTextField Placeholder="Provincie"        @bind-Value="_formData2.StateOrProvince" />
+                    <FluentTextField Placeholder="Land"             @bind-Value="_formData2.Country" />
+                    <FluentTextField Placeholder="Postal Code"      @bind-Value="_formData2.PostalCode" />
+                </FluentStack>
+                <FluentValidationSummary style="color:darkred" />
+            </FluentEditForm>
+        </FluentWizardStep>
+
+        <FluentWizardStep Label="Set budget"
+                          Summary="Identify the best price"
+                          IconPrevious="@(new Icons.Filled.Size24.Star())"
+                          IconCurrent="@(new Icons.Filled.Size24.StarEmphasis())"
+                          IconNext="@(new Icons.Regular.Size24.Star())"
+                          DisplayStepNumber="false"
+                          OnChange="@OnStepChange">
+            Phasellus quis augue convallis, congue velit ac, aliquam ex. In egestas porttitor massa
+            aliquet porttitor. Donec bibendum faucibus urna vitae elementum. Phasellus vitae efficitur
+            turpis, eget molestie ipsum.
+            <FluentSelect Items="@(Enumerable.Range(10, 80).Select(i => i.ToString()))"
+                          Style="min-width: 70px;"
+                          Height="300px" />
+        </FluentWizardStep>
+
+        <FluentWizardStep Label="Finish">
+            <FluentEditForm Model="_finishFormData" FormName="finishForm" OnValidSubmit="OnValidSubmit" OnInvalidSubmit="OnInvalidSubmit">
+                <DataAnnotationsValidator />
+                <FluentStack Orientation="Orientation.Vertical">
+                    <FluentTextField Label="Signature" Placeholder="Type your signature" @bind-Value="_finishFormData.Signature" />
+                </FluentStack>
+                <FluentValidationSummary style="color:darkred" />
+            </FluentEditForm>
+        </FluentWizardStep>
+
+    </Steps>
+</FluentWizard>
+
+<FluentOverlay @bind-Visible=@_overlayIsVisible
+               Opacity="0.4"
+               Alignment="Align.Center"
+               Justification="@JustifyContent.Center">
+    <FluentProgressRing />
+</FluentOverlay>
+
+@code
+{
+    private FormData1 _formData1 = new FormData1();
+    private FormData2 _formData2 = new FormData2();
+    private FinishFormData _finishFormData = new FinishFormData();
+    private bool _overlayIsVisible = false;
+
+    void OnStepChange(FluentWizardStepChangeEventArgs e)
+    {
+        Console.WriteLine($"Go to step {e.TargetLabel} (#{e.TargetIndex})");
+    }
+
+    async Task OnFinishedAsync()
+    {
+        await DialogService.ShowInfoAsync("Wizard completed");
+    }
+
+    async Task OnValidSubmit()
+    {
+        Console.WriteLine($"OnValidSubmit called");
+
+        _overlayIsVisible = true;
+        await Task.Delay(100);
+        _overlayIsVisible = false;
+    }
+
+    void OnInvalidSubmit()
+    {
+        Console.WriteLine($"OnInvalidSubmit called");
+    }
+
+    private class FormData1
+    {
+        [Display(Name = "Voornaam")]
+        [Required(ErrorMessage = "{0} is verplicht.")]
+        [MinLength(1, ErrorMessage = "{0} moet minimaal {1} leestekens krijgen.")]
+        [MaxLength(12, ErrorMessage = "{0} mag maximaal {1} leestekens krijgen.")]
+
+        public string? FirstName { get; set; }
+
+        [Display(Name = "Achternaam")]
+        [Required(ErrorMessage = "{0} is verplicht.")]
+        [MinLength(2, ErrorMessage = "{0} moet minimaal {1} leestekens krijgen.")]
+        [MaxLength(30, ErrorMessage = "{0} mag maximaal {1} leestekens krijgen.")]
+        public string? LastName { get; set; }
+    }
+
+
+
+    private class FormData2
+    {
+
+        [Display(Name = "Adresregel1")]
+        [Required(ErrorMessage = "{0} is verplicht.")]
+        public string? AddressLine1 { get; set; }
+
+        public string? AddressLine2 { get; set; }
+
+        [Display(Name = "Stad")]
+        [Required(ErrorMessage = "{0} is verplicht.")]
+        public string? City { get; set; }
+
+        [Display(Name = "Provincie")]
+        [Required(ErrorMessage = "{0} is verplicht.")]
+        public string? StateOrProvince { get; set; }
+
+        [Display(Name = "Land")]
+        [Required(ErrorMessage = "{0} is verplicht.")]
+        public string? Country { get; set; } = "Nederland";
+
+        [Display(Name = "Postcode")]
+        [Required(ErrorMessage = "{0} is verplicht.")]
+        public string? PostalCode { get; set; }
+    }
+
+    private class FinishFormData
+    {
+        [Required]
+        [MinLength(1)]
+        public string? Signature { get; set; }
+    }
+}
+
+

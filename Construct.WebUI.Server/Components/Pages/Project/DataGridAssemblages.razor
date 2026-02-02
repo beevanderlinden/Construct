@@ -1,0 +1,115 @@
+﻿
+@if (Visible)
+{
+    @if (ToonCardView)
+    {
+        <AssemblagesCardView EditEntityClicked="HandleEditEntity" />
+    }
+   
+
+    @if (Items != null)
+    {
+        <FluentAccordion>
+            @foreach (var item in Items)
+            {
+                <FluentAccordionItem Heading="@($"{item.Merk} | {item.Naam}")">
+                    @* <FluentIcon Value="@(new Icons.Regular.Size24.Check())" Slot="start" /> *@
+
+                    <FluentIcon Value="@(new Icons.Regular.Size24.Edit())" OnClick="@(() => EditItem(Items.FirstOrDefault(i => i.Guid == item.Guid)))" Slot="start" />
+
+
+                   @*  <div slot="start">
+                        <FluentButton OnClick="@(() => EditItem(Items.FirstOrDefault(i => i.Guid == item.Guid)))" IconEnd="@(new Icons.Regular.Size24.Edit())">
+                            Bijwerken
+                        </FluentButton>
+                    </div> *@
+
+                    <FluentIcon Value="@(new Icons.Regular.Size24.Delete())" OnClick="@(() => DeleteItem(Items.FirstOrDefault(i => i.Guid == item.Guid)))" Slot="end" />
+
+                    <SteektrapSamenvatting Model="@item.AssemblageEntity" />
+                </FluentAccordionItem>
+            }
+        </FluentAccordion>
+       
+        
+    }
+
+
+
+
+
+}
+
+
+@code {
+    [Parameter]
+    public bool Visible { get; set; } = true;
+
+    [Parameter]
+    public bool ToonCardView { get; set; } = true;
+
+    [Parameter]
+    public required IQueryable<AssemblageViewModel> Items { get; set; }
+
+    [Parameter]
+    public IQueryable<SteekTrapEntity>? SteekTrappen { get; set; } 
+
+
+    [Parameter]
+    public EventCallback<AssemblageViewModel> ViewItemClicked { get; set; }
+
+    [Parameter]
+    public EventCallback<AssemblageViewModel> EditItemClicked { get; set; }
+
+    [Parameter]
+    public EventCallback<AssemblageViewModel> EditUitgangspuntenClicked{ get; set; }
+
+    [Parameter]
+    public EventCallback<AssemblageViewModel> DeleteItemClicked { get; set; }
+
+    private bool debugMode = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Delay(200);
+        StateHasChanged();
+    }
+
+
+    private async void ViewItem(AssemblageViewModel viewModel)
+    {
+        await ViewItemClicked.InvokeAsync(viewModel);
+    }
+
+    private async void EditItem(AssemblageViewModel? viewModel)
+    {
+        await EditItemClicked.InvokeAsync(viewModel);
+    }
+
+    private async void EditUitgangspunten(AssemblageViewModel viewModel)
+    {
+        await EditUitgangspuntenClicked.InvokeAsync(viewModel);
+    }
+
+    private async void DeleteItem(AssemblageViewModel? viewModel)
+    {
+        await DeleteItemClicked.InvokeAsync(viewModel);
+    }
+
+    private void HandleEditEntity(AssemblageEntity entity)
+    {
+        if (entity == null)
+            return;
+
+        // zoek de viewmodel die bij deze entity hoort
+        var vm = Items.FirstOrDefault(i => i.Guid == entity.Guid);
+        if (vm != null)
+        {
+            EditItem(vm);
+        }
+    }
+
+
+
+
+}

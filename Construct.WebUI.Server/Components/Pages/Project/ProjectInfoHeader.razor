@@ -1,0 +1,18 @@
+﻿<FluentCard Style="border-radius:16px; padding-top:4px;" Height="32px">
+    <FluentStack>
+        <small>Project: </small>
+        @Model.Nummer
+        <FluentSpacer></FluentSpacer>
+        <small>Plaats: </small>
+        @Model.Plaatsnaam
+    </FluentStack>
+    
+   
+</FluentCard>
+
+
+@code {
+    [Parameter]
+    public ProjectInfoViewModel Model { get; set; } = new();
+
+}

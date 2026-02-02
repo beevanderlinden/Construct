@@ -1,0 +1,346 @@
+﻿@using Eurocode.BetonConstructies
+@using Eurocode.HoutConstructies
+@using Eurocode.StaalConstructies
+@using Mechanica.SimpleBeam
+@using Profielen.Parametrisch
+@inject IDialogService DialogService
+@inject NavigationManager Nav
+@inject IProjectStateService ProjectState 
+
+
+@if (Visible && ProjectEntity != null)
+{
+
+    <FluentButton id="btnOpen1" 
+    IconStart="@(new Icons.Regular.Size24.AddSquare())"
+    Appearance="Appearance.Neutral" 
+    OnClick="@HandleMenuOpen">
+        Toevoegen berekening
+    </FluentButton>
+
+
+    <FluentButton IconStart="@(new Icons.Regular.Size24.Print())"
+                  Appearance="Appearance.Neutral"
+                  OnClick="@HandleGoToPrint">Afdrukken</FluentButton>
+ 
+
+
+    <FluentMenu
+        @key="ProjectEntity.Id" 
+        @bind-Open="@open" @onmenuchange=OnMenuChange Width="400px" >
+        <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Steektrap</FluentMenuItem>
+        <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Bordes</FluentMenuItem>
+        <FluentMenuItem Disabled="false">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Kolom</FluentMenuItem>
+        <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Console</FluentMenuItem>
+        <FluentMenuItem Disabled="false">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Ligger (beton)</FluentMenuItem>
+        <FluentMenuItem Disabled="false">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Ligger (staal)</FluentMenuItem>
+        <FluentMenuItem Disabled="false">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Ligger (hout)</FluentMenuItem>
+
+    </FluentMenu>
+
+
+
+
+
+
+}
+@code {
+    [Parameter]
+    public bool Visible { get; set; } = true;
+
+
+    [CascadingParameter]
+    public ProjectEntity? ProjectEntity { get; set; } 
+
+    //public AssemblageEntity NieuweAssemblage = new();
+
+
+    [Parameter]
+    public EventCallback<AssemblageEntity> CreateAssemblageClicked { get; set; }
+
+    private async void CreateAssemblage(AssemblageEntity assemblageEntity)
+    {
+        await CreateAssemblageClicked.InvokeAsync(assemblageEntity);
+    }
+
+
+
+    
+
+
+    [Parameter]
+    public bool open { get; set;} = false;
+
+    [Parameter]
+    public EventCallback<bool>MenuOpen{ get; set; }
+
+    private async Task HandleMenuOpen()
+    {
+        open = !open;
+        await MenuOpen.InvokeAsync(open);
+    }
+
+    private async Task HandleGoToPrint()
+    {
+        Nav.NavigateTo("/project/print");
+    }
+
+    private string status = "";
+
+    // Helper methoden om materialen op te halen of toe te voegen
+    private BetonContext GetOrAddBetonMaterial()
+    {
+        if (ProjectEntity?.Materialen == null)
+            throw new InvalidOperationException("Project.Materialen is null");
+
+        // Haal eerste beton materiaal op
+        var betonMaterial = ProjectEntity.Materialen.Values
+            .OfType<BetonContext>()
+            .FirstOrDefault();
+
+        // Als niet gevonden, maak en voeg standaard toe
+        if (betonMaterial == null)
+        {
+            betonMaterial = new BetonContext("C20/25");
+            ProjectEntity.Materialen.Add(betonMaterial.Id, betonMaterial);
+        }
+
+        return betonMaterial;
+    }
+
+    private StaalContext GetOrAddStaalMaterial()
+    {
+        if (ProjectEntity?.Materialen == null)
+            throw new InvalidOperationException("Project.Materialen is null");
+
+        // Haal eerste staal materiaal op
+        var staalMaterial = ProjectEntity.Materialen.Values
+            .OfType<StaalContext>()
+            .FirstOrDefault();
+
+        // Als niet gevonden, maak en voeg standaard toe
+        if (staalMaterial == null)
+        {
+            staalMaterial = new StaalContext() { StaalKwaliteit = StaalKwaliteitEnum.S235 };
+            ProjectEntity.Materialen.Add(staalMaterial.Id, staalMaterial);
+        }
+
+        return staalMaterial;
+    }
+
+    private HoutContext GetOrAddHoutMaterial()
+    {
+        if (ProjectEntity?.Materialen == null)
+            throw new InvalidOperationException("Project.Materialen is null");
+
+        // Haal eerste hout materiaal op
+        var houtMaterial = ProjectEntity.Materialen.Values
+            .OfType<HoutContext>()
+            .FirstOrDefault();
+
+        // Als niet gevonden, maak en voeg standaard toe
+        if (houtMaterial == null)
+        {
+            houtMaterial = new HoutContext(Houtkwaliteit.C24);
+            ProjectEntity.Materialen.Add(houtMaterial.Id, houtMaterial);
+        }
+
+        return houtMaterial;
+    }
+
+    private KolomEntity GetKolom()
+    {
+        KolomEntity kolom = new()
+        {
+            Guid = Guid.NewGuid(),
+            ProjectInfo = ProjectEntity!.ProjectInfo,
+            Naam = "kolom",
+            Merk = "KL-1",
+        };
+        kolom.Belastingen.GenereerBelastingCombinaties(kolom.Belastingen, kolom.Belastingen.BelastingGevallen, kolom.Belastingen.CombinatiesTypes);
+        return kolom;
+    }
+
+    private SteekTrapEntity GetSteekTrap()
+    {
+        SteekTrapEntity steekTrap = new(ProjectEntity!.ProjectInfo)
+        {
+            Guid = Guid.NewGuid(),
+            Naam = "steektrap",
+            Merk = "TR-1",
+        };
+
+        steekTrap.Belastingen.GenereerBelastingCombinaties(steekTrap.Belastingen, steekTrap.Belastingen.BelastingGevallen, steekTrap.Belastingen.CombinatiesTypes);
+
+        return steekTrap;
+    }
+
+    private async Task OnMenuChange(MenuChangeEventArgs args)
+    {
+        if (args is not null && args.Value is not null)
+        {
+            status = $"Item \"{args.Value}\" clicked";
+            if (ProjectEntity == null)
+            {
+                Console.WriteLine("ProjectEntity is null");
+                return;
+            }
+
+            switch (args.Value.ToLower())
+            {
+                case "ligger (staal)":
+                    var liggerStaal = new LiggerEntity()
+                    {
+                        ProjectInfo = ProjectEntity.ProjectInfo,
+                        Belastingen = new(ProjectEntity.ProjectInfo.Grondslagen),
+
+                        Guid =  Guid.NewGuid(),
+                        Naam = "ligger staal",
+                        Merk = "L-1",
+                        AssemblageType = AssemblageEntity.AssemblageTypeEnum.StaalAssemblage,
+                        Materiaal = GetOrAddStaalMaterial(),
+                        Profiel = Profielen.Staal.Doorsneden.HEB200,
+                    };
+                    liggerStaal.Beam.Profiel = liggerStaal.Profiel;
+                    liggerStaal.Beam.Materiaal = liggerStaal.Materiaal;
+                    liggerStaal.Beam.Length = 4.0;
+                    
+                    // Genereer belastingcombinaties
+                    liggerStaal.Belastingen.GenereerBelastingCombinaties(
+                        liggerStaal.Belastingen, 
+                        liggerStaal.Belastingen.BelastingGevallen, 
+                        liggerStaal.Belastingen.CombinatiesTypes);
+
+                    CreateAssemblage(liggerStaal);
+                    break;
+
+                case "ligger (beton)":
+                    var liggerBeton = new LiggerEntity()
+                    {
+                        ProjectInfo = ProjectEntity.ProjectInfo,
+                        Belastingen = new(ProjectEntity.ProjectInfo.Grondslagen),
+                        Naam = "betonbalk",
+                        Merk = "BB-1",
+                        AssemblageType = AssemblageEntity.AssemblageTypeEnum.BetonAssemblage,
+                        Materiaal = GetOrAddBetonMaterial(),
+                        Profiel = new Profielen.Beton.BetonProfiel(666,333),
+                    };
+                    liggerBeton.Beam.Materiaal = liggerBeton.Materiaal;
+                    liggerBeton.Beam.Profiel = liggerBeton.Profiel;
+                    liggerBeton.Beam.Length = 3.0;
+                    
+                    // Genereer belastingcombinaties
+                    liggerBeton.Belastingen.GenereerBelastingCombinaties(
+                        liggerBeton.Belastingen, 
+                        liggerBeton.Belastingen.BelastingGevallen, 
+                        liggerBeton.Belastingen.CombinatiesTypes);
+                    
+                    CreateAssemblage(liggerBeton);
+                    break;
+
+
+                case "ligger (hout)":
+                    var liggerHout = new LiggerEntity()
+                    {
+                        ProjectInfo = ProjectEntity.ProjectInfo,
+                        Belastingen = new(ProjectEntity.ProjectInfo.Grondslagen),
+
+                        Guid = Guid.NewGuid(),
+                        Naam = "houten balk",
+                        Merk = "HB-1",
+                        AssemblageType = AssemblageEntity.AssemblageTypeEnum.HoutAssemblage,
+                        Materiaal = GetOrAddHoutMaterial(),
+                        Profiel = new ParametrischProfielContext()
+                        {
+                            Vorm = ParametrischeProfielVormEnum.Rechthoek,
+                            Naam = "58x156",
+                            B = 58,
+                            H = 156,
+                        }
+                    };
+                    
+                    // ✅ Gebruik bestaande Beam, maak geen nieuwe aan!
+                    liggerHout.Beam.Length = 3.0;
+                    liggerHout.Beam.Materiaal = liggerHout.Materiaal;
+                    liggerHout.Beam.Profiel = liggerHout.Profiel;
+                    
+                    // Genereer belastingcombinaties
+                    liggerHout.Belastingen.GenereerBelastingCombinaties(
+                        liggerHout.Belastingen, 
+                        liggerHout.Belastingen.BelastingGevallen, 
+                        liggerHout.Belastingen.CombinatiesTypes);
+
+                    CreateAssemblage(liggerHout);
+                    break;
+
+
+
+                case "steektrap":
+                    var steektrap = GetSteekTrap();
+
+
+                    CreateAssemblage(steektrap);
+                    break;
+                case "kolom":
+                    // toekomst geef een 'kolom' door als assemblage
+                    var kolom = GetKolom();
+                    CreateAssemblage(kolom);
+                    break;
+                case "bordes":
+                    BordesEntity bordes = new()
+                    {
+                        ProjectInfo = ProjectEntity.ProjectInfo,
+                        Guid = Guid.NewGuid(),
+                        Naam = "bordes",
+                        Merk = "BD-1",
+                        Breedte = 1300,
+                        Lengte = 2700,
+
+                    };
+                    bordes.Trap1!.Randafstand = 100;
+                    bordes.Trap2!.Randafstand = 100;
+
+
+
+                    CreateAssemblage(bordes);
+
+                    //CreateBordes(bordes);
+
+                    // als er geen trap is dan moeten we die ook maken
+                    // zodat we de trap op het bordes kunnen zetten
+                    var trappen = ProjectState!.CurrentProject!.Assemblages.Where(x => x.Merk!.StartsWith("TR")).ToList();
+                    if (trappen.Count == 0)
+                    {
+                        var steektrapVoorOpBordes = GetSteekTrap();
+                        steektrapVoorOpBordes.OptredeAantal1 = 8;
+                        steektrapVoorOpBordes.OptredeMaat = 1500.0 / 8.0;
+                        steektrapVoorOpBordes.Breedte = 1200.0;
+                        //steektrapVoorOpBordes.ProfielSchil.Hoogte = 100.0;
+
+                        steektrapVoorOpBordes.Bijwerken();
+
+                        CreateAssemblage(steektrapVoorOpBordes);
+                        bordes.Trap1.AansluitendElement = steektrapVoorOpBordes;
+                        bordes.Trap2.AansluitendElement = steektrapVoorOpBordes;
+                    }
+                    else
+                    {
+                        var fod = trappen.FirstOrDefault();
+                        bordes.Trap1.AansluitendElement = fod;
+                        bordes.Trap2.AansluitendElement = fod;
+                    }
+
+                    break;
+
+
+            }
+
+            await HandleMenuOpen();
+
+        }
+        
+    }
+
+
+}
+

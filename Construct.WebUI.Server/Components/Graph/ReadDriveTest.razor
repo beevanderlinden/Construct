@@ -1,0 +1,135 @@
+﻿@namespace Giraffe
+@using Microsoft.Kiota.Abstractions
+@inject GraphServiceClient GraphClient
+@inject IGraphDriveService GraphDriveService
+
+<h3>GiraffeDrive – Selecteer bron</h3>
+
+<select @onchange="OnSourceChanged" class="form-select">
+    <option value="mydrive">📁 Mijn Drive</option>
+    <option value="shared">🤝 Gedeeld met mij</option>
+    <option value="appfolder">🔒 AppFolder</option>
+</select>
+
+@if (isLoading)
+{
+    <p>Laden...</p>
+}
+else if (driveItems != null && driveItems.Any())
+{
+    <ul>
+        @foreach (var item in driveItems)
+        {
+            <li>
+                @if (item.Folder != null)
+                {
+                    <strong>📁 @item.Name</strong>
+                }
+                else
+                {
+                    <span>📄 @item.Name</span>
+                }
+            </li>
+        }
+    </ul>
+}
+else if (driveItems != null)
+{
+    <p>Geen bestanden gevonden.</p>
+}
+
+@code {
+    private List<DriveItem>? driveItems;
+    private bool isLoading = false;
+    private string selectedSource = "appfolder";
+    private string? extension = null;
+
+    private async Task OnSourceChanged(ChangeEventArgs e)
+    {
+        selectedSource = e.Value?.ToString() ?? "appfolder";
+        await LoadDriveItemsAsync();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDriveItemsAsync();
+    }
+
+    private async Task LoadDriveItemsAsync()
+    {
+        driveItems = null;
+        isLoading = true;
+
+        try
+        {
+            driveItems = await GraphDriveService.LoadDriveItemsAsync(selectedSource, extension, maxDepth: 8);
+
+
+            // debug
+            //if (driveItems != null &&)
+            //await LoadDriveItemsAsync_BAK();
+
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine("Fout bij ophalen: " + ex.Message);
+            driveItems = new List<DriveItem>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+
+    private async Task LoadDriveItemsAsync_BAK()
+    {
+        driveItems = null;
+        isLoading = true;
+
+        try
+        {
+            // Bepaal de relative path voor elke bron
+            var relativePath = selectedSource switch
+            {
+                "mydrive" => "/me/drive/root/children",
+                "shared" => "/me/drive/sharedWithMe",
+                "appfolder" => "/me/drive/special/approot/children",
+                _ => throw new InvalidOperationException("Ongeldige bron")
+            };
+
+            var requestInfo = new RequestInformation
+            {
+                HttpMethod = Method.GET,
+                UrlTemplate = "{+baseurl}" + relativePath,
+                PathParameters = new Dictionary<string, object>
+            {
+                { "baseurl", "https://graph.microsoft.com/v1.0" }
+            }
+            };
+
+            var response = await GraphClient
+                .RequestAdapter
+                .SendAsync<DriveItemCollectionResponse>(
+                    requestInfo,
+                    DriveItemCollectionResponse.CreateFromDiscriminatorValue,
+                    null,
+                    CancellationToken.None
+                );
+
+            driveItems = response?.Value?.ToList() ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine("Fout bij ophalen items: " + ex.Message);
+            driveItems = new List<DriveItem>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+
+   
+}

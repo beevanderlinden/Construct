@@ -1,0 +1,118 @@
+﻿@namespace Giraffe
+@inject GraphServiceClient GraphClient
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+
+<button class="mgt-login" @onclick="TogglePopup" @onblur="ClosePopup" type="button" tabindex="0">
+    @if (user != null)
+    {
+        @if (!string.IsNullOrWhiteSpace(photoBase64))
+        {
+            <img src="data:image/jpeg;base64,@photoBase64" alt="Foto" class="mgt-login__avatar" />
+        }
+        else
+        {
+            <div class="mgt-login__avatar">@GetInitials(user.DisplayName)</div>
+        }
+        <div class="mgt-login__info">
+            <div class="mgt-login__name">@user.DisplayName</div>
+            <div class="mgt-login__email">@(user.Mail ?? user.UserPrincipalName)</div>
+        </div>
+    }
+    else
+    {
+        <span>Gast</span>
+    }
+</button>
+
+@if (isPopupVisible)
+{
+    <div class="mgt-login__popup" tabindex="-1" @onfocusout="ClosePopup" style="position: absolute;">
+        <button class="mgt-login__logout-button" @onmousedown="Logout">Uitloggen</button>
+    </div>
+}
+
+@code {
+    private User? user;
+    private string? photoBase64;
+    private bool isPopupVisible = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userClaims = authState.User;
+
+        if (!userClaims.Identity?.IsAuthenticated ?? true)
+        {
+            // Geen ingelogde gebruiker, veilig terugvallen
+            user = null;
+            photoBase64 = null;
+            return;
+        }
+
+        // Alleen GraphClient gebruiken als er auth is
+        try
+        {
+            user = await GraphClient.Me.GetAsync();
+
+            try
+            {
+                var photoStream = await GraphClient.Me.Photo.Content.GetAsync();
+                if (photoStream != null)
+                {
+                    using var ms = new MemoryStream();
+                    await photoStream.CopyToAsync(ms);
+                    photoBase64 = Convert.ToBase64String(ms.ToArray());
+                }
+            }
+            catch
+            {
+                // Geen foto beschikbaar
+            }
+        }
+        catch
+        {
+            // Graph call faalt, veilig terugvallen
+            user = null;
+            photoBase64 = null;
+        }
+    }
+
+    private void TogglePopup()
+    {
+        isPopupVisible = !isPopupVisible;
+    }
+
+    private void ClosePopup(FocusEventArgs? e = null)
+    {
+        // Sluit popup bij focusverlies
+        isPopupVisible = false;
+        StateHasChanged();
+    }
+
+  
+
+    private string GetInitials(string? fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName)) return string.Empty;
+        var names = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return string.Concat(names.Take(2).Select(n => char.ToUpperInvariant(n[0])));
+    }
+
+
+
+
+
+    private void Login()
+    {
+        Navigation.NavigateTo($"authentication/login?returnUrl={Uri.EscapeDataString(Navigation.Uri)}", forceLoad: true);
+
+    }
+
+    private void Logout()
+    {
+        //await SignOutManager.SetSignOutState();
+        Navigation.NavigateTo($"authentication/logout?returnUrl={Uri.EscapeDataString(Navigation.Uri)}", forceLoad: true);
+    }
+}

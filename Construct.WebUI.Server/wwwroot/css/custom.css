@@ -1,0 +1,1248 @@
+﻿:root {
+    --line-height: 4mm;
+    --padding-table-cell: 1mm; /* zodat we zonder rand netjes tekst uitgelijnd hebben */
+    --margin-table-left: -1mm; /* mogelijk gebruiken om tabelrand in de marge te tekenen, door negatieve waarde*/
+    --border-width-table: 0.1mm; /* standaard tabelrand dikte */
+    --page-padding-left: 15mm; /* pagina marge links */
+    --page-padding-top: 10mm; /* pagina marge boven */
+    --page-padding-right: 15mm; /* pagina marge rechts */
+    --page-padding-bottom: 10mm; /* pagina marge onder */
+    --accent-doc: var(--accent-fill-rest); /* kleur voor accenten in document */
+    --accent: #006a6a;
+    --head-bg: rgba(0,106,106,0.10);
+    --foot-bg: rgba(0,106,106,0.18);
+}
+
+
+i {
+    font-family: "Cambria Math", Cambria, serif;
+    font-style: italic; /* optioneel */
+}
+
+
+.math {
+    font-family: 'Cambria Math';
+    font-style: normal;
+}
+
+/* ====== TABLE WRAPPER ====== */
+.table-wrapXXX {
+    display: inline-block;
+    /*margin: 12px 0 28px;*/
+    margin-left: var(--margin-table-left);
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    background: white;
+}
+
+/* ====== BASE TABLE ====== */
+.ec-tableXXX {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 3mm;
+    color: var(--text);
+    margin: 0;
+}
+
+
+/* ====== NAVIGATIE MENU STYLING ====== */
+
+/* Subtiele achtergrondkleur voor NavMenu */
+.navmenu {
+    background: rgba(0, 0, 0, 0.02); /* Zeer subtiele grijze tint */
+}
+
+/* Alternatief: iets meer contrast */
+nav.sitenav {
+    background: rgba(0, 0, 0, 0.015);
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Voor dark mode - iets lichter */
+@media (prefers-color-scheme: dark) {
+    .navmenu {
+        background: rgba(255, 255, 255, 0.03);
+    }
+    
+    nav.sitenav {
+        background: rgba(255, 255, 255, 0.02);
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+    }
+}
+
+
+/* ====== TABLE WRAPPER ====== */
+.table-wrap {
+    margin-left: -1mm;
+    margin-right: -1mm;
+    margin-bottom: 4mm;
+    width: calc(100% + 2mm);
+    border-radius: 0px;
+    background: white;
+    box-shadow: 0 3px 9px rgba(0,0,0,0.12);
+    overflow: inherit;
+}
+
+/* ====== TABEL BASIS ====== */
+.ec-table {
+    width: 182mm;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 3mm;
+    margin: 0; 
+    line-height: 5mm;
+}
+
+
+    .ec-table th,
+    .ec-table td {
+        padding: 0 1mm;
+        border-bottom: 1px solid #eee;
+        font-weight: 400;
+    }
+
+    /* laatste rij: geen border-bottom */
+    .ec-table tr:last-child > th,
+    .ec-table tr:last-child > td {
+        border-bottom: none;
+    }
+
+
+/* ====== LAYOUT ONLY MODE ====== */
+.table-wrap.layout-only {
+    box-shadow: none;
+    background: transparent;
+    border-radius: 0;
+    border:1px solid #ddd;
+    border-color: #eee;
+}
+
+    .table-wrap.layout-only .ec-table {
+        border-radius: 0;
+    }
+
+        /* alleen rechter- en onderlijn → geen dubbele lijnen */
+        .table-wrap.layout-only .ec-table th,
+        .table-wrap.layout-only .ec-table td {
+            background: none;
+            font-weight: normal;
+            border-right: 0.2mm dotted rgba(0,0,0,0.25);
+            border-bottom: 0.2mm dotted rgba(0,0,0,0.25);
+            border-color: #eee;
+        }
+
+        /* geen extra nadruk op header */
+        .table-wrap.layout-only .ec-table thead th {
+            background: none;
+        }
+
+        /* laatste kolom geen rechterlijn */
+        .table-wrap.layout-only .ec-table tr > *:last-child {
+            border-right: none;
+        }
+
+        /* laatste rij geen onderlijn */
+        .table-wrap.layout-only .ec-table tbody tr:last-child > *,
+        .table-wrap.layout-only .ec-table tfoot tr:last-child > * {
+            border-bottom: none;
+        }
+
+
+/* ====== HEAD ====== */
+/* col-head: thead als aanwezig, anders eerste rij tbody */
+.ec-table.col-head thead tr > * {
+    background: var(--head-bg);
+    font-weight: 400;
+    color: var(--accent);
+}
+
+.ec-table.col-head:not(:has(thead)) tbody tr:first-child > * {
+    background: var(--head-bg);
+    font-weight: 400;
+    color: var(--accent);
+}
+
+/* row-head = eerste kolom van alle rijen */
+.ec-table.row-head tr > *:first-child {
+    background: var(--head-bg);
+    font-weight: 400;
+    color: var(--accent);
+}
+
+/* corner cel = alleen als beide heads actief */
+.ec-table.col-head.row-head thead tr:first-child > *:first-child {
+    background: var(--head-bg);
+}
+
+/* ====== FOOT ====== */
+/* col-foot: tfoot als aanwezig, anders laatste rij tbody */
+.ec-table.col-foot tfoot tr > * {
+    background: var(--foot-bg);
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.ec-table.col-foot:not(:has(tfoot)) tbody tr:last-child > * {
+    background: var(--foot-bg);
+    font-weight: 600;
+    color: var(--accent);
+}
+
+/* row-foot = laatste kolom van alle rijen, wint altijd */
+.ec-table.row-foot tr > *:last-child {
+    background: var(--foot-bg) !important;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+
+.tippy-box {
+    font-size: 5mm;
+}
+
+.katex-display {
+    margin: 0;
+}
+
+.formula-caption {
+    margin-top: 0.25rem;
+    font-size: 3mm;
+    text-align: center;
+}
+
+
+.beam-diagram.dirty {
+    position: relative;
+}
+
+    .beam-diagram.dirty::after {
+        content: "INVOER GEWIJZIGD";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-30deg);
+        font-size: 36px; /* pas aan naar je container */
+        color: red;
+        opacity: 0.2;
+        pointer-events: none;
+    }
+
+
+.hide-on-phone {
+    display: block;
+}
+
+.grid-5mm {
+    /* lichte blauwe lijntjes */
+    background-image: repeating-linear-gradient( to bottom, rgba(135, 206, 235, 0.6) 0mm, /* lijndikte begin */
+    rgba(135, 206, 235, 0.6) 0.2mm, /* lijndikte (0.2mm = dunne lijn) */
+    transparent 0.2mm, transparent 5mm /* afstand tot de volgende lijn */
+    );
+}
+
+
+@media (max-width: 600px) {
+    .hide-on-phone {
+        display: none !important;
+    }
+}
+
+
+
+
+    dl {
+        display: grid;
+        grid-template-columns: max-content auto;
+    }
+
+    dt {
+        grid-column-start: 1;
+    }
+
+    dd {
+        grid-column-start: 2;
+        margin-left: 1em;
+        margin-bottom: 0.25em;
+    }
+
+    .add-colon::before {
+        color: #333; /* Optioneel: pas de kleur aan */
+        content: "🔹 "; /* Voeg ": " vóór de tekst toe */
+        white-space: pre;
+    }
+
+    .custom-data-table {
+        width: 100%;
+        margin: 0px;
+        padding: 0px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--neutral-layer-1);
+        /*background-color: #f9f9f9;*/
+        background-color: transparent;
+        border-collapse: separate; /* Zorgt voor afgeronde hoeken op de cellen */
+        border-spacing: 0; /* Verwijdert extra ruimte tussen cellen */
+    }
+
+        .custom-data-table td:first-child {
+            width: 200px; /* vaste breedte */
+            white-space: nowrap; /* voorkomt afbreken tekst */
+            vertical-align: top; /* optioneel: uitlijning */
+        }
+
+
+        .custom-data-table td {
+            padding: 2px 8px;
+            border-bottom: 0px solid ghostwhite;
+            word-wrap: break-word; /* Zorgt ervoor dat lange woorden breken */
+            word-break: break-word; /* Forceert breken van lange woorden */
+            hyphens: auto; /* Automatisch afbreken van woorden waar mogelijk */
+        }
+
+        .custom-data-table tr:nth-child(even) {
+            background-color: var(--neutral-layer-1);
+        }
+
+
+        .custom-data-table tr:hover {
+            background-color: transparent;
+            color: var(--accent-base-color);
+        }
+
+
+
+        .custom-data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+    .document-subtitle {
+        font-size: 1.1em;
+        font-style: italic;
+        text-align: center;
+    }
+
+    .document-title {
+        font-size: 4em;
+        font-weight: bold;
+        line-height: initial;
+        margin-bottom: 20px;
+        margin-top: 20px;
+        text-align: center;
+        /*background: var(--fluent-color-accent, #b6ff00);*/
+    }
+
+    .ec-accordion {
+        background-color: transparent;
+        border-left: none;
+        border-right: none;
+        border-top: none;
+        border-bottom: solid 1px gray;
+        color: var(--neutral-foreground-rest);
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 500;
+        outline: none;
+        padding-top: 10px;
+        padding-bottom: 5px;
+        padding-left: 0px;
+        text-align: left;
+        /*width: 100%;*/
+        display: none; /* doe maar even niet */
+        transform: rotate(-90deg);
+        transform-origin: center;
+        width: 100mm !important;
+        height: 10mm;
+    }
+
+        .ec-accordion.active + .ec-panel {
+            display: block; /* Toon de inhoud als de accordion actief is */
+        }
+
+        .ec-accordion.active:after {
+            content: "➖"; /* Inklappen (minder tonen) */
+            float: right;
+            font-size: 12px;
+        }
+
+        .ec-accordion:hover {
+            background-color: #ddd;
+        }
+
+        .ec-accordion:not(.active):after {
+            content: "➕"; /* Uitklappen (meer tonen) */
+            float: right;
+            font-size: 12px;
+            padding-left: 10px;
+        }
+
+    /*.ec-accordion::before {
+        content: "✒️ ";
+        white-space: pre;
+    }*/
+
+    .ec-article {
+        display: none;
+        color: gray;
+        /*font-size: smaller;*/
+        min-width: 75px;
+    }
+
+    .ec-description {
+        font-weight: 100;
+        font-size: 3mm;
+        /*font-size: x-small;*/
+        /*display: none;*/
+        width: 8cm;
+        /*min-width: 400px;*/
+    }
+
+   
+
+    table {
+        border: 0px solid lightgrey; /* verander de border bij Debug! */
+        border-radius: 3px;
+    }
+
+
+.preview-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start; /* Links uitlijnen ipv center */
+    align-content: flex-start; /* verticaal bovenaan uitlijnen */
+    background: var(--neutral-fill-layer-rest);
+    /*background: none;*/
+    padding: 0;
+    padding-right: 270px; /* Ruimte voor PrintPageMenu: 250px menu + 20px offset + 20px extra = 290px */
+    gap: 4.95mm;
+    box-sizing: border-box; /* Zorg dat padding binnen de breedte blijft */
+    /* lichte blauwe lijntjes */
+   
+}
+
+
+
+.preview-container,
+.preview-container * {
+    /* stel hier alle kleuren in voor op de pagina;*/
+    --svg-text-color: darkblue;
+    --svg-line-color: black;
+    --svg-fill-color: gray;
+    --accent: #006a6a;
+
+
+}
+
+.preview-container text {
+    fill: black;
+}
+
+
+/* Pulserende animatie voor paths */
+@keyframes pulse {
+    0% {
+        fill-opacity: 1;
+        stroke-opacity: 1;
+    }
+
+    50% {
+        fill-opacity: 0.75;
+        stroke-opacity: 0.5;
+        transform:rotate(5);
+    }
+
+    100% {
+        fill-opacity: 1;
+        stroke-opacity: 1;
+    }
+}
+@keyframes draw {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+
+
+
+svg.has-warning path {
+    stroke: var(--warning) !important;
+   
+    /*animation: pulse 2s infinite;*/ /* 1s cyclus, oneindig herhalen */
+}
+svg.has-warning text{
+    fill: var(--warning) !important;
+}
+svg.has-warning line{
+    stroke: var(--warning) !important;
+}
+
+
+    .preview-container svg * {
+        /*fill: var(--svg-fill-color);*/ /* standaardkleur voor alles (vlakken, lijnen) */
+        stroke: var(--svg-line-color); /* standaard lijntint */
+    }
+
+    /* tekst apart behandelen */
+    .preview-container svg text {
+        /*fill: var(--svg-text-color);*/ /* tekstkleur (anders dan de rest) */
+        stroke: none; /* voorkomt omlijning rond letters */
+    }
+
+/* === STIJL BUITEN DE PREVIEW-CONTAINER === */
+/* Optioneel: standaard SVG-stijl voor de rest van de site */
+[id^="svgContainer_"] svg * {
+    /*fill: var(--fill-color);*/ /* switch tussen dark en light */
+    
+    stroke: var(--accent-fill-rest); /* switch tussen dark en light */
+}
+
+/* Tekst buiten de preview */
+[id^="svgContainer_"] svg text {
+    fill: var(--neutral-foreground-rest); /* switch tussen dark en light */
+    stroke: none;
+}
+
+    /* Eén A4-pagina */
+    .preview-container .ec-panel {
+        --panel-width: 210mm;
+        --panel-height: 297mm;
+        width: var(--panel-width);
+        height: var(--panel-height);
+        background: white;
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.25);
+        box-sizing: border-box;
+        position: relative;
+        /* Visuele schaal */
+        /*transform: scale(var(--scale, 1));*/
+        /*transform-origin: top left;*/
+        /* --- HET BELANGRIJKSTE: laat flex de geschaalde afmetingen gebruiken --- */
+        /* flex-basis bepaalt hoeveel ruimte een item in de flex-layout inneemt */
+        /*flex: 0 0 calc(var(--panel-width) * var(--scale));*/
+        /* reset margins (geen compenserende margin nodig meer) */
+        margin: 0;
+    }
+
+.ec-panel {
+    width: 210mm;
+    height: 297mm;
+    background: white;
+    box-sizing: border-box;
+    padding-left: var(--page-padding-left);
+    padding-top: var(--page-padding-top); /* marge boven */
+    padding-bottom: var(--page-padding-bottom); /* marge onder */
+    padding-right: var(--page-padding-right);
+    display: flex;
+    flex-direction: column;
+    /*font-family: Arial, sans-serif;*/
+}
+
+.ec-header {
+    position: absolute;
+    top: 0mm;
+    font-size: 3mm;
+    font-weight: 100;
+    left: var(--page-padding-left);
+    right: var(--page-padding-right);
+    /* height: 8mm; */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    /* align-items: center; */
+    border-bottom: 1px solid #eee;
+    color: var(--accent);
+    padding-bottom: 0.1mm;
+    padding-top: 5mm;
+}
+
+    .ec-header .left {
+        text-align: left;
+    }
+
+    .ec-header .center {
+        text-align: center;
+        /*font-weight: 600;*/
+    }
+
+    .ec-header .right {
+        text-align: right;
+    }
+
+.ec-footer {
+    position: absolute;
+    bottom: 0mm;
+    left: var(--page-padding-left);
+    right: var(--page-padding-right);
+    /* height: 10mm; */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    border-top: 1px dashed var(--accent-doc);
+    padding-top: 0.1mm;
+    padding-bottom: 2mm;
+}
+    .ec-footer .left {
+        text-align: left;
+    }
+
+    .ec-footer .center {
+        text-align: center;
+    }
+
+    .ec-footer .right {
+        text-align: right;
+    }
+
+
+
+/* Header en footer */
+/*.page-header,
+.page-footer {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 15mm;*/ /* marge links/rechts */
+    /*font-size: 9pt;
+    box-sizing: border-box;
+}*/
+
+/* Eventueel subtiele lijnen */
+/*.page-header {
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 2mm;
+}
+
+.page-footer {
+    border-top: 1px solid #ccc;
+    padding-top: 2mm;
+    margin-top: auto;*/ /* duwt footer naar beneden */
+/*}*/
+
+    /* Flex-spanning voor links/midden/rechts */
+    /*.page-header span,
+    .page-footer span {
+        flex: 1;
+    }
+
+    .page-header .center,
+    .page-footer .center {
+        text-align: center;
+    }
+
+    .page-header .right,
+    .page-footer .right {
+        text-align: right;
+    }*/
+
+/* Content neemt de overgebleven ruimte */
+.page-content {
+    flex: 1;
+    padding: 5mm 15mm; /* marge rondom content */
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+
+/* pseudo-element dat de geschaalde hoogte “reserveert” in de layout */
+/*.ec-panel::after {
+    content: "";
+    display: block;
+    width: 100%;
+    height: calc(var(--panel-height) * var(--scale));
+}*/
+
+
+/*.preview-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1mm;
+    padding: 0;
+    justify-content: flex-start;
+    
+}*/
+
+
+
+
+/*.preview-container .ec-panel {*/
+    /* origineel A4 */
+    /*--panel-width: 210mm;
+    --panel-height: 297mm;
+    width: var(--panel-width);
+    height: var(--panel-height);
+    background: white;
+    box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    box-sizing: border-box;
+    margin-bottom: 10px;
+    transform: scale(var(--scale, 1));
+    transform-origin: top left;
+}*/
+
+
+
+
+    /*.ec-panel {*/
+        /*background-color: #f9f9f9;*/
+        /*display: none;*/ /* in de basis verborgen*/
+        /*overflow: hidden;
+        position: relative;*/ /* zodat we de svg met absoluut kunnen plaatsen als ware een textframe */
+        /*padding-top: 15mm;
+        padding-right: 15mm;
+        padding-left: 15mm;
+        padding-bottom: 15mm;
+        width: 210mm;
+        height: 297mm;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }*/
+
+.ec-par {
+    font-size: 3.0mm;
+    margin-bottom: 0px;
+    line-height: var(--line-height);
+    /*white-space:pre;*/
+}
+
+
+    .ec-width {
+        min-width: var(--ec-width);
+    }
+
+    .ec-width-0 {
+        min-width: 3cm !important;
+        max-width: 9cm;
+    }
+
+    .ec-width-1 {
+        min-width: 1cm !important;
+    }
+
+   
+    .ec-width-2 {
+        min-width: 2cm !important;
+    }
+
+    .ec-width-3 {
+        min-width: 3cm !important;
+    }
+
+    .ec-width-4 {
+        min-width: 4cm !important;
+    }
+
+    .ec-width-5 {
+        min-width: 5cm !important;
+    }
+
+    .ec-width-6 {
+        min-width: 6cm !important;
+    }
+
+    .ec-width-7 {
+        min-width: 7cm !important;
+    }
+
+    .ec-width-8 {
+        min-width: 8cm !important;
+    }
+
+    .ec-width-9 {
+        min-width: 9cm !important;
+    }
+
+    .ec-width-10 {
+        min-width: 10cm !important;
+    }
+
+    .ec-width-11 {
+        min-width: 11cm !important;
+    }
+
+    .ec-width-12 {
+        min-width: 12cm !important;
+    }
+
+    .ec-width-13 {
+        min-width: 13cm !important;
+    }
+
+    .ec-width-14 {
+        min-width: 14cm !important;
+    }
+
+    .ec-width-15 {
+        min-width: 15cm !important;
+    }
+
+    .ec-width-16 {
+        min-width: 16cm !important;
+    }
+
+    .ec-width-17 {
+        min-width: 17cm !important;
+    }
+
+    .ec-width-18 {
+        min-width: 18cm !important;
+    }
+
+
+    .ec-symbol {
+        /*text-align: center;*/
+        font-size: small;
+        font-style: italic;
+        text-align: right !important;
+        /*font-family: 'Cambria Math', 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;*/
+        width: 2cm;
+    }
+
+        .ec-symbol:after {
+            /*font-family: 'Arial Narrow';*/
+            font-style: normal;
+            /*content: " :";*/
+        }
+
+ 
+
+    /* Als de container `.ec-panel` de class `.bordered` heeft */
+    .preview-container.bordered .ec-table .ec-th,
+    .preview-container.bordered .ec-table .ec-td {
+        padding-left: 8px;
+        /*border: 1px solid #ccc;*/
+    }
+
+    /* bordered, dan */
+    .preview-container.bordered .ec-table {
+        /*width: 100%;*/
+        background-color: wheat;
+    }
+
+    /* Optioneel: buitenrand van de hele tabel */
+    /*.ec-panel.bordered .ec-table {
+    border: 1px solid #ccc;
+}*/
+
+
+
+table.borderless {
+    border-collapse: collapse;
+    border: 0 !important;
+}
+
+    table.borderless th,
+    table.borderless td {
+        border: 0;
+    }
+
+
+    /* Basisstijl zonder borders */
+.ec-tableXXX {
+    /*box-shadow: 0 0 1px 0 teal;*/
+    border-width: var(--border-width-table);
+    border-color: var(--accent-doc);
+    background: none;
+    border-radius: 2mm;
+    border-collapse: separate; /* seperate voor radius */
+    border-spacing: 0; /* Geen extra ruimte */
+    font-size: 3mm;
+    margin-bottom: 2.5mm;
+   
+    line-height: var(--line-height);
+    width: max-content; /* als we geen border gebruiken is dit mooi*/
+    max-width: 180mm; /* maar niet groter dan dit */
+    table-layout: fixed;
+}
+
+        .ec-table th,
+        .ec-table th * {
+            /*font-style: italic;*/
+            /*color: var(--accent-doc);*/
+        }
+
+        /* Geen standaard padding/border */
+    .ec-table .ec-th,
+    .ec-table .ec-td {
+        /*padding: 0 var(--padding-table-cell);
+        box-sizing: border-box;
+        font-size: 3mm;
+        line-height: var(--line-height);
+        white-space: normal;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;*/
+        /*padding-left: 0px;*/
+        /*border: solid 0.1px red;*/
+    }
+
+   
+
+
+    /* Styling actief zodra een ouder .bordered heeft (zoals .preview-container.bordered) */
+    .preview-container.bordered .ec-table {
+        border-radius: 4px;
+        /*border: solid 1px red;*/
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+    }
+
+        /* Alleen horizontale lijnen tussen rijen */
+        .preview-container.bordered .ec-table tr:not(:last-child) .ec-td,
+        .preview-container.bordered .ec-table tr:not(:last-child) .ec-th {
+            border-bottom: 1px solid #ddd;
+        }
+
+        /* Alleen verticalen tussen kolommen */
+        .preview-container.bordered .ec-table td:not(:last-child) .ec-td,
+        .preview-container.bordered .ec-table td:not(:last-child) .ec-th {
+            border-right: 5px solid red;
+        }
+
+        /* Padding links alleen bij bordered */
+        .preview-container.bordered .ec-table .ec-td,
+        .preview-container.bordered .ec-table .ec-th {
+            padding-left: 8px;
+        }
+
+
+
+
+
+
+
+
+.ec-table-head {
+    background: transparent;
+    border-bottom: 0.1mm solid var(--accent-doc);
+    border-top: 0.1mm solid var(--accent-doc);
+    text-align: left;
+}
+
+    .ec-table-heading {
+        border-left: 0px solid var(--accent-base-color);
+        font-size: small;
+        font-weight: 500;
+        margin-bottom: 0.0em;
+        padding-bottom: 0.1em;
+        padding-left: 0.25em;
+        /*border-bottom: 1px solid green;*/
+        /*text-align: center;*/
+    }
+
+    .ec-table-pivot {
+        border-collapse: collapse;
+        border: none;
+        width:max-content;
+        font-size: 3.0mm;
+        margin-bottom: 0;
+        line-height: var(--line-height);
+        border-bottom: 0px;
+    }
+
+    .ec-table-row {
+        /*border-bottom: 1px solid #929292;*/
+        padding: 8px 12px;
+        text-align: left;
+    }
+
+   
+
+
+    .ec-table-row-pivot {
+        border-bottom: none; /* geen horizontale lijntjes */
+        /*border-right: 1px solid #929292;*/
+    }
+
+    .ec-td {
+        vertical-align: top;
+        padding-left: 0.0em;
+        padding-right: 1.0em;
+        border-bottom: solid 0px gray;
+        border-right: solid 0px gray;
+        border-left: solid 0px gray;
+        max-width: 18cm;
+        min-width: 1cm;
+        font-size: 3.0mm;
+        /*color: red;*/
+    }
+
+    .ec-td-pivot {
+        font-size: small;
+        padding-left: 0.5em;
+        padding-top: 0;
+        padding-bottom: 0;
+        align-content: start;
+    }
+
+    
+
+    .text-center {
+        text-align: center;
+        padding: 0 1px 0 1px !important;
+    }
+
+    .text-left {
+        text-align: left;
+    }
+
+    .text-right {
+        text-align: right;
+        padding: 0 1px 0 1px !important;
+    }
+
+    .text-justify {
+        text-align: justify;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    .ec-th-pivot {
+        font-weight: normal;
+        padding-left: 0.0em;
+        padding-right: 0.5em;
+        padding-top: 0;
+        padding-bottom: 0;
+        text-align: left;
+        /*align-content: start;*/
+        /*border-right: solid 1px gray;*/
+        /*width: 40%;*/
+        /*font-style: italic;*/
+    }
+
+    .ec-th-right {
+        border-right: solid 1px gray;
+        font-style: italic;
+        font-weight: normal;
+        padding: 0.5em;
+        text-align: right;
+        width: 50%;
+    }
+
+    h1 {
+        font-weight: 500;
+    }
+
+    h1 small {
+        font-size: 4.0mm;
+        font-weight: 400;
+        color: #6b7280; /* grijs */
+        text-align: end;
+    }
+
+
+    h2, h3, h4, h5, h6 {
+        font-size: 3.0mm;
+        color: var(--neutral-foreground-rest);
+        margin-bottom: 0px;
+        margin-top: 0mm; /* zelfde als migradoc */
+        line-height: var(--line-height);
+    }
+
+/* Basis layout: Links | Rechts */
+.kop1,
+.kop2,
+.kop3,
+.kop4 {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    column-gap: 1rem;
+}
+
+    /* Titel links (optioneel, vaak niet nodig) */
+    .kop1 .titel,
+    .kop2 .titel,
+    .kop3 .titel,
+    .kop4 .titel {
+        font-weight: inherit;
+    }
+
+    /* Subtitel rechts */
+    .kop1 .subtitel,
+    .kop2 .subtitel,
+    .kop3 .subtitel,
+    .kop4 .subtitel {
+        font-weight: 400;
+        color: #6b7280;
+        white-space: nowrap;
+    }
+
+    /* Schaling per kopniveau */
+    .kop1 .subtitel {
+        font-size: 0.55em;
+    }
+
+    .kop2 .subtitel {
+        font-size: 0.6em;
+    }
+
+    .kop3 .subtitel {
+        font-size: 0.65em;
+    }
+
+    .kop4 .subtitel {
+        font-size: 0.7em;
+    }
+
+
+
+
+
+    .mono {
+        white-space: pre-wrap;
+        /*font-family: 'Roboto Mono','Menlo','Fira Code', 'Consolas', 'Courier New', monospace;*/
+    }
+
+
+    .kop1 {
+        background-color: var(--fluent-color-background);
+        border-bottom: none; /* Underline color and thickness */
+        font-size: 1.5em;
+        margin-bottom: 0.01em;
+
+    }
+
+    .kop2 {
+        font-size: 2em;
+    }
+
+    .kop3 {
+        font-size: 1.75em;
+    }
+
+
+
+        
+
+    
+
+    .tab-simulated {
+        /*display: inline-block;*/
+        /*min-width: 75px;*/ /* De breedte van de "tab" */
+    }
+
+        .tab-simulated:after {
+            content: " ";
+        }
+
+        .tab-simulated:before {
+            /*content: "= ";*/
+        }
+
+
+
+    .to-toc-btn {
+        bottom: 15px;
+        cursor: pointer;
+        padding: 15px;
+        position: fixed;
+        right: 45px;
+        z-index: 1000;
+    }
+
+    .ruler {
+        position: sticky;
+        display: flex;
+        z-index: 9999 !important;
+        background-color: var(--neutral-fill-layer-rest);
+        top: 0;
+        transform: translateY(-0mm);
+        margin: 0 auto;
+        height: 1cm;
+        border: 0px solid black;
+        /*background: repeating-linear-gradient( to right, white 0, white 0.9mm, #ccc 0.9mm, #ccc 5mm );*/
+    }
+
+    .cm-mark {
+        position: absolute;
+        bottom: 0;
+        width: 0.01cm;
+        height: 0.5cm;
+        background: black;
+        text-align: center;
+        font-size: 0.3cm;
+        transform: translateX(-50%);
+    }
+
+        .cm-mark::after {
+            content: attr(data-label);
+            position: absolute;
+            top: -0.5cm;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+    .warning {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 0.5em 1em;
+        border: 1px solid #ffeeba;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+        .warning::before {
+            content: "⚠️ ";
+            margin-right: 0.5em;
+        }
+
+    .success {
+        background-color: #d4edda;
+        color: #155724;
+        padding: 0.5em 1em;
+        border: 1px solid #c3e6cb;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+        .success::before {
+            content: "✅ ";
+            margin-right: 0.5em;
+        }
+
+    .error {
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 0.5em 1em;
+        border: 1px solid #f5c6cb;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+        .error::before {
+            content: "❌ ";
+            margin-right: 0.5em;
+        }
+
+.spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 3px solid rgba(0, 0, 0, 0.2); /* lichtgrijze achtergrondring */
+    border-top-color: #0078d4; /* blauwe kleur (Fluent UI primary) */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    vertical-align: middle; /* netjes naast tekst uitlijnen */
+    margin-left: 8px; /* optioneel, ruimte naast tekst */
+    margin-right: 8px; /* optioneel, ruimte naast tekst */
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.print-navmenu::-webkit-scrollbar {
+    width: 8px; /* Smalle scrollbar binnen menu */
+}
+
+/* Zorg dat tabel zich aanpast aan container */
+.ec-table {
+    table-layout: fixed; /* Respecteer col widths */
+    width: 100%;
+}
+
+
+
+

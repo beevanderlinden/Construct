@@ -1,0 +1,11 @@
+﻿@page "/Project"
+@using Construct.WebUI.Server.Shared.ViewModels
+
+<h3>Project</h3>
+
+<ProjectInfo @bind-Model="ProjectInfo"></ProjectInfo>
+
+@code {
+    [CascadingParameter]
+    public ProjectInfoViewModel? ProjectInfo { get; set; } = new();
+}

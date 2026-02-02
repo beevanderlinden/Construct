@@ -1,0 +1,33 @@
+﻿@page "/project/documenten"
+<h3>Documenten</h3>
+
+@if (ProjectState is not null && ProjectState.CurrentProject is not null && ProjectState.CurrentProject.Documenten is not null)
+{ 
+    <FluentAccordion>
+        @foreach (var doc in ProjectState.CurrentProject.Documenten)
+        {
+            <FluentAccordionItem Heading="@doc.DocumentNumber">
+                <FluentAccordion>
+                    <FluentAccordionItem Heading="ℹ️ Info">
+                        <DocumentInfoComponent DocumentEntity="doc" />
+                        </FluentAccordionItem>
+                    <FluentAccordionItem Heading="🖨️ Afdrukvoorbeeld">
+                       
+                        <PrintPage />
+                        </FluentAccordionItem>
+                </FluentAccordion>
+            </FluentAccordionItem>
+        }
+    </FluentAccordion>    
+}
+
+
+
+
+
+@code {
+    [CascadingParameter] public IProjectStateService? ProjectState { get; set; }
+
+    
+
+}

@@ -1,0 +1,60 @@
+﻿.kaskon-input-container {
+    display: flex;
+    gap: 0.0rem;
+}
+
+    .kaskon-input-container.horizontal {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .kaskon-input-container.vertical {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .kaskon-input-container.horizontal .kaskon-input-label {
+        flex-shrink: 0;
+        text-align: left;
+        margin-left: 3.5px;
+        padding-right: 0.5rem;
+        width: var(--label-width, 200px);
+    }
+
+    .kaskon-input-container.vertical .kaskon-input-label {
+        width: 100%;
+        text-align: left;
+    }
+
+.kaskon-input-content {
+    flex: 1;
+    width: 100%;
+}
+
+
+/* 📏 Container query: als de container < 600px wordt, forceer Top layout */
+@container leftcol (max-width: 600px) {
+    .kaskon-input-container {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    .kaskon-input-label {
+        width: 100% !important;
+        text-align: left !important;
+    }
+}
+
+
+
+@media (max-width: 600px) {
+    .kaskon-input-container {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    .kaskon-input-label {
+        width: 100% !important;
+        text-align: left !important;
+    }
+}

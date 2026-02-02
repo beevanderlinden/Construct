@@ -1,0 +1,121 @@
+﻿@page "/Admin/logo-beheer"
+@using System.IO
+@inject IWebHostEnvironment Env
+
+<h3>Admin Logo Beheer</h3>
+
+<div class="mb-3 border p-3 text-center"
+     style="width:300px; height:150px;"
+     @ondrop="DropHandler"
+     @ondragover:preventDefault>
+    @if (PreviewUrl != null)
+    {
+        <img src="@PreviewUrl" alt="Logo Preview" style="max-width:100%; max-height:100%;" />
+    }
+    else
+    {
+        <img src="@CurrentLogoPath" alt="Huidig logo" style="max-width:100%; max-height:100%;" />
+        <div>Sleep een bestand hierheen of klik om te selecteren</div>
+    }
+    <InputFile OnChange="OnInputFileChange" accept=".png,.jpg,.jpeg" />
+</div>
+
+@if (!string.IsNullOrEmpty(CurrentLogoPath) && CurrentLogoPath != DefaultLogoPath)
+{
+    <div class="mb-3">
+        <strong>Huidig logo:</strong>
+        <img src="@CurrentLogoPath" alt="Huidig logo" style="max-width:150px; max-height:80px;" />
+        <button class="btn btn-danger btn-sm ms-2" @onclick="DeleteLogo">Verwijder</button>
+    </div>
+}
+
+<button class="btn btn-primary" @onclick="UploadLogo" disabled="@(!SelectedFileUploaded)">Upload</button>
+
+@code {
+    private IBrowserFile? SelectedFile;
+    private string? PreviewUrl;
+    private string? CurrentLogoPath;
+    private string? ErrorMessage;
+    private bool SelectedFileUploaded => SelectedFile != null;
+
+    private string LogoFolder => Path.Combine(Env.WebRootPath, "images", "logos");
+    private string DefaultLogoPath => "/images/logos/defaultlogo.png";
+
+    protected override void OnInitialized()
+    {
+        Directory.CreateDirectory(LogoFolder);
+
+        var files = Directory.GetFiles(LogoFolder);
+        if (files.Length > 0)
+            CurrentLogoPath = $"/images/logos/{Path.GetFileName(files[0])}";
+        else
+            CurrentLogoPath = DefaultLogoPath;
+    }
+
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        SelectedFile = e.File;
+        await LoadPreview();
+    }
+
+    private async Task LoadPreview()
+    {
+        if (SelectedFile == null) return;
+
+        var buffer = new byte[SelectedFile.Size];
+        await SelectedFile.OpenReadStream().ReadAsync(buffer);
+        PreviewUrl = $"data:{SelectedFile.ContentType};base64,{Convert.ToBase64String(buffer)}";
+    }
+
+    private async Task DropHandler(DragEventArgs e)
+    {
+        if (e.DataTransfer?.Files.Length > 0)
+        {
+            // In Blazor Server krijg je hier geen IBrowserFile, daarom: gebruik JS interop
+            await JS.InvokeVoidAsync("console.log", "Drag&Drop: gebruik klik of InputFile voor upload.");
+        }
+    }
+
+    private async Task UploadLogo()
+    {
+        if (SelectedFile == null) return;
+
+        try
+        {
+            // Verwijder oud logo (behalve default)
+            foreach (var existing in Directory.GetFiles(LogoFolder))
+                File.Delete(existing);
+
+            var filePath = Path.Combine(LogoFolder, SelectedFile.Name);
+            await using var stream = File.Create(filePath);
+            await SelectedFile.OpenReadStream().CopyToAsync(stream);
+
+            CurrentLogoPath = $"/images/logos/{SelectedFile.Name}?v={DateTime.UtcNow.Ticks}";
+            PreviewUrl = null;
+            SelectedFile = null;
+            ErrorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Fout bij upload: {ex.Message}";
+        }
+    }
+
+    private void DeleteLogo()
+    {
+        try
+        {
+            foreach (var file in Directory.GetFiles(LogoFolder))
+                File.Delete(file);
+
+            CurrentLogoPath = DefaultLogoPath;
+            PreviewUrl = null;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Fout bij verwijderen: {ex.Message}";
+        }
+    }
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+}

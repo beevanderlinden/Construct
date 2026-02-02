@@ -1,0 +1,30 @@
+﻿@implements IDialogContentComponent
+
+<FluentDesignTheme @bind-Mode="@Mode" @bind-CustomColor="@CustomColor" StorageName="theme" /> 
+
+<FluentSelect 
+    Label="Theme" 
+    Items="@(Enum.GetValues<DesignThemeModes>())" @bind-SelectedOption="@Mode"/>
+
+
+<FluentSelect Label="CustomColor"
+              Items="@(new string?[]{ "#ff0f45", "#176ee5", "#e58717", "#23bd5d", "#ff990f"})"
+              @bind-SelectedOption="@CustomColor">
+   
+              <OptionTemplate>
+
+        <FluentIcon Icon="Icons.Regular.Size20.Color" Slot="start" Color="Microsoft.FluentUI.AspNetCore.Components.Color.Custom" CustomColor="@context" />
+        @context
+    </OptionTemplate>
+
+</FluentSelect>
+
+<DefaultDirectorySelector></DefaultDirectorySelector>
+
+
+
+@code {
+    private DesignThemeModes Mode = DesignThemeModes.Light;
+    //private OfficeColor? Color = OfficeColor.Excel;
+    private string? CustomColor = "#ff0f45";
+}

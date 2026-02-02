@@ -1,0 +1,227 @@
+﻿@page "/File/openBAK"
+@inject NavigationManager NavManager
+@inject ILogService Log
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using Construct.Application.Interfaces
+
+   
+
+
+@* <h3>Open project bestand</h3> *@
+
+
+<FluentProgressRing style="width: 82px; height: 82px;" Visible="@progressRingVisible"></FluentProgressRing>
+
+@* <FluentButton Id="MyUploadButton" Appearance="Appearance.Accent">
+    Open bestand
+</FluentButton> *@
+
+
+
+
+
+
+@* <FluentInputFile Id="my-file-uploader"
+Mode ="InputFileMode.Stream"
+Multiple="false"
+MaximumFileCount="1"
+MaximumFileSize="@(100*1024*1024)"
+Accept=".ktbp"
+@bind-ProgressPercent="@ProgressPercent"
+OnCompleted="@OnCompletedAsync"
+AnchorId="MyUploadButton"
+Style="height: 300px; border: 1px dashed var(--accent-fill-rest);">
+    <ChildContent>
+        <label for="my-file-uploader">
+            <FluentIcon Value="@(new @Icons.Regular.Size24.ArrowUpload())" />
+        </label>
+
+        <div>
+            Sleep hier uw *.ktbp bestand heen, 
+            of <label for="my-file-uploader">browse</label>
+            naar het bestand.
+        </div>
+
+
+    </ChildContent>
+</FluentInputFile> *@
+
+
+<LoadProject></LoadProject>
+
+@if (Files.Any())
+{
+    <h4>File(s) uploaded:</h4>
+    <ul>
+        @foreach (var file in Files)
+        {
+            <li>
+                <b>@file.Name</b> 🔹
+                @($"{Decimal.Divide(file.Size, 1024):N} KB") 🔹
+                @file.ContentType 🔹
+                @file.LocalFile?.FullName
+                @file.ErrorMessage
+            </li>
+        }
+    </ul>
+}
+
+@code
+{
+    [CascadingParameter] public ProjectEntity? ProjectEntity { get; set; }
+    [CascadingParameter] public IProjectStateService? ProjectState { get; set; }
+
+    private bool progressRingVisible = false;
+
+    protected override void OnInitialized()
+    {
+        if (ProjectState != null)
+        {
+            ProjectState.OnProjectChanged += StateHasChanged;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (ProjectState != null)
+        {
+            ProjectState.OnProjectChanged -= StateHasChanged;
+        }
+    }
+
+    private JsonSerializerOptions jsonOptions = new()
+        {
+            WriteIndented = true,
+            ReferenceHandler = ReferenceHandler.IgnoreCycles,
+            NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+            PropertyNameCaseInsensitive = true,
+        };
+
+    //int ProgressPercent = 0;
+    FluentInputFileEventArgs[] Files = Array.Empty<FluentInputFileEventArgs>();
+
+    private async Task OnCompletedAsync(IEnumerable<FluentInputFileEventArgs> files)
+    {
+        progressRingVisible = true;
+        Files = files.ToArray();
+
+        // For the demo, delete these files.
+        foreach (var file in Files)
+        {
+            file.LocalFile?.Delete();
+
+            string? result = null;
+            var stream = file.Stream;
+            if (stream != null)
+            {
+                var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                ms.Position = 0;
+                StreamReader reader = new(ms);
+                result = await reader.ReadToEndAsync();
+
+                if (result != null)
+                {
+                    //var options = new JsonSerializerOptions
+
+                    // var settings = new JsonSerializerSettings
+                    //     {
+                    //         TypeNameHandling = TypeNameHandling.Auto,
+                    //         ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                    //         Formatting = Formatting.Indented,
+
+
+                    //     };
+                    //var jsonProject = JsonConvert.DeserializeObject<Domain.Entities.ProjectEntity>(result, settings);
+
+                    var jsonProject = System.Text.Json.JsonSerializer.Deserialize<Construct.Domain.Entities.ProjectEntity>(result, jsonOptions);
+
+
+
+                    if (jsonProject != null)
+                    {
+                        jsonProject.InitAll();
+                        ProjectState?.SetProject(jsonProject); //🏭 gebruik ProjectStateService
+                        Console.WriteLine($"Project geladen : {jsonProject}");
+
+                    }
+
+                }
+
+
+            }
+
+
+
+
+
+
+
+
+
+        }
+
+        // Wait before to reset the progress bar.
+        await Task.Delay(80);
+        //ProgressPercent = 0;
+        progressRingVisible = false;
+        // refresh aka
+        StateHasChanged();
+
+        // Ververs door naar de home pagina te gaan.
+        NavManager.NavigateTo("/");
+
+    }
+
+
+
+    async Task<MemoryStream> ToMemoryStreamAsync(Stream stream)
+    {
+        var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        ms.Position = 0;
+        return ms;
+    }
+
+    private async void LoadFile(InputFileChangeEventArgs e)
+    {
+        string? result = null;
+        var stream = e.File.OpenReadStream(long.MaxValue);
+        var memoryStream = await ToMemoryStreamAsync(stream);
+        StreamReader reader = new(memoryStream);
+        result = await reader.ReadToEndAsync();
+
+        if (result != null)
+        {
+            var jsonProject = JsonConvert.DeserializeObject<Construct.Domain.Entities.ProjectEntity>(result);
+            if (jsonProject != null)
+            {
+                //jsonProject;
+                //
+                // inspecteer
+                //var info = ProjectInfoViewModel;
+                //projectStatus.Project = Project;
+                //projectStatus.ProjectInfo = new ProjectInfoModel() {
+                //    ProjectName = Project.ProjectInfo.Naam,
+                //    ProjectNumber = Project.ProjectInfo.Nummer
+                //};
+            }
+
+
+
+            StateHasChanged();
+        }
+
+
+
+    }
+
+
+
+}
+
+
+
+
+

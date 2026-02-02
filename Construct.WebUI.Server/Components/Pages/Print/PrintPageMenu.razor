@@ -1,0 +1,230 @@
+@using Microsoft.FluentUI.AspNetCore.Components
+
+<div class="print-navmenu @(IsVisible ? "visible" : "hidden")">
+    <input type="checkbox" title="Menu expand/collapse toggle" id="print-navmenu-toggle" class="print-navmenu-icon" @bind="expanded" />
+    <label for="print-navmenu-toggle" class="print-navmenu-icon">
+        <FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" />
+    </label>
+    
+    <nav class="print-sitenav" aria-labelledby="print-menu">
+        <FluentNavMenu Id="print-menu" 
+                       Collapsible="true" 
+                       Width="250" 
+                       Title="Print acties"
+                       @bind-Expanded="expanded"
+                       CustomToggle="true">
+
+            <FluentNavLink OnClick="@HandlePrintClick"
+                          Disabled="@(!IsVisible)"
+                          Icon="@(new Icons.Regular.Size20.Print())"
+                          IconColor="Color.Accent"
+                          Title="Afdrukken">
+                Afdrukken
+            </FluentNavLink>
+
+            <FluentDivider Style="margin: 8px 0;" />
+
+            <FluentNavLink OnClick="@HandleDownloadRtfClick"
+                          Icon="@(new Icons.Regular.Size20.ArrowDownload())"
+                          IconColor="Color.Accent"
+                          Title="Download RTF bestand">
+                Download RTF
+            </FluentNavLink>
+
+            <FluentNavLink OnClick="@HandleRefreshClick"
+                          Icon="@(new Icons.Regular.Size20.ArrowRedo())"
+                          IconColor="Color.Accent"
+                          Title="Document opnieuw genereren">
+                Bijwerken
+            </FluentNavLink>
+
+            <FluentNavLink OnClick="@HandleToggleInfoClick"
+                          Icon="@(new Icons.Regular.Size20.Info())"
+                          IconColor="Color.Accent"
+                          Title="@InfoButtonText">
+                @InfoButtonText
+            </FluentNavLink>
+
+            <FluentDivider Style="margin: 8px 0;" />
+
+            <FluentNavLink OnClick="@HandleTestMarkdownClick"
+                          Icon="@(new Icons.Regular.Size20.Document())"
+                          Title="Test markdown document">
+                Test MD
+            </FluentNavLink>
+
+        </FluentNavMenu>
+    </nav>
+</div>
+
+<style>
+    .print-navmenu {
+        position: fixed;
+        right: 20px; /* Ruimte voor scrollbar */
+        top: 60px;
+        width: 250px;
+        background: var(--neutral-layer-1);
+        border-left: 1px solid var(--neutral-stroke-divider);
+        border-radius: var(--control-corner-radius);
+        box-shadow: var(--elevation-shadow-card-rest);
+        z-index: 1000;
+        transition: transform 0.3s ease, opacity 0.3s ease, width 0.3s ease;
+        height: auto; /* Automatische hoogte */
+        max-height: calc(100vh - 80px); /* Max hoogte met wat marge */
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .print-navmenu.hidden {
+        transform: translateX(calc(100% + 20px)); /* Slide uit naar rechts, voorbij de right offset */
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .print-navmenu.visible {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    /* Toggle button styling - zoals NavMenu */
+    .print-navmenu-icon {
+        position: absolute;
+        left: -40px;
+        top: 10px;
+        z-index: 1001;
+        cursor: pointer;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--neutral-layer-1);
+        border: 1px solid var(--neutral-stroke-divider);
+        border-radius: var(--control-corner-radius);
+        transition: all 0.3s ease;
+    }
+
+    .print-navmenu-icon:hover {
+        background: var(--neutral-layer-2);
+    }
+
+    /* Hide checkbox */
+    input.print-navmenu-icon {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        position: absolute;
+    }
+
+    /* Collapsed state - alleen icons, smaller */
+    input.print-navmenu-icon:not(:checked) ~ nav {
+        width: 60px;
+        overflow: hidden;
+    }
+
+    input.print-navmenu-icon:not(:checked) ~ .print-sitenav {
+        width: 60px;
+    }
+
+    /* Pas de container breedte aan bij collapse */
+    .print-navmenu:has(input.print-navmenu-icon:not(:checked)) {
+        width: 60px;
+    }
+
+    .print-sitenav {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: fit-content; /* Minimale hoogte op basis van content */
+        transition: width 0.3s ease;
+    }
+
+    /* Zorg dat FluentNavMenu de content hoogte gebruikt */
+    .print-navmenu fluent-nav-menu {
+        height: auto;
+        min-height: 200px; /* Minimale hoogte voor een paar items */
+    }
+
+    /* Tooltip enhancement voor geminimaliseerde knoppen */
+    .print-navmenu:has(input.print-navmenu-icon:not(:checked)) fluent-nav-link {
+        position: relative;
+    }
+
+    /* Loading state voor knoppen */
+    .print-navmenu fluent-nav-link[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Scrollbar styling binnen het menu */
+    .print-navmenu::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .print-navmenu::-webkit-scrollbar-track {
+        background: var(--neutral-layer-2);
+        border-radius: 4px;
+    }
+
+    .print-navmenu::-webkit-scrollbar-thumb {
+        background: var(--neutral-stroke-strong);
+        border-radius: 4px;
+    }
+
+    .print-navmenu::-webkit-scrollbar-thumb:hover {
+        background: var(--accent-fill-rest);
+    }
+</style>
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string InfoButtonText { get; set; } = "Bewerk info";
+    
+    [Parameter] public EventCallback OnPrintClick { get; set; }
+    [Parameter] public EventCallback OnDownloadRtfClick { get; set; }
+    [Parameter] public EventCallback OnRefreshClick { get; set; }
+    [Parameter] public EventCallback OnToggleInfoClick { get; set; }
+    [Parameter] public EventCallback OnTestMarkdownClick { get; set; }
+
+    private bool expanded = true;
+
+    // Wrapper methods die de expanded state behouden
+    private async Task HandlePrintClick()
+    {
+        var wasExpanded = expanded;
+        await OnPrintClick.InvokeAsync();
+        expanded = wasExpanded;
+    }
+
+    private async Task HandleDownloadRtfClick()
+    {
+        var wasExpanded = expanded;
+        await OnDownloadRtfClick.InvokeAsync();
+        expanded = wasExpanded;
+    }
+
+    private async Task HandleRefreshClick()
+    {
+        var wasExpanded = expanded;
+        await OnRefreshClick.InvokeAsync();
+        expanded = wasExpanded;
+    }
+
+    private async Task HandleToggleInfoClick()
+    {
+        var wasExpanded = expanded;
+        await OnToggleInfoClick.InvokeAsync();
+        expanded = wasExpanded;
+    }
+
+    private async Task HandleTestMarkdownClick()
+    {
+        var wasExpanded = expanded;
+        await OnTestMarkdownClick.InvokeAsync();
+        expanded = wasExpanded;
+    }
+}
+
+
+

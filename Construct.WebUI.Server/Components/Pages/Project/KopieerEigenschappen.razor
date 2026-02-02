@@ -1,0 +1,239 @@
+﻿@using Domain.Common
+
+@if (Visible)
+{
+    <h3>KopieerEigenschappen</h3>
+    <p>Kopieert eigenschappen van een onderdeel naar een andere onderdelen.</p>
+
+    <FluentStack Orientation="Orientation.Horizontal">
+
+
+        <!-- Bron -->
+        <!-- Laat gebruiker de eigenschappen kiezen welke we gaan kopieeren -->
+        <FluentStack Style="margin: 15px;" Orientation="Orientation.Vertical">
+            <FluentCheckbox Label="@SelectAllPropertiesString"
+                            ThreeState="true"
+                            ShowIndeterminate="false"
+                            @bind-CheckState="AreAllPropertiesVisible" />
+            @foreach (var kvp in _keyValuePairs)
+            {
+                bool isChecked = _keyValuePairsSelected.Contains(kvp);
+   
+                <FluentCheckbox Label="@($"{kvp.Key} ({kvp.Value})")"
+                                @bind-Value:get="isChecked"
+                                @bind-Value:set="c => OnResourceTypeVisibilityChanged(kvp, c)" />
+            }
+        </FluentStack>
+
+
+        <!-- Wellicht mogelijk met MAPPER ? Map geselecteerde Properties naar doel -->
+
+        <FluentStack Orientation="Orientation.Vertical" VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@(new Icons.Regular.Size24.DualScreenUpdate())" OnClick="KopieerClick" />
+        </FluentStack>
+
+        <!-- Doel -->
+        <!-- Laat gebruiker de doelen selecteren -->
+        <FluentStack Style="margin: 15px;" Orientation="Orientation.Vertical">
+            <FluentCheckbox Label="@SelectAllTargetsString"
+                ThreeState="true"
+                ShowIndeterminate="false"
+                            @bind-CheckState="AreAllTargetsVisible" />
+
+                @foreach (var doelAssemblage in DoelAssemblages)
+            {
+                bool isChecked = DoelAssemblagesSelected.Contains(doelAssemblage);
+                <FluentCheckbox Label="@($"{doelAssemblage.Merk} ({doelAssemblage.Naam})")"
+                                @bind-Value:get="isChecked"
+                                @bind-Value:set="c => OnDoelSelectedChanged(doelAssemblage, c)" />
+            }
+
+            @if(DoelAssemblages.Count == 0)
+            {
+                <p>Geen doelen gevonden om naar toe te kopieeren.</p>
+            }
+
+        </FluentStack>
+
+    </FluentStack>
+
+
+
+    <!-- Knop aktie -->
+}
+
+@code {
+
+    [Parameter]
+    public bool Visible { get; set; }
+
+    /// <summary>
+    /// Het originele exemplaar waarvan de eigenschappen gekopieerd worden.
+    /// </summary>
+    [Parameter] 
+    public required AssemblageEntity Assemblage { get; set; }
+
+    /// <summary>
+    /// De doel exemplaren. Hiervan worden de eigenschappen overschreven.
+    /// </summary>
+    [Parameter]
+    public List<AssemblageEntity> DoelAssemblages { get; set; } = new();
+
+    private List<AssemblageEntity> DoelAssemblagesSelected { get; set; } = new();
+
+
+
+
+
+
+    IDictionary<string, object>? dictionary;
+
+
+
+    protected override void OnInitialized()
+    {
+        dictionary = Assemblage.AsDictionary();
+        _allResourceTypes = new();
+        foreach (var kvp in dictionary)
+        {
+            _allResourceTypes.Add(kvp.Key);
+            _keyValuePairs.Add(kvp.Key, kvp.Value);
+        }
+        _visibleResourceTypes = new(_allResourceTypes);
+        _keyValuePairsSelected = new(_keyValuePairs);
+
+    }
+
+
+    private HashSet<string> _allResourceTypes { get; set; } =  ["Prop1", "Prop2", "Prop3"];
+    private HashSet<string> _visibleResourceTypes { get; set; } = new();
+
+    private Dictionary<string, object> _keyValuePairs { get; set; } = new();
+    private Dictionary<string, object> _keyValuePairsSelected { get; set; } = new();
+
+
+    private void KopieerClick()
+    {
+        foreach (var doel in DoelAssemblages)
+        {
+            foreach (var kvp in _keyValuePairsSelected)
+            {
+                // haaljuiste type op? en schrijf eigenschappen weg
+                
+            }
+        }
+       
+    }
+
+
+    protected void OnResourceTypeVisibilityChanged(KeyValuePair<string, object> kvp, bool isVisible)
+    {
+        if (isVisible)
+        {
+            _keyValuePairsSelected.Add(kvp.Key, kvp.Value);
+            // _visibleResourceTypes.Add(resourceType);
+
+        }
+        else
+        {
+            _keyValuePairsSelected.Remove(kvp.Key);
+            //_visibleResourceTypes.Remove(resourceType);
+        }
+    }
+
+    protected void OnDoelSelectedChanged(AssemblageEntity doel, bool visible)
+    {
+        if (visible)
+        {
+            DoelAssemblagesSelected.Add(doel);
+        }
+        else
+        {
+            DoelAssemblagesSelected.Remove(doel);   
+        }
+    }
+
+
+    private bool? AreAllPropertiesVisible
+    {
+        get
+        {
+            return _keyValuePairsSelected.Count == _keyValuePairs.Count
+                ? true
+                : _keyValuePairsSelected.Count == 0
+                    ? false
+                    : null;
+        }
+        set
+        {
+            if (value is true)
+            {
+                _keyValuePairsSelected = new(_keyValuePairs);
+            }
+            else if (value is false)
+            {
+                _keyValuePairsSelected.Clear();
+            }
+        }
+    }
+
+
+    public static string GetSelectAllString(bool? allesGeselecteerd)
+    {
+        if (allesGeselecteerd == null)
+        {
+            return "Verwijder selectie";
+        }
+        else if (allesGeselecteerd is true)
+        {
+            return "Verwijder selectie";
+        }
+        else if (allesGeselecteerd is false)
+        {
+            return "Selecteer alles";
+        }
+        else return "Alles";
+    }
+
+
+    private string SelectAllPropertiesString
+    {
+        get
+        {
+            return GetSelectAllString(AreAllPropertiesVisible);
+        }
+    }
+
+    private string SelectAllTargetsString
+    {
+        get
+        {
+            return GetSelectAllString(AreAllTargetsVisible);
+        }
+    }
+
+    private bool? AreAllTargetsVisible
+    {
+        get
+        {
+            return DoelAssemblagesSelected.Count == DoelAssemblages.Count
+                ? true
+                : DoelAssemblagesSelected.Count == 0
+                    ? false
+                    : null;
+        }
+        set
+        {
+            if (value is true)
+            {
+                DoelAssemblagesSelected = new(DoelAssemblages);
+            }
+            else if (value is false)
+            {
+                DoelAssemblagesSelected.Clear();
+            }
+        }
+    }
+
+
+}

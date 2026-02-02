@@ -1,0 +1,87 @@
+﻿@using CommonLibrary.Interfaces
+
+@* <FluentAutocomplete TOption="IProfiel"
+                    AutoComplete="off"
+                    Autofocus="true"
+                    Label="Selecteer profiel"
+                    Width="250px"
+                    Placeholder="Selecteer profiel"
+                    OnOptionsSearch="@OnSearchAsync"
+                    SelectedOptionChanged="@OnProfielSelected"
+                    Multiple=false
+                    OptionText="@(item => item?.Naam)"
+                    /> *@
+
+@* <p>
+    <b>Selected</b>: @(SelectedItem?.Value.Naam)
+</p> *@
+
+
+
+
+<FluentTreeView>
+    <FluentTreeItem>
+        HEA
+        @foreach (var item in HEAcollection)
+        {
+            <FluentTreeItem SelectedChanged="() => SelectProfiel(item)" >@item.Naam</FluentTreeItem>
+        }
+    </FluentTreeItem>
+
+    <FluentTreeItem>
+        Koker
+        @foreach (var item in KokerCollection)
+        {
+            <FluentTreeItem SelectedChanged="() => SelectProfiel(item)">@item.Naam</FluentTreeItem>
+        }
+    </FluentTreeItem>
+
+   
+
+    @* <FluentTreeItem>
+        IPE
+        @foreach (var item in IpeProfielen)
+        {
+            <FluentTreeItem SelectedChanged="() => SelectProfiel(item.Value)">@item.Value.Naam</FluentTreeItem>
+        }
+    </FluentTreeItem> *@
+
+</FluentTreeView>
+
+@code {
+    //[Parameter, EditorRequired] public IMateriaal Materiaal { get; set; }
+    [Parameter] public EventCallback<IProfiel?> OnProfielSelected { get; set; }
+
+    //private readonly Dictionary<string, IProfiel> IpeProfielen = Profielen.Staal.Doorsneden.IPEdict;
+    //private readonly Dictionary<string, IProfiel> HeProfielen = Profielen.Staal.Doorsneden.HE;
+
+    private readonly List<IStaalProfiel> HEAcollection = Profielen.Staal.Doorsneden.HEA;
+    private readonly List<IStaalProfiel> HEBcollection = Profielen.Staal.Doorsneden.HEB;
+    private readonly List<IStaalProfiel> HEMcollection = Profielen.Staal.Doorsneden.HEM;
+    private readonly List<IStaalProfiel> IPEcollection = Profielen.Staal.Doorsneden.IPE;
+    private readonly List<IStaalProfiel> KokerCollection = Profielen.Staal.Doorsneden.Koker;
+
+
+
+    private async Task SelectProfiel(IProfiel? profiel)
+    {
+        if (profiel is null)
+        {
+            //await OnProfielSelected.InvokeAsync(null);
+            return;
+        }
+
+        await OnProfielSelected.InvokeAsync(profiel);
+    }
+
+    private IProfiel? SelectedProfile { get; set; } = Profielen.Staal.Doorsneden.HEM200;
+
+
+    private async Task OnSearchAsync(OptionsSearchEventArgs<IProfiel> e)
+    {
+        
+        e.Items = Profielen.Staal.Doorsneden.Alles.Where(i => i.Naam.Contains(e.Text, StringComparison.OrdinalIgnoreCase))
+                              .OrderBy(i => i.Naam);
+    }
+
+}

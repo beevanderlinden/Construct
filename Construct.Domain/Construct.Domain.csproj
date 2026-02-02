@@ -1,0 +1,52 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Kaskon.Algemeen" Version="1.0.0" />
+    <PackageReference Include="Kaskon.Toolbox.PrefabModels" Version="1.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.1" />
+    <PackageReference Include="MigraDoc.DocumentObjectModel.Core" Version="1.0.0" />
+    <PackageReference Include="Plotly.Blazor" Version="6.0.2" />
+	  
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\CommonLibrary\CommonLibrary.csproj" />
+    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\Eurocode0.Grondslagen\Eurocode0.Grondslagen.csproj" />
+    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\Eurocode1.Belastingen\Eurocode1.Belastingen.csproj" />
+    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\Eurocode2.BetonConstructies\Eurocode2.BetonConstructies.csproj" />
+    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\Eurocode3.StaalConstructies\Eurocode3.StaalConstructies.csproj" />
+    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\Eurocode5.HoutConstructies\Eurocode5.HoutConstructies.csproj" />
+    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\ExportFactory\ExportFactory.csproj" />
+    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Profielen\ParametrischeProfielen\ParametrischeProfielen.csproj" />
+    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Profielen\StaalProfielen\StaalProfielen.csproj" />
+    <ProjectReference Include="..\Mechanica.LiggerSB\Mechanica.LiggerSB.csproj" />
+  </ItemGroup>
+
+  <!--<ItemGroup>
+    <Reference Include="CommonLibrary">
+      <HintPath>..\..\Eurocode\EurocodeRazorClassLibrary\bin\Debug\net9.0\CommonLibrary.dll</HintPath>
+    </Reference>
+    <Reference Include="Eurocode0.Grondslagen">
+      <HintPath>..\..\Eurocode\Eurocode0.Grondslagen\bin\Debug\net9.0\Eurocode0.Grondslagen.dll</HintPath>
+    </Reference>
+    <Reference Include="Eurocode1.Belastingen">
+      <HintPath>..\..\Eurocode\Eurocode1.Belastingen\bin\Release\net8.0\Eurocode1.Belastingen.dll</HintPath>
+    </Reference>
+    <Reference Include="Eurocode2.BetonConstructies">
+      <HintPath>..\..\Eurocode\Eurocode2.BetonConstructies\bin\Debug\net9.0\Eurocode2.BetonConstructies.dll</HintPath>
+    </Reference>
+    <Reference Include="ExportFactory">
+      <HintPath>..\..\Eurocode\ExportFactory\bin\Debug\net9.0\ExportFactory.dll</HintPath>
+    </Reference>
+    <Reference Include="Kaskon.Toolbox.PrefabModels">
+      <HintPath>..\..\Kaskon.Toolbox.PrefabModels\bin\Debug\net8.0\Kaskon.Toolbox.PrefabModels.dll</HintPath>
+    </Reference>
+  </ItemGroup>-->
+
+</Project>

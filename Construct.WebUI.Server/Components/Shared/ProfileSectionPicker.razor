@@ -1,0 +1,48 @@
+﻿@using CommonLibrary.Models
+<h3>ProfileSectionPicker</h3>
+
+<FluentCombobox 
+                Placeholder="Kies type..." 
+                OptionText="@(i => i.Text)"
+                OptionValue="@(i => i.Value)"
+                Label="Type" 
+                @bind-SelectedOption="@selectedProfielTypeOption"
+                Items="_profielTypeOptions"/>
+
+
+
+
+
+
+
+@code {
+    [Parameter] public BaseProfiel? Profiel{ get; set; }
+    [Parameter] public EventCallback<BaseProfiel> ProfielChanged { get; set; }
+
+    Option<string> selectedProfielTypeOption = default!;
+
+    private List<Option<string>> _profielTypeOptions = new()
+        {
+            { new Option<string> { Value = "HEA", Text = "HEA" } },
+            { new Option<string> { Value = "HEB", Text = "HEB" } },
+            { new Option<string> { Value = "HEM", Text = "HEM" } },
+            { new Option<string> { Value = "IPE", Text = "HEM" } },
+            { new Option<string> { Value = "Parametrisch", Text = "Parametrisch" } },
+            { new Option<string> { Value = "CHS", Text = "CHS" } },
+            { new Option<string> { Value = "SHS", Text = "SHS" } },
+            { new Option<string> { Value = "RHS", Text = "RHS" } },
+
+
+
+
+
+
+        };
+
+    
+
+
+
+
+
+}

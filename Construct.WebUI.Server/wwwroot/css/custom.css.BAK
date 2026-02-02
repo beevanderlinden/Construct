@@ -1,0 +1,109 @@
+﻿.preview-container {
+    text-align: left;
+    max-width: 1400px;
+    padding-right: 20px;
+}
+
+
+.ec-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    border: solid 1px gray;
+}
+
+.ec-table-borderless {
+}
+
+.ec-th-right {
+    text-align: left; /*hernoemen naar ec-th-pivot*/
+    padding: 0.5em;
+    border-right: solid 1px gray;
+    width: 50%;
+    font-weight: normal;
+    font-style: italic;
+    /*background-color:antiquewhite;*/
+}
+
+.ec-td {
+    padding: 0.5em;
+}
+
+.ec-th {
+    font-weight: normal;
+    font-style: italic;
+    padding: 0.5em;
+    background-color:antiquewhite;
+}
+
+
+.ec-table-head {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #f4f4f4;
+    background-color: antiquewhite;
+}
+
+.ec-table-heading {
+    font-weight: 500;
+    font-size: 1.1em;
+    margin-bottom: 0.5em;
+    text-align: center;
+}
+
+
+.ec-table-row {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #929292;
+}
+
+
+.ec-table-row-pivot {
+    border-bottom: none; /* gedraaide table heeft borders right*/
+    border-right: 1px solid #929292;
+}
+
+.ec-par {
+}
+
+
+
+
+.kop1 {
+    font-size: 2.5em;
+    border-bottom: 1px solid #000; /* Underline color and thickness */
+    padding-bottom: 5px; /* Optional: space between the text and the underline */
+    background-color: var(--fluent-color-background);
+}
+
+.kop2 {
+    font-size: 2em;
+}
+
+.kop3 {
+    font-size: 1.75em;
+}
+
+.document-title {
+    font-size: 4em;
+    font-weight: bold;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    line-height: initial;
+    /*background: var(--fluent-color-accent, #b6ff00);*/
+}
+
+.document-subtitle {
+    font-size: 1.1em;
+    font-style: italic;
+}
+
+.to-toc-btn {
+    position: fixed;
+    bottom: 15px;
+    right: 45px;
+    z-index: 1000;
+    padding: 15px;
+    cursor: pointer;
+}

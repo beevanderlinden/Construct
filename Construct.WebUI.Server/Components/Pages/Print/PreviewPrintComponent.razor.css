@@ -1,0 +1,89 @@
+﻿
+
+.preview-flex {
+    --scale: 1.0; /* default */
+}
+
+
+/* Flex preview: 2 pagina's naast elkaar */
+#print-preview .preview-flex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px; /* afstand tussen pagina's */
+}
+
+#print-preview .ec-panel {
+    width: 210mm;
+    height: 297mm;
+    background: white;
+    box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+@media print {
+    /* De hele preview container resetten voor print */
+    .preview-container,
+    #print-container {
+        display: block !important;
+        background: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        gap: 0 !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        justify-content: initial !important;
+        align-content: initial !important;
+    }
+
+        /* Elke pagina op z’n eigen A4 */
+        .preview-container .ec-panel,
+        #print-container .ec-panel {
+            display: block;
+            width: 210mm !important;
+            height: 297mm !important;
+            padding: 20mm !important;
+            margin: 0 auto !important;
+            background: white !important;
+            box-shadow: none !important;
+            box-sizing: border-box;
+            transform: none !important; /* verwijder preview scaling */
+            page-break-after: always;
+            position: static !important;
+        }
+
+            /* Laatste pagina zonder extra lege pagina */
+            .preview-container .ec-panel:last-child,
+            #print-container .ec-panel:last-child {
+                page-break-after: auto;
+            }
+
+    /* Stel de paginaformaat en marge voor de printer */
+    @page {
+        size: A4;
+        margin: 0;
+    }
+}
+
+
+
+
+/*@media print {
+    #print-container .ec-panel {
+        display: block;
+        width: 210mm;
+        height: 297mm;
+        padding: 20mm;
+        margin: 0 auto;
+        background: white;
+        box-shadow: none !important;
+        page-break-after: always;
+        box-sizing: border-box;
+        transform: none;
+    }
+
+    @page {
+        size: A4;
+        margin: 0;
+    }
+}*/

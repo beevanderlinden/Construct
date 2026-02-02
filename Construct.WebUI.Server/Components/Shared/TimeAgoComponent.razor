@@ -1,0 +1,34 @@
+﻿@using System.Timers
+@implements IDisposable
+
+<span style=@Style>@TimeAgoText</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public DateTime TargetTime { get; set; }
+
+    [Parameter]
+    public int Interval { get; set; } = 30000; // 30 seconden
+
+    [Parameter]
+    public string Style { get; set; } = "font-weight:600";
+
+
+
+    private string TimeAgoText => Helpers.TimeAgoHelper.GetTimeAgo(TargetTime);
+
+    private Timer? _timer;
+
+    protected override void OnInitialized()
+    {
+        _timer = new Timer(Interval); 
+        _timer.Elapsed += (s, e) => InvokeAsync(StateHasChanged);
+        _timer.Start();
+    }
+
+    public void Dispose()
+    {
+        _timer?.Stop();
+        _timer?.Dispose();
+    }
+}

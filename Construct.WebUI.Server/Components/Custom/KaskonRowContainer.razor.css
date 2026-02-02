@@ -1,0 +1,92 @@
+﻿.input-container {
+    display: grid;
+    gap: 0.5rem;
+    align-items: center;
+    width: 100%;
+}
+
+/* Label + Prefix in eerste blok */
+.label-prefix {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    white-space: normal;
+}
+
+.label-part {
+    text-align: left;
+}
+
+.prefix-part {
+    text-align: right;
+}
+
+.input {
+    min-width: 0;
+}
+
+    .input.full {
+        grid-column: 2 / span 2;
+    }
+
+.suffix {
+    text-align: left;
+    white-space: normal;
+}
+
+/* Mobiel layout */
+@media (max-width: 600px) {
+    .input-container {
+        grid-template-columns: 75% 25%;
+        grid-template-rows: auto auto;
+        grid-template-areas:
+            "label label"
+            "prefix input suffix";
+    }
+
+    /* Label bovenaan */
+    .label-prefix {
+        grid-area: label;
+        justify-content: flex-start; /* label links uitgelijnd */
+    }
+
+    /* Mobiel: als geen prefix */
+    .input-container:not(:has(.prefix-part:empty)) .input {
+        grid-area: input;
+    }
+
+    .input-container:has(.prefix-part:empty):has(.suffix) {
+        grid-template-columns: 75% 25%;
+        grid-template-areas:
+            "label label"
+            "input suffix";
+    }
+
+    /* Mobiel: als geen suffix */
+    .input-container:has(.prefix-part):not(:has(.suffix)) {
+        grid-template-columns: 25% 75%;
+        grid-template-areas:
+            "label label"
+            "prefix input";
+    }
+
+    /* Mobiel: geen prefix en geen suffix */
+    .input-container:has(.prefix-part:empty):not(:has(.suffix)) {
+        grid-template-columns: 100%;
+        grid-template-areas:
+            "label"
+            "input";
+    }
+
+    .prefix-part {
+        grid-area: prefix;
+    }
+
+    .input {
+        grid-area: input;
+    }
+
+    .suffix {
+        grid-area: suffix;
+    }
+}

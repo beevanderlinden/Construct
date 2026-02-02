@@ -1,0 +1,90 @@
+﻿@if (Visible && Model != null)
+{
+    <h3>Bordes bijwerken</h3>
+    <div class="two-column-container">
+        <div class="left-column">
+            <FluentTabs ActiveTabId="@ActiveTabId"
+                        ActiveTabIdChanged="ChangeTabId"
+                        Style="width:100%; height:100%;"
+                        Orientation="Orientation.Horizontal">
+
+                <FluentTab Id="tab-Info" Label="Info">
+                    <Header>
+                        <FluentIcon Value="@(new Icons.Regular.Size24.BarcodeScanner())" />
+                        Info
+                    </Header>
+                    <Content>
+                        <AssemblageInfoComponent1 Model="Model" />
+                        <EurocodeGrondslagen Model="Model.Grondslagen" ReadOnly="true" />
+                    </Content>
+                </FluentTab>
+
+               
+
+
+                <FluentTab Id="tab-Samenvatting" Label="Summary">
+                    <Header>
+                        <FluentIcon Value="@(new Icons.Regular.Size24.ReadingList())"></FluentIcon>
+                        Samenvatting
+                    </Header>
+                    <Content>
+                        
+                    </Content>
+                </FluentTab>
+            </FluentTabs>
+        </div>
+
+        <div class="right-column">
+            <div style="font-weight:600; font-size:1em; text-align:center;">
+                @Model
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .two-column-container {
+            display: grid;
+            grid-template-columns: 1fr 600px;
+            height: calc(100vh - 102px); /* vult scherm */
+            width: 100%;
+            overflow: hidden; /* voorkomt dubbele scroll */
+        }
+
+        .left-column {
+            background: var(--neutral-layer-1);
+            border-right: 1px solid var(--neutral-stroke-1);
+            overflow-y: auto; /* laat scrollen als nodig */
+            min-width: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+        }
+
+        .right-column {
+            background: var(--neutral-layer-2);
+            width: 600px;
+            min-width: 600px;
+            padding: 0rem;
+            box-sizing: border-box;
+        }
+    </style>
+
+}
+
+
+
+
+
+@code {
+    [Parameter, EditorRequired] public BordesEntity? Model {get; set; }
+    [CascadingParameter] public ProjectEntity? ProjectEntity { get; set; }
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public string ActiveTabId { get; set; } = "tab-1";
+    async Task ChangeTabId(string tabId)
+    {
+        ActiveTabId = tabId;
+    }
+}

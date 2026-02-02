@@ -1,0 +1,17 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg"
+     preserveAspectRatio="xMidYMid meet"
+     viewBox="@ViewBox"
+     style="width:100%; height:600px; border:2px solid red;">
+    @foreach (var path in Paths)
+    {
+        <path d="@path" fill="lightgray" stroke="black" stroke-width="2" />
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public IEnumerable<string> Paths { get; set; } = [];
+    [Parameter] public double Margin { get; set; } = 50;
+    [Parameter] public string ViewBox { get; set; } = "-200 -2200 2400 2400";
+
+    
+}
