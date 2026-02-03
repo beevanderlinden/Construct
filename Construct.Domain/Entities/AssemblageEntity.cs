@@ -27,11 +27,16 @@ namespace Construct.Domain.Entities
     public abstract class AssemblageEntity : BaseAssemblage
     {
         // JSON opslag
-        public JsonNode? MateriaalJson { get; set; }
+        // ✅ VERWIJDERD: MateriaalJson - nu gebruiken we MateriaalId in plaats daarvan
 
         // internal properties and methods can go here...
         internal BetonContext _beton = new("C45/55");
+        
+        [JsonIgnore]
         internal BaseMateriaal _materiaal = new BetonContext("C30/37");
+
+        // ✅ NIEUW: ID reference naar materiaal (kleine, primitieve type)
+        public Guid? MateriaalId { get; set; }
 
         private readonly List<BaseEurocodeContext> _toetsen = [];
         private readonly List<StrookEntity> _stroken = [];
@@ -100,6 +105,10 @@ namespace Construct.Domain.Entities
             set => SetNestedProperty(ref _beton!, value);
         }
 
+        /// <summary>
+        /// Het materiaal van dit assemblage (beton, staal, hout)
+        /// ⚠️ NIET geserialiseerd - gebruik MateriaalId voor referentie!
+        /// </summary>
         [JsonIgnore]
         public BaseMateriaal Materiaal
         {
@@ -220,6 +229,17 @@ namespace Construct.Domain.Entities
             }
         }
 
+
+        /// <summary>
+        /// Herstelt object-referenties en relaties na JSON-deserialisatie.
+        /// Roept slechts eenmaal aan via ProjectStateService.RestoreNavigationProperties()
+        /// </summary>
+        public virtual void RestoreReferencesAfterDeserialization(ProjectInfoEntity projectInfo)
+        {
+            // Basis implementatie: alleen ProjectInfo instellen
+            // Subclasses kunnen dit overschrijven voor meer specifieke herstel
+            ProjectInfo = projectInfo;
+        }
 
         public virtual void Bijwerken()
         {

@@ -15,7 +15,19 @@ namespace Construct.Application.Interfaces
         /// ✅ Toevoegen voor StateContainer compatibiliteit
         //event Action? OnChange;
 
+        /// <summary>
+        /// Laad een project na deserialisatie
+        /// Herstelt alle navigation properties en relaties
+        /// Gebruik dit ENKEL na het laden uit JSON
+        /// </summary>
         void SetProject(ProjectEntity project);
+
+        /// <summary>
+        /// Bijwerken van project state ZONDER relaties opnieuw in te stellen
+        /// Gebruik dit voor eenvoudige updates (bijv. ProjectInfo wijzigen)
+        /// </summary>
+        void UpdateProject(ProjectEntity project);
+
         void SetProjectFileInfo(ProjectFileInfo projectFileInfo);
 
         // 👇 Nieuw voor Undo/Redo service

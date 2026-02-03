@@ -7,6 +7,7 @@
 @inject IDialogService DialogService
 @inject IToastService ToastService
 @inject ILogService Log
+@inject NavigationManager NavigationManager
 
 @implements IDisposable
 
@@ -27,11 +28,14 @@
 
                     @* <FluentNavLink Href="/File/new" Icon="@(new Icons.Regular.Size20.New())">New</FluentNavLink> *@
                     <FluentNavLink Href="/File/newProjectSaveFile" Icon="@(new Icons.Regular.Size20.New())">Nieuw</FluentNavLink>
+                    <FluentNavLink OnClick="OnNewProjectClicked" Icon="@(new Icons.Regular.Size20.New())">Nieuw</FluentNavLink>
                     <FluentNavLink Href="/File/open" Icon="@(new Icons.Regular.Size20.Open())">Open</FluentNavLink>
                 
                    
 
                     <FluentNavLink Disabled=@(!projectLoaded) OnClick="OnSaveClicked" Icon="@(new Icons.Regular.Size20.Save())">Save</FluentNavLink>
+                    
+                    <FluentNavLink Href="/File/inspect-save-file" Icon="@(new Icons.Regular.Size20.TextWrap())">Inspect Save File</FluentNavLink>
                     @* <FluentNavLink Disabled=@(!projectLoaded) Href="/File/save-as" Icon="@(new Icons.Regular.Size20.Save())">Save As</FluentNavLink> *@
                 </FluentNavGroup>
 
@@ -65,7 +69,7 @@
                     </FluentNavGroup>
 
                     <FluentNavLink Href="/Project/assemblages" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size28.Grid())" IconColor="Color.Accent">Berekeningen</FluentNavLink>
-                    <FluentNavLink Href="/Project/documenten" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size28.DocumentFolder())" IconColor="Color.Accent">Documenten</FluentNavLink>
+                    @* <FluentNavLink Href="/Project/documenten" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size28.DocumentFolder())" IconColor="Color.Accent">Documenten</FluentNavLink> *@
                     <FluentNavLink Href="/Project/print" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size28.Print())" IconColor="Color.Accent">Preview</FluentNavLink>
 
 
@@ -137,5 +141,39 @@
 
     }
 
+
+    private async Task OnNewProjectClicked()
+    {
+        if (projectLoaded && ProjectState.CurrentProject != null)
+        {
+            var dialog = await DialogService.ShowDialogAsync<SaveProjectDialog>(
+                new DialogParameters()
+                {
+                    Title = "Project opslaan?",
+                    Width = "400px"
+                });
+
+            var result = await dialog.Result;
+
+            if (result.Cancelled)
+            {
+                // Annuleer: niet navigeren
+                return;
+            }
+
+            if (result.Data is true)
+            {
+                // Ja: eerst opslaan
+                await OnSaveClicked();
+            }
+            // Nee of Ja (na opslaan): doorgaan
+            NavigationManager.NavigateTo("/File/newProjectSaveFile");
+        }
+        else
+        {
+            // Geen project: direct doorgaan
+            NavigationManager.NavigateTo("/File/newProjectSaveFile");
+        }
+    }
 }
 

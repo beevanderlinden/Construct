@@ -93,35 +93,54 @@ namespace Construct.Domain.Entities
 
             this.AddStrook(vs);
 
-            Init(ProjectInfo);
-
-
         }
 
-        public override void Init(ProjectInfoEntity projectInfo)
+        public override void RestoreReferencesAfterDeserialization(ProjectInfoEntity projectInfo)
         {
             ProjectInfo = projectInfo; // projectinfo + grondslagen
 
-            Belastingen = new(grondslagen: ProjectInfo.Grondslagen); // Als null, nieuwe aanmaken
+            // ✅ Gebruik ??= om bestaande BelastingCombinaties te behouden
+            Belastingen ??= new(grondslagen: ProjectInfo.Grondslagen);
 
-            // herstel de parent-relatie (indien uit json geladen, moet dit opnieuw aangemaakt worden)
+            // ✅ Herstel de parent-relatie (indien uit json geladen, moet dit opnieuw aangemaakt worden)
             Belastingen.Grondslagen = ProjectInfo.Grondslagen;
+            
+            // ⚠️ BelastingCombinaties kunnen leeg zijn door JsonConstructor die GenereerBelastingCombinaties() aanroept
+            // Controleer of we opnieuw moeten genereren
+            if (Belastingen.BelastingCombinaties.Count == 0)
+            {
+                // Roep GenereerBelastingCombinaties aan om de combinaties opnieuw te genereren
+                Belastingen.GenereerBelastingCombinaties(
+                    Belastingen, 
+                    Belastingen.BelastingGevallen, 
+                    Belastingen.CombinatiesTypes);
+            }
+            
+            // ✅ Herstel bidirectionele Father-relaties in VerbindingAansluitendElement
+            Trap1.Father = this;
+            Trap2.Father = this;
+            
             var beton = this.Materiaal as BetonContext;
 
-            PlaatDekking.Onder = new BetonDekkingContext()
+            // ✅ Initialiseer PlaatDekking.Onder/Boven ENKEL als ze null zijn
+            // Behoud gedeserialiseerde waarden (IsKwaliteitsBeheersing, IsPlaatGeometrie)
+            if (PlaatDekking.Onder == null)
             {
-                Grondslagen = ProjectInfo.Grondslagen,
-                Beton = beton ?? new(),
-                IsKwaliteitsBeheersing = true,
-                IsPlaatGeometrie = true,
-            };
-            PlaatDekking.Boven = new BetonDekkingContext()
+                PlaatDekking.Onder = new BetonDekkingContext();
+                PlaatDekking.Onder.IsKwaliteitsBeheersing = true;
+                PlaatDekking.Onder.IsPlaatGeometrie = true;
+            }
+            PlaatDekking.Onder.Grondslagen = ProjectInfo.Grondslagen;
+            PlaatDekking.Onder.Beton = beton ?? new();
+            
+            if (PlaatDekking.Boven == null)
             {
-                Grondslagen = ProjectInfo.Grondslagen,
-                Beton = beton ?? new(),
-                IsKwaliteitsBeheersing = true,
-                IsPlaatGeometrie = true,
-            };
+                PlaatDekking.Boven = new BetonDekkingContext();
+                PlaatDekking.Boven.IsKwaliteitsBeheersing = true;
+                PlaatDekking.Boven.IsPlaatGeometrie = true;
+            }
+            PlaatDekking.Boven.Grondslagen = ProjectInfo.Grondslagen;
+            PlaatDekking.Boven.Beton = beton ?? new();
 
 
             // Create basiswapening without direct call to the ReferentieDekking setter (use reflection)
@@ -185,7 +204,8 @@ namespace Construct.Domain.Entities
                 // swallow - we prefer not to throw here to avoid MissingMethodException at runtime
             }
 
-            PlaatWapening = new PlaatWapening()
+            // ✅ Alleen initialiseren als PlaatWapening nog niet bestaat
+            PlaatWapening ??= new PlaatWapening()
             {
                 Boven = new PlaatWapeningGroep()
                 {
@@ -560,6 +580,16 @@ namespace Construct.Domain.Entities
             get => _breedteVersterkteStrook;
             set => SetAndRecalcultate(ref _breedteVersterkteStrook, value);
         }
+
+        /// <summary>
+        /// GUID van Trap1.AansluitendElement (voor serialisatie)
+        /// </summary>
+        public Guid? Trap1AansluitendElementGuid { get; set; }
+
+        /// <summary>
+        /// GUID van Trap2.AansluitendElement (voor serialisatie)
+        /// </summary>
+        public Guid? Trap2AansluitendElementGuid { get; set; }
 
 
         public double Dikte

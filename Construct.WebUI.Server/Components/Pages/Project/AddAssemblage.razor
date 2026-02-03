@@ -156,6 +156,7 @@
             ProjectInfo = ProjectEntity!.ProjectInfo,
             Naam = "kolom",
             Merk = "KL-1",
+            Materiaal = GetOrAddBetonMaterial(),  // ✅ Voeg materiaal toe
         };
         kolom.Belastingen.GenereerBelastingCombinaties(kolom.Belastingen, kolom.Belastingen.BelastingGevallen, kolom.Belastingen.CombinatiesTypes);
         return kolom;
@@ -295,12 +296,10 @@
                         Merk = "BD-1",
                         Breedte = 1300,
                         Lengte = 2700,
-
+                        Materiaal = GetOrAddBetonMaterial(),  // ✅ Voeg materiaal toe
                     };
                     bordes.Trap1!.Randafstand = 100;
                     bordes.Trap2!.Randafstand = 100;
-
-
 
                     CreateAssemblage(bordes);
 
@@ -321,13 +320,20 @@
 
                         CreateAssemblage(steektrapVoorOpBordes);
                         bordes.Trap1.AansluitendElement = steektrapVoorOpBordes;
+                        bordes.Trap1AansluitendElementGuid = steektrapVoorOpBordes.Guid;
+
                         bordes.Trap2.AansluitendElement = steektrapVoorOpBordes;
+                        bordes.Trap2AansluitendElementGuid = steektrapVoorOpBordes.Guid;
                     }
                     else
                     {
                         var fod = trappen.FirstOrDefault();
                         bordes.Trap1.AansluitendElement = fod;
+                        bordes.Trap1AansluitendElementGuid = fod?.Guid;
+
                         bordes.Trap2.AansluitendElement = fod;
+                        bordes.Trap2AansluitendElementGuid = fod?.Guid;
+
                     }
 
                     break;

@@ -2,6 +2,7 @@
 using Construct.Application.Interfaces;
 using Construct.Domain;
 using Construct.Domain.Entities;
+using CommonLibrary.Models;
 using Microsoft.JSInterop;
 using System.Text.Json;
 
@@ -34,8 +35,74 @@ namespace Construct.Application.Services
 
         public void SetProject(ProjectEntity project)
         {
+            // ✅ Herstel navigation properties na deserialisatie
+            // BELANGRIJK: Dit wordt ENKEL aangeroepen voor NIEUWE projecten (na JSON-load)
+            RestoreNavigationProperties(project);
+            
             CurrentProject = project;
             OnProjectChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Bijwerken van project state ZONDER relaties opnieuw in te stellen
+        /// Gebruik deze methode voor eenvoudige updates (bijv. ProjectInfo wijzigen)
+        /// </summary>
+        public void UpdateProject(ProjectEntity project)
+        {
+            // ✅ Geen RestoreNavigationProperties! Dit is enkel voor state updates
+            CurrentProject = project;
+            OnProjectChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Herstelt object-referenties (nav properties) na JSON-deserialisatie
+        /// omdat ReferenceHandler.IgnoreCycles deze negeert
+        /// </summary>
+        private void RestoreNavigationProperties(ProjectEntity project)
+        {
+            if (project?.Assemblages == null) return;
+
+            // ✅ Materialen Dictionary is al gevuld door JSON-deserialisatie (ReferenceHandler)
+            // Zorg alleen dat Assemblages naar dezelfde Materiaal references wijzen
+            
+            foreach (var assemblage in project.Assemblages)
+            {
+                if (assemblage.MateriaalId.HasValue && assemblage.MateriaalId != Guid.Empty)
+                {
+                    if (project.Materialen.TryGetValue(assemblage.MateriaalId.Value, out var materiaal))
+                    {
+                        assemblage.Materiaal = materiaal;
+                    }
+                }
+            }
+
+            // Herstel AansluitendeElementen in BordesEntity's
+            foreach (var bordes in project.Assemblages.OfType<BordesEntity>())
+            {
+                if (bordes.Trap1AansluitendElementGuid.HasValue)
+                {
+                    var element = project.Assemblages.FirstOrDefault(a => a.Guid == bordes.Trap1AansluitendElementGuid);
+                    if (element != null)
+                    {
+                        bordes.Trap1.AansluitendElement = element;
+                    }
+                }
+
+                if (bordes.Trap2AansluitendElementGuid.HasValue)
+                {
+                    var element = project.Assemblages.FirstOrDefault(a => a.Guid == bordes.Trap2AansluitendElementGuid);
+                    if (element != null)
+                    {
+                        bordes.Trap2.AansluitendElement = element;
+                    }
+                }
+            }
+
+            // Roep RestoreReferencesAfterDeserialization aan per assemblage
+            foreach (var assemblage in project.Assemblages)
+            {
+                assemblage.RestoreReferencesAfterDeserialization(project.ProjectInfo);
+            }
         }
 
         public void SetProjectFileInfo(ProjectFileInfo projectFileInfo)
@@ -101,13 +168,13 @@ namespace Construct.Application.Services
                 if (CurrentProject is null)
                     return;
 
-                // ⚡ Sla polymorfe Materiaal properties op als JsonElement
+                // ✅ Stel MateriaalId in VOOR serialisatie
+                // Het Materiaal object zelf wordt NIET geserialiseerd (JsonIgnore)
+                // In plaats daarvan gebruiken we MateriaalList (helper property)
                 foreach (var assemblage in CurrentProject.Assemblages)
                 {
-                    assemblage.MateriaalJson =
-                        JsonSerializer.SerializeToNode(assemblage.Materiaal, ProjectJsonOptions.Fast);
+                    assemblage.MateriaalId = assemblage.Materiaal?.Id;
                 }
-
 
                 var jsonString = JsonSerializer.Serialize(CurrentProject, ProjectJsonOptions.Fast);
                 await _js.InvokeVoidAsync("localStorage.setItem", "currentProject", jsonString);
@@ -130,15 +197,12 @@ namespace Construct.Application.Services
                 if (project is null)
                     return;
 
-                // ⚡ Polymorfe assemblages vullen
-                foreach (var assemblage in project.Assemblages.Where(a=>a.MateriaalJson != null))
-                {
-                    assemblage.Materiaal =
-                        MateriaalFactory.Create(assemblage.MateriaalJson!.AsObject(), ProjectJsonOptions.Fast);
-                }
+                // ✅ VEREENVOUDIGD: Geen MateriaalFactory meer nodig!
+                // Materialen worden opgebouwd uit project.Materialen Dictionary
+                // (ReferenceHandler doet zijn werk via JSON $ref/$id patterns)
 
                 project.InitAll();
-                SetProject(project);
+                SetProject(project);  // ← RestoreNavigationProperties wordt hier aangeroepen
             }
             catch (Exception ex)
             {

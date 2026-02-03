@@ -2,6 +2,7 @@ using BeamClassLibrary.Services;
 using Construct.Application;
 using Construct.Application.Interfaces;
 using Construct.Application.Services;
+using Construct.Application.Serialization;
 using Construct.Domain;
 using Construct.Domain.Entities;
 using Construct.Infrastructure;
@@ -24,6 +25,12 @@ using System.Text.Json;
 
 const string MS_OIDC_SCHEME = "MicrosoftOidc";
 
+// ? Registreer MaterialenDictionaryConverter in BEIDE ProjectJsonOptions
+// Default wordt gebruikt door UndoRedoService
+// Fast wordt gebruikt door ProjectFileService
+var converter = new MaterialenDictionaryConverter();
+ProjectJsonOptions.Default.Converters.Insert(0, converter);
+ProjectJsonOptions.Fast.Converters.Insert(0, converter);
 
 
 

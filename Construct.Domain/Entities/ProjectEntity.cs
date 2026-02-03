@@ -2,6 +2,7 @@
 using CommonLibrary.Models;
 using Eurocode.Belastingen;
 using Eurocode.BetonConstructies;
+using System.Text.Json.Serialization;
 
 namespace Construct.Domain.Entities
 {
@@ -30,9 +31,10 @@ namespace Construct.Domain.Entities
         }];
 
         /// <summary>
-        /// Materialen in het project.
+        /// Materialen in het project (beton, staal, hout).
+        /// ✅ Serialiseert automatisch - ReferenceHandler deduplicaert
         /// </summary>
-        public Dictionary<Guid, BaseMateriaal> Materialen { get; } = [];
+        public Dictionary<Guid, BaseMateriaal> Materialen { get; set; } = [];
 
         public T VoegMateriaalToe<T>(T materiaal) where T : BaseMateriaal
         {
@@ -48,7 +50,6 @@ namespace Construct.Domain.Entities
 
         // Mogelijkheid voor Defaults in project
         //public List<BetonContext> Materialen { get; set; } = [new BetonContext("C45/55")];
-        public List<GebruiksklasseEnum> Gebruiksklassen { get; set; } = [GebruiksklasseEnum.A_gemeenschappelijke_trappen];
 
         // TODO implementeer een JsonConverter voor IMateriaal 
         //public List<IMateriaal> Materialen { get; set; } = [new BetonContext("C45/55")];

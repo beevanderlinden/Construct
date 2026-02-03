@@ -1,14 +1,43 @@
 ﻿//using Kaskon.Toolbox.PrefabModels;
 
 //using Mechanica.LiggerSB;
+using System.Text.Json.Serialization;
+
 namespace Construct.Domain.Entities
 {
-    public class VerbindingAansluitendElement(AssemblageEntity father)
+    public class VerbindingAansluitendElement
     {
+        /// <summary>
+        /// Constructor voor JSON deserialisatie met parametermapping
+        /// Dit zorgt ervoor dat alle properties correct uit JSON worden gemapt
+        /// </summary>
+        [JsonConstructor]
+        public VerbindingAansluitendElement(
+            bool gebruikEigenOpgave = false,
+            double lengteEigenOpgave = 1200,
+            double breedteEigenOpgave = 100,
+            double hoogteEigenOpgave = 105,
+            double randafstand = 150,
+            bool gespiegeld = false,
+            AssemblageEntity? father = null)
+        {
+            GebruikEigenOpgave = gebruikEigenOpgave;
+            LengteEigenOpgave = lengteEigenOpgave;
+            BreedteEigenOpgave = breedteEigenOpgave;
+            HoogteEigenOpgave = hoogteEigenOpgave;
+            Randafstand = randafstand;
+            Gespiegeld = gespiegeld;
+            Father = father ?? null!;
+        }
 
-        //private double _breedte = 100;
-        //private double _lengte = 1200;
-        //private double _hoogte = 105;
+        /// <summary>
+        /// Normale constructor met father parameter (voor programmatisch gebruik)
+        /// </summary>
+        public VerbindingAansluitendElement(AssemblageEntity father)
+        {
+            Father = father;
+        }
+
         private AssemblageEntity? _aansluitendElement;
         public AssemblageEntity? AansluitendElement
         {
@@ -16,7 +45,7 @@ namespace Construct.Domain.Entities
             set => _aansluitendElement = value;
         }
 
-        public AssemblageEntity Father { get; init; } = father;
+        public AssemblageEntity Father { get; set; } = null!;
 
 
 

@@ -7,6 +7,7 @@
 @using Construct.Application.Services
 @using Construct.Domain.Common
 @using Construct.WebUI.Server.Components.Beam
+@using Construct.WebUI.Server.Components.Pages.Print
 @using Eurocode.HoutConstructies
 @using Eurocode.StaalConstructies
 @using EurocodeRazorClassLibrary.Custom
@@ -32,6 +33,7 @@
 
 
 
+
 @if (ProjectState?.CurrentProject == null)
 {
     <p>Geen project gevonden.</p>
@@ -39,7 +41,7 @@
 else
 {
     @* Nieuw secundair menu - alleen zichtbaar als preview actief is *@
-    <Construct.WebUI.Server.Components.Pages.Print.PrintPageMenu IsVisible="@(!ShowInfo && !string.IsNullOrEmpty(Html))"
+    <PrintPageMenu IsVisible="@(!ShowInfo && !string.IsNullOrEmpty(Html))"
                    IsLoading="@isLoading"
                    InfoButtonText="@BtnShowInfoTekst"
                    OnPrintClick="@PrintPreviewAsync"
@@ -832,7 +834,8 @@ else
         string width2 = "9cm";
         section.Elements.Add(new ParagraphContent("Grondslag van het constructief ontwerp", "Kop 3"));
         var tblGrondslagen = new TableContent(){
-            IsPivotTable = true,
+            LayoutOnly = true,
+            IsPivotTable = !true,
             HideHeaders = true,
         };
         tblGrondslagen.Headers =

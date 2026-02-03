@@ -10,8 +10,8 @@
 else
 {
     @* <EurocodeGrondslagen @bind-Model="ProjectState.CurrentProject.ProjectInfo.Grondslagen" /> *@
-    <FluentCard AreaRestricted="false">
-        <h1>Grondslagen (EC0)</h1>
+    <FluentCard AreaRestricted="false" Style="max-width: 210mm;">
+        <h1>Grondslagen</h1>
         <Grondslagen @bind-Model="ProjectState.CurrentProject.ProjectInfo.Grondslagen" />
     </FluentCard>
 }

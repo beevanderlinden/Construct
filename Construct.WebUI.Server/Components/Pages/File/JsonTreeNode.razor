@@ -1,0 +1,120 @@
+﻿@using System.Text.Json
+@rendermode InteractiveServer
+
+@if (Node.ValueKind == JsonValueKind.Object)
+{
+    <div>
+        <span class="json-toggle" @onclick="@(() => OnToggle.InvokeAsync(NodeId))">
+            @if (HasChildren)
+            {
+                <span>@(IsExpanded ? "▼" : "▶")</span>
+            }
+            else
+            {
+                <span style="visibility: hidden;">▶</span>
+            }
+        </span>
+        <span class="json-bracket">{</span>
+        @if (HasChildren && !IsExpanded)
+        {
+            <span class="json-array-count">... @(Node.EnumerateObject().Count()) properties</span>
+        }
+        @if (IsExpanded)
+        {
+            <div class="json-node">
+                @foreach (var property in Node.EnumerateObject())
+                {
+                    <div>
+                        <span class="json-key">"@property.Name"</span>
+                        <span class="json-bracket">:</span>
+                        <JsonTreeNode Node="property.Value" NodeId="@($"{NodeId}.{property.Name}")" ExpandedNodes="ExpandedNodes" OnToggle="OnToggle" />
+                    </div>
+                }
+            </div>
+        }
+        <span class="json-bracket">}</span>
+    </div>
+}
+else if (Node.ValueKind == JsonValueKind.Array)
+{
+    <div>
+        <span class="json-toggle" @onclick="@(() => OnToggle.InvokeAsync(NodeId))">
+            @if (HasChildren)
+            {
+                <span>@(IsExpanded ? "▼" : "▶")</span>
+            }
+            else
+            {
+                <span style="visibility: hidden;">▶</span>
+            }
+        </span>
+        <span class="json-bracket">[</span>
+        @if (HasChildren && !IsExpanded)
+        {
+            <span class="json-array-count">@(Node.GetArrayLength()) items</span>
+        }
+        @if (IsExpanded)
+        {
+            <div class="json-node">
+                @{
+                    int index = 0;
+                    foreach (var item in Node.EnumerateArray())
+                    {
+                        <div>
+                            <span class="json-key">[@(index)]</span>
+                            <span class="json-bracket">:</span>
+                            <JsonTreeNode Node="item" NodeId="@($"{NodeId}[{index}]")" ExpandedNodes="ExpandedNodes" OnToggle="OnToggle" />
+                        </div>
+                        index++;
+                    }
+                }
+            </div>
+        }
+        <span class="json-bracket">]</span>
+    </div>
+}
+else if (Node.ValueKind == JsonValueKind.String)
+{
+    <span class="json-string">"@Node.GetString()"</span>
+}
+else if (Node.ValueKind == JsonValueKind.Number)
+{
+    <span class="json-number">@Node.GetRawText()</span>
+}
+else if (Node.ValueKind == JsonValueKind.True || Node.ValueKind == JsonValueKind.False)
+{
+    <span class="json-boolean">@(Node.GetBoolean() ? "true" : "false")</span>
+}
+else if (Node.ValueKind == JsonValueKind.Null)
+{
+    <span class="json-null">null</span>
+}
+else
+{
+    <span>@Node.GetRawText()</span>
+}
+
+@code {
+    [Parameter]
+    public JsonElement Node { get; set; }
+
+    [Parameter]
+    public string NodeId { get; set; } = "root";
+
+    [Parameter]
+    public HashSet<string> ExpandedNodes { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<string> OnToggle { get; set; }
+
+    private bool IsExpanded => ExpandedNodes.Contains(NodeId);
+
+    private bool HasChildren
+    {
+        get
+        {
+            return (Node.ValueKind == JsonValueKind.Object && Node.EnumerateObject().Any()) ||
+                   (Node.ValueKind == JsonValueKind.Array && Node.GetArrayLength() > 0);
+        }
+    }
+}

@@ -14,6 +14,13 @@ namespace Construct.Domain
         public static readonly JsonSerializerOptions Default = CreateDefaultOptions();
         public static readonly JsonSerializerOptions Fast = CreateFastOptions();
 
+        // ✅ Static constructor - registreer converters NA opties creation
+        static ProjectJsonOptions()
+        {
+            // MaterialenDictionaryConverter wordt geregistreerd in Program.cs
+            // Dit moet gedaan worden in Program.cs omdat die Application kan zien
+        }
+
 
 
         private static JsonSerializerOptions CreateDefaultOptions()
@@ -63,7 +70,7 @@ namespace Construct.Domain
             return new JsonSerializerOptions
             {
                 WriteIndented = false,
-                IncludeFields = false, // alleen properties
+                IncludeFields = false,
                 IgnoreReadOnlyFields = true,
                 IgnoreReadOnlyProperties = true,
                 ReferenceHandler = ReferenceHandler.IgnoreCycles,
