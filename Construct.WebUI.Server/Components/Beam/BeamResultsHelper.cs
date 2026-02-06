@@ -297,7 +297,8 @@ public static class BeamResultsHelper
 
             // Placeholder: As_required: simpele schatting op basis van moment
             var betonProfiel = profiel as Profielen.Beton.BetonProfiel;
-            var wapening = My < 0 ? beam.PlaatWapening.Onder.BasisWapening : beam.PlaatWapening.Boven.BasisWapening;
+            var wapening = My < 0 ? beam.PlaatWapening?.Onder?.BasisWapening : beam.PlaatWapening?.Boven?.BasisWapening;
+
 
             var bending = new BendingResults((BetonContext)materiaal, betonProfiel, wapening, new() { My = My });
 

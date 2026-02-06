@@ -2,6 +2,7 @@
 using Construct.Application.Interfaces;
 using Construct.Domain;
 using Construct.Domain.Entities;
+using Construct.Domain.Common;
 using CommonLibrary.Models;
 using Microsoft.JSInterop;
 using System.Text.Json;
@@ -39,6 +40,17 @@ namespace Construct.Application.Services
             // BELANGRIJK: Dit wordt ENKEL aangeroepen voor NIEUWE projecten (na JSON-load)
             RestoreNavigationProperties(project);
             
+            // ✅ NIEUW: Valideer alle referenties en log diagnostische info
+            var validationReport = ReferenceValidationHelper.ValidateProjectReferences(project);
+            if (!validationReport.IsHealthy)
+            {
+                Console.Error.WriteLine(ReferenceValidationHelper.GetSummary(validationReport));
+            }
+            else
+            {
+                Console.WriteLine("✅ All entity references restored successfully!");
+            }
+            
             CurrentProject = project;
             OnProjectChanged?.Invoke();
         }
@@ -56,53 +68,67 @@ namespace Construct.Application.Services
 
         /// <summary>
         /// Herstelt object-referenties (nav properties) na JSON-deserialisatie
-        /// omdat ReferenceHandler.IgnoreCycles deze negeert
+        /// ✅ NIEUW SYSTEEM: Gebruikt EntityReference<T> voor generieke referentie-beheer
+        /// Roept RestoreReferencesAfterDeserialization(ProjectEntity) aan voor elke assemblage
         /// </summary>
         private void RestoreNavigationProperties(ProjectEntity project)
         {
             if (project?.Assemblages == null) return;
 
-            // ✅ Materialen Dictionary is al gevuld door JSON-deserialisatie (ReferenceHandler)
-            // Zorg alleen dat Assemblages naar dezelfde Materiaal references wijzen
+            Console.WriteLine($"=== RestoreNavigationProperties START ===");
+            Console.WriteLine($"📊 Project.Materialen Count: {project.Materialen?.Count ?? 0}");
+            if (project.Materialen?.Count > 0)
+            {
+                Console.WriteLine($"   Beschikbare material IDs:");
+                foreach (var key in project.Materialen.Keys)
+                {
+                    Console.WriteLine($"     - {key} ({project.Materialen[key]?.Naam ?? "?"})");
+                }
+            }
+
+            // 🔍 DEBUG: Log alle assemblages met hun MateriaalId
+            foreach (var assemblage in project.Assemblages)
+            {
+                Console.WriteLine($"[RestoreNav] {assemblage.GetType().Name} '{assemblage.Merk}'");
+                Console.WriteLine($"   - MateriaalId: {assemblage.MateriaalId}");
+                Console.WriteLine($"   - Materiaal: {assemblage.Materiaal?.Naam ?? "NULL"}");
+                Console.WriteLine($"   - In dictionary? {(assemblage.MateriaalId.HasValue && project.Materialen.ContainsKey(assemblage.MateriaalId.Value))}");
+            }
+
+            // ✅ Itereer door alle assemblages
+            // Virtual call → roept de juiste subtype-implementatie aan (Ligger, Bordes, SteekTrap, etc.)
+            foreach (var assemblage in project.Assemblages)
+            {
+                Console.WriteLine($"\n>>> BEFORE RESTORE: {assemblage.GetType().Name} '{assemblage.Merk}'");
+                Console.WriteLine($"    MateriaalId: {assemblage.MateriaalId}");
+                Console.WriteLine($"    Materiaal: {assemblage.Materiaal?.Naam ?? "NULL"}");
+                
+                //System.Diagnostics.Debugger.Break();  // ⬅️ BREAKPOINT
+                
+                Console.WriteLine($">>> CALLING RestoreReferencesAfterDeserialization()...");
+                assemblage.RestoreReferencesAfterDeserialization(project);
+                
+                Console.WriteLine($">>> AFTER RESTORE: {assemblage.GetType().Name} '{assemblage.Merk}'");
+                Console.WriteLine($"    MateriaalId: {assemblage.MateriaalId}");
+                Console.WriteLine($"    Materiaal: {assemblage.Materiaal?.Naam ?? "NULL"}");
+                
+                // 🔍 DETAIL CHECK
+                if (assemblage.Materiaal == null && assemblage.MateriaalId.HasValue)
+                {
+                    Console.Error.WriteLine($"  ❌ CRITICAL: MateriaalId is set ({assemblage.MateriaalId}) but Materiaal is NULL!");
+                    if (project.Materialen.ContainsKey(assemblage.MateriaalId.Value))
+                    {
+                        Console.Error.WriteLine($"     BUT IT EXISTS IN DICTIONARY: {project.Materialen[assemblage.MateriaalId.Value]?.Naam}");
+                        Console.Error.WriteLine($"     RESTORE FAILED!");
+                    }
+                    else
+                    {
+                        Console.Error.WriteLine($"     AND IT'S NOT IN THE DICTIONARY!");
+                    }
+                }
+            }
             
-            foreach (var assemblage in project.Assemblages)
-            {
-                if (assemblage.MateriaalId.HasValue && assemblage.MateriaalId != Guid.Empty)
-                {
-                    if (project.Materialen.TryGetValue(assemblage.MateriaalId.Value, out var materiaal))
-                    {
-                        assemblage.Materiaal = materiaal;
-                    }
-                }
-            }
-
-            // Herstel AansluitendeElementen in BordesEntity's
-            foreach (var bordes in project.Assemblages.OfType<BordesEntity>())
-            {
-                if (bordes.Trap1AansluitendElementGuid.HasValue)
-                {
-                    var element = project.Assemblages.FirstOrDefault(a => a.Guid == bordes.Trap1AansluitendElementGuid);
-                    if (element != null)
-                    {
-                        bordes.Trap1.AansluitendElement = element;
-                    }
-                }
-
-                if (bordes.Trap2AansluitendElementGuid.HasValue)
-                {
-                    var element = project.Assemblages.FirstOrDefault(a => a.Guid == bordes.Trap2AansluitendElementGuid);
-                    if (element != null)
-                    {
-                        bordes.Trap2.AansluitendElement = element;
-                    }
-                }
-            }
-
-            // Roep RestoreReferencesAfterDeserialization aan per assemblage
-            foreach (var assemblage in project.Assemblages)
-            {
-                assemblage.RestoreReferencesAfterDeserialization(project.ProjectInfo);
-            }
+            Console.WriteLine($"=== RestoreNavigationProperties END ===\n");
         }
 
         public void SetProjectFileInfo(ProjectFileInfo projectFileInfo)
@@ -160,6 +186,33 @@ namespace Construct.Application.Services
             }
         }
 
+        /// <summary>
+        /// ✅ NIEUW: Valideer alle entity-referenties in het huidige project
+        /// Kan handmatig aangeroepen worden via Component code-behind
+        /// Retourneert detailed diagnostische informatie
+        /// </summary>
+        public ReferenceValidationHelper.ValidationReport ValidateCurrentProjectReferences()
+        {
+            if (CurrentProject is null)
+            {
+                return new ReferenceValidationHelper.ValidationReport
+                {
+                    Issues = new() { new ReferenceValidationHelper.ReferenceCheckResult
+                    {
+                        EntityName = "ProjectStateService",
+                        IsValid = false,
+                        ErrorMessage = "CurrentProject is null"
+                    }}
+                };
+            }
+
+            var report = ReferenceValidationHelper.ValidateProjectReferences(CurrentProject);
+            
+            // Log naar console
+            Console.WriteLine(ReferenceValidationHelper.GetSummary(report));
+            
+            return report;
+        }
 
         public async Task SaveProjectToLocalStorageAsync()
         {
@@ -193,20 +246,72 @@ namespace Construct.Application.Services
                 if (string.IsNullOrWhiteSpace(jsonString))
                     return;
 
+                Console.WriteLine("=== JSON BEFORE DESERIALIZATION ===");
+                // Controleer de Materialen in JSON
+                if (jsonString.Contains("\"materialen\"", StringComparison.OrdinalIgnoreCase))
+                {
+                    var startIdx = jsonString.IndexOf("\"materialen\"", StringComparison.OrdinalIgnoreCase);
+                    var snippet = jsonString.Substring(startIdx, Math.Min(500, jsonString.Length - startIdx));
+                    Console.WriteLine($"Materialen JSON snippet:\n{snippet}");
+                }
+                
+                // Controleer de materiaalId in SteekTrap
+                if (jsonString.Contains("\"steektrap\"", StringComparison.OrdinalIgnoreCase))
+                {
+                    var startIdx = jsonString.IndexOf("\"steektrap\"", StringComparison.OrdinalIgnoreCase);
+                    // Find materiaalId in this section
+                    var steektrapSection = jsonString.Substring(startIdx, Math.Min(1000, jsonString.Length - startIdx));
+                    if (steektrapSection.Contains("materiaalId", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var matIdx = steektrapSection.IndexOf("materiaalId", StringComparison.OrdinalIgnoreCase);
+                        var matSnippet = steektrapSection.Substring(matIdx, Math.Min(100, steektrapSection.Length - matIdx));
+                        Console.WriteLine($"SteekTrap materiaalId:\n{matSnippet}");
+                    }
+                }
+                Console.WriteLine("=== END JSON ===\n");
+
                 var project = JsonSerializer.Deserialize<ProjectEntity>(jsonString, ProjectJsonOptions.Fast);
                 if (project is null)
                     return;
 
-                // ✅ VEREENVOUDIGD: Geen MateriaalFactory meer nodig!
-                // Materialen worden opgebouwd uit project.Materialen Dictionary
-                // (ReferenceHandler doet zijn werk via JSON $ref/$id patterns)
+                Console.WriteLine("=== AFTER DESERIALIZATION ===");
+                Console.WriteLine($"Project.Materialen.Count: {project.Materialen?.Count ?? 0}");
+                if (project.Materialen?.Count > 0)
+                {
+                    foreach (var kvp in project.Materialen)
+                    {
+                        Console.WriteLine($"  Key: {kvp.Key}, Value: {kvp.Value?.Naam ?? "NULL"}");
+                    }
+                }
+                Console.WriteLine("=== END DESERIALIZATION ===\n");
 
+                // ✅ VOLGORDE CRITICAL!
+                // 1. EERST: RestoreNavigationProperties() - herstelt alle Materiaal-referenties
+                //    Dit MOET vóór InitAll() omdat InitAll() de Materiaal objects nodig heeft!
+                RestoreNavigationProperties(project);
+                
+                // 2. DAARNA: InitAll() - initialiseert nested properties nu met CORRECT materiaal
+                //    Nu ziet Init() het echte Materiaal, niet null!
                 project.InitAll();
-                SetProject(project);  // ← RestoreNavigationProperties wordt hier aangeroepen
+                
+                // 3. TENSLOTTE: SetProject() - triggers change event
+                CurrentProject = project;
+                OnProjectChanged?.Invoke();
+                
+                // ✅ Valideer alle referenties na load
+                var validationReport = ReferenceValidationHelper.ValidateProjectReferences(project);
+                if (!validationReport.IsHealthy)
+                {
+                    Console.Error.WriteLine(ReferenceValidationHelper.GetSummary(validationReport));
+                }
+                else
+                {
+                    Console.WriteLine("✅ All entity references restored successfully!");
+                }
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[LocalStorage Load] {ex.Message}");
+                Console.Error.WriteLine($"[LocalStorage Load] {ex.Message}\n{ex.StackTrace}");
             }
         }
 

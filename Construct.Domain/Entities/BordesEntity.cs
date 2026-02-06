@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using Tekla.Common.Geometry;
 using Tekla.Structures.Model;
+using System.Text.Json.Serialization;
 
 namespace Construct.Domain.Entities
 {
@@ -95,35 +96,24 @@ namespace Construct.Domain.Entities
 
         }
 
-        public override void RestoreReferencesAfterDeserialization(ProjectInfoEntity projectInfo)
+        public override void RestoreReferencesAfterDeserialization(ProjectEntity project)
         {
-            ProjectInfo = projectInfo; // projectinfo + grondslagen
+            // ✅ EERST: Algemeen deel (Belastingen, ProjectInfo, Materiaal, etc.)
+            base.RestoreReferencesAfterDeserialization(project);
 
-            // ✅ Gebruik ??= om bestaande BelastingCombinaties te behouden
-            Belastingen ??= new(grondslagen: ProjectInfo.Grondslagen);
-
-            // ✅ Herstel de parent-relatie (indien uit json geladen, moet dit opnieuw aangemaakt worden)
-            Belastingen.Grondslagen = ProjectInfo.Grondslagen;
+            // ✅ DAN: Bordes-SPECIFIEKE dingen
             
-            // ⚠️ BelastingCombinaties kunnen leeg zijn door JsonConstructor die GenereerBelastingCombinaties() aanroept
-            // Controleer of we opnieuw moeten genereren
-            if (Belastingen.BelastingCombinaties.Count == 0)
-            {
-                // Roep GenereerBelastingCombinaties aan om de combinaties opnieuw te genereren
-                Belastingen.GenereerBelastingCombinaties(
-                    Belastingen, 
-                    Belastingen.BelastingGevallen, 
-                    Belastingen.CombinatiesTypes);
-            }
-            
-            // ✅ Herstel bidirectionele Father-relaties in VerbindingAansluitendElement
+            // Herstel bidirectionele Father-relaties in VerbindingAansluitendElement
             Trap1.Father = this;
             Trap2.Father = this;
+
+            // ✅ NIEUW: Herstel trap-referenties
+            Trap1.RestoreAssemblageReference(project);
+            Trap2.RestoreAssemblageReference(project);
             
             var beton = this.Materiaal as BetonContext;
 
             // ✅ Initialiseer PlaatDekking.Onder/Boven ENKEL als ze null zijn
-            // Behoud gedeserialiseerde waarden (IsKwaliteitsBeheersing, IsPlaatGeometrie)
             if (PlaatDekking.Onder == null)
             {
                 PlaatDekking.Onder = new BetonDekkingContext();
@@ -142,7 +132,6 @@ namespace Construct.Domain.Entities
             PlaatDekking.Boven.Grondslagen = ProjectInfo.Grondslagen;
             PlaatDekking.Boven.Beton = beton ?? new();
 
-
             // Create basiswapening without direct call to the ReferentieDekking setter (use reflection)
             var hoofdwapOnder = new WapeningContext()
             {
@@ -157,7 +146,6 @@ namespace Construct.Domain.Entities
                 ReferentieLengte = 1000,
             };
 
-
             var hoofdwapBoven = new WapeningContext()
             {
                 Tekst = "r6-150",
@@ -170,7 +158,6 @@ namespace Construct.Domain.Entities
                 ReferentieVlak = ReferentieVlakEnum.Boven,
                 ReferentieLengte = 1000,
             };
-
 
             // Probeer via reflection te zetten (verschillende versies van Eurocode kunnen andere members hebben)
             try
@@ -193,7 +180,6 @@ namespace Construct.Domain.Entities
                         var propDek = wcType.GetProperty("Dekking");
                         if (propDek != null && propDek.CanWrite)
                         {
-                            // probeer beton dekking object toe te wijzen
                             propDek.SetValue(hoofdwapOnder, PlaatDekking.Onder);
                         }
                     }
@@ -227,14 +213,13 @@ namespace Construct.Domain.Entities
                     DiameterVerdeel = 8,
                 },
             };
-
-
         }
 
 
         private double _lengte = 2200;
         private double _breedte = 1200;
         private double _dikte = 200;
+        
 
         private double _breedteVersterkteStrook = 300;
 
@@ -245,8 +230,8 @@ namespace Construct.Domain.Entities
         private PlaatWapening? _plaatWapening;
 
         // aansluitende assemblages
-        public VerbindingAansluitendElement Trap1 { get; }
-        public VerbindingAansluitendElement Trap2 { get; }
+        public VerbindingAansluitendElement Trap1 { get; set; }
+        public VerbindingAansluitendElement Trap2 { get; set; }
 
         // stroken
         public double VlaklastG => EigenGewicht + AfwerkingVlaklast;
@@ -456,26 +441,16 @@ namespace Construct.Domain.Entities
         public override void Bijwerken()
         {
             UpdateStrook1();
-            
-            
             UpdateStrook2();
-
-
-
-
-
-
-            
-            
-            
-
-
         }
 
 
 
         protected void Bereken()
         {
+            // TODO: Functiee nalopen
+
+
             double tempM = 0.125 * -10 * Math.Pow(Lengte * 0.001, 2);
             UpdateBasisStrook(tempM, 1000);
 
@@ -575,6 +550,8 @@ namespace Construct.Domain.Entities
             set => SetAndRecalcultate(ref _breedte, value);
         }
 
+        public override double Hoogte => Dikte;
+
         public double BreedteVersterkteStrook
         {
             get => _breedteVersterkteStrook;
@@ -597,6 +574,11 @@ namespace Construct.Domain.Entities
             get => _dikte;
             set => SetAndRecalcultate(ref _dikte, value);
         }
+
+        /// <summary>
+        /// Via projectinfo gezette grondslagen
+        /// </summary>
+        [JsonIgnore]
         public GrondslagenContext? Grondslagen
         {
             get => _grondslagen;

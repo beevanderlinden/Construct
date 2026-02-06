@@ -27,11 +27,12 @@ namespace Construct.Domain
         {
             return new JsonSerializerOptions
             {
-                WriteIndented = !true,
-                //Converters =
-                //{
-                //    new BaseMateriaalJsonConverter()
-                //},
+                WriteIndented = true,
+                Converters =
+                {
+                    new MaterialenDictionaryConverter(),  // ✅ NIEUW: Custom converter voor Dictionary<Guid, BaseMateriaal>
+                    new JsonStringEnumConverter()  // ✅ Serialiseer enums als strings
+                },
                 ReferenceHandler = ReferenceHandler.IgnoreCycles,
                 NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
                 PropertyNameCaseInsensitive = true,
@@ -76,6 +77,12 @@ namespace Construct.Domain
                 ReferenceHandler = ReferenceHandler.IgnoreCycles,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+                PropertyNameCaseInsensitive = true,  // ✅ NIEUW: Zorg voor case-insensitive deserialisatie
+                Converters =
+                {
+                    new MaterialenDictionaryConverter(),  // ✅ NIEUW: Custom converter voor Dictionary<Guid, BaseMateriaal>
+                    new JsonStringEnumConverter()  // ✅ Serialiseer enums als strings
+                },
             };
         }
     }

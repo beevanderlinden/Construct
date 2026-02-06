@@ -7,47 +7,102 @@
 
 <h3>Projectmaterialen</h3>
 
-<div class="table-wrap">
+<FluentCard AreaRestricted="false">
 
-    <table class="table">
-        <thead>
-            <tr>
-                <th>type</th>
-                <th>kwaliteit</th>
-                <th>E-modulus</th>
-                <th>s.g.</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var materiaal in Project.Materialen.Values.OfType<BaseMateriaal>())
-            {
+    <div class="table-wrap">
+
+        <table class="table">
+            <thead>
                 <tr>
-                    <td>
-                        @materiaal.Type.ToString()
-                    </td>
-                    <td>
-                        @materiaal.Naam
-                    </td>
-                    <td>
-                        @materiaal.E
-                    </td>
-                    <td>
-                        @materiaal.SoortelijkGewicht
-                    </td>
-                    <td>
-                        <button class="btn btn-danger"
-                                @onclick="() => VerwijderMateriaal(materiaal.Id)">
-                            Verwijder
-                        </button>
-                    </td>
+                    <th>ID</th>
+                    <th>type</th>
+                    <th>kwaliteit</th>
+                    <th>E-modulus</th>
+                    <th>s.g.</th>
+                    <th>aantal</th>
+                    <th></th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var materiaal in Project.Materialen.Values.OfType<BaseMateriaal>())
+                {
+                    <tr>
+                        <td style="font-size: 0.85rem; color: #666; font-family: monospace;">
+                            @materiaal.Id.ToString().Substring(0, 8)...
+                        </td>
+                        <td>
+                            @materiaal.Type.ToString()
+                        </td>
+                        <td>
+                            @if (materiaal is StaalContext staalContext)
+                            {
+                                <select @onchange="@((ChangeEventArgs e) => UpdateStaalKwaliteit(staalContext, (string)e.Value!))" class="form-select">
+                                    <option value="S235" selected="@(staalContext.StaalKwaliteit == StaalKwaliteitEnum.S235)">S235</option>
+                                    <option value="S275" selected="@(staalContext.StaalKwaliteit == StaalKwaliteitEnum.S275)">S275</option>
+                                    <option value="S355" selected="@(staalContext.StaalKwaliteit == StaalKwaliteitEnum.S355)">S355</option>
+                                    <option value="S450" selected="@(staalContext.StaalKwaliteit == StaalKwaliteitEnum.S450)">S450</option>
+                                </select>
+                            }
+                            else if (materiaal is HoutContext houtContext)
+                            {
+                                <select @onchange="@((ChangeEventArgs e) => UpdateHoutKwaliteit(houtContext, (string)e.Value!))" class="form-select">
+                                    <option value="C18" selected="@(houtContext.Kwaliteit == Houtkwaliteit.C18)">C18</option>
+                                    <option value="C24" selected="@(houtContext.Kwaliteit == Houtkwaliteit.C24)">C24</option>
+                                    <option value="C30" selected="@(houtContext.Kwaliteit == Houtkwaliteit.C30)">C30</option>
+                                    <option value="C40" selected="@(houtContext.Kwaliteit == Houtkwaliteit.C40)">C40</option>
+                                    <option value="C50" selected="@(houtContext.Kwaliteit == Houtkwaliteit.C50)">C50</option>
+                                    <option value="D30" selected="@(houtContext.Kwaliteit == Houtkwaliteit.D30)">D30</option>
+                                    <option value="D40" selected="@(houtContext.Kwaliteit == Houtkwaliteit.D40)">D40</option>
+                                    <option value="D50" selected="@(houtContext.Kwaliteit == Houtkwaliteit.D50)">D50</option>
+                                    <option value="D60" selected="@(houtContext.Kwaliteit == Houtkwaliteit.D60)">D60</option>
+                                    <option value="D70" selected="@(houtContext.Kwaliteit == Houtkwaliteit.D70)">D70</option>
+                                </select>
+                            }
+                            else if (materiaal is BetonContext betonContext)
+                            {
+                                <select @onchange="@((ChangeEventArgs e) => UpdateBetonKlasse(betonContext, (string)e.Value!))" class="form-select">
+                                    <option value="C12_15" selected="@(betonContext.Betonsterkteklasse == BetonsterkteklasseEnum.C12_15)">C12/15</option>
+                                    <option value="C16_20" selected="@(betonContext.Betonsterkteklasse == BetonsterkteklasseEnum.C16_20)">C16/20</option>
+                                    <option value="C20_25" selected="@(betonContext.Betonsterkteklasse == BetonsterkteklasseEnum.C20_25)">C20/25</option>
+                                    <option value="C25_30" selected="@(betonContext.Betonsterkteklasse == BetonsterkteklasseEnum.C25_30)">C25/30</option>
+                                    <option value="C30_37" selected="@(betonContext.Betonsterkteklasse == BetonsterkteklasseEnum.C30_37)">C30/37</option>
+                                    <option value="C35_45" selected="@(betonContext.Betonsterkteklasse == BetonsterkteklasseEnum.C35_45)">C35/45</option>
+                                    <option value="C40_50" selected="@(betonContext.Betonsterkteklasse == BetonsterkteklasseEnum.C40_50)">C40/50</option>
+                                    <option value="C45_55" selected="@(betonContext.Betonsterkteklasse == BetonsterkteklasseEnum.C45_55)">C45/55</option>
+                                    <option value="C50_60" selected="@(betonContext.Betonsterkteklasse == BetonsterkteklasseEnum.C50_60)">C50/60</option>
+                                </select>
+                            }
+                            else
+                            {
+                                @materiaal.Naam
+                            }
+                        </td>
+                        <td>
+                            @materiaal.E.ToString("0")
+                        </td>
+                        <td>
+                            @materiaal.SoortelijkGewicht.ToString("0 kg/m³")
+                        </td>
+                        <td>
+                            @Project.Assemblages.Where(a => a.Materiaal?.Id == materiaal.Id).ToList().Count()
+                        </td>
+
+                        <td>
+                            <button class="btn btn-danger"
+                                    @onclick="() => VerwijderMateriaal(materiaal.Id)">
+                                Verwijder
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
 
 
-</div>
+    </div>
+</FluentCard>
+
+
 
 
 
@@ -83,6 +138,36 @@
         {
             Betonsterkteklasse = BetonsterkteklasseEnum.C45_55
         });
+    }
+
+    private void UpdateStaalKwaliteit(StaalContext staalContext, string kwaliteit)
+    {
+        if (Enum.TryParse<StaalKwaliteitEnum>(kwaliteit, out var staalKwaliteit))
+        {
+            staalContext.StaalKwaliteit = staalKwaliteit;
+            StateHasChanged();
+            ToastService.ShowSuccess($"Staalkwaliteit bijgewerkt naar {kwaliteit}");
+        }
+    }
+
+    private void UpdateHoutKwaliteit(HoutContext houtContext, string kwaliteit)
+    {
+        if (Enum.TryParse<Houtkwaliteit>(kwaliteit, out var houtKwaliteit))
+        {
+            houtContext.Kwaliteit = houtKwaliteit;
+            StateHasChanged();
+            ToastService.ShowSuccess($"Houtkwaliteit bijgewerkt naar {kwaliteit}");
+        }
+    }
+
+    private void UpdateBetonKlasse(BetonContext betonContext, string klasse)
+    {
+        if (Enum.TryParse<BetonsterkteklasseEnum>(klasse, out var betonKlasse))
+        {
+            betonContext.Betonsterkteklasse = betonKlasse;
+            StateHasChanged();
+            ToastService.ShowSuccess($"Betonsterkteklasse bijgewerkt naar {klasse}");
+        }
     }
 
     private async Task VerwijderMateriaal(Guid id)

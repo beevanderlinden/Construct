@@ -17,7 +17,9 @@ namespace Construct.Domain.Entities
         {
             // stalen ligger
             this.AssemblageType = AssemblageTypeEnum.StaalAssemblage;
-            this.Materiaal = new StaalContext() { StaalKwaliteit = StaalKwaliteitEnum.S235};
+            // ⚠️ REMOVED: this.Materiaal = new StaalContext() { StaalKwaliteit = StaalKwaliteitEnum.S235};
+            // Materiaal zal worden ingesteld via JSON-deserialisatie of AddAssemblage.razor
+            
             this.Naam = "stalen ligger";
             this.Merk = "SL-?";
             
@@ -39,9 +41,9 @@ namespace Construct.Domain.Entities
                 Length = 4.0,
                 LoadContext = this.Belastingen,
                 Profiel = this.Profiel,
-                Materiaal = this.Materiaal,
+                Materiaal = this.Materiaal,  // Kan null zijn totdat Materiaal wordt ingesteld
                 
-                EI = this.Profiel.Iy * 1e-12 * this.Materiaal.E * 1e3,
+                EI = this.Profiel.Iy * 1e-12 * (this.Materiaal?.E ?? 210e3) * 1e3,  // Default E als Materiaal null
             };
 
             // 

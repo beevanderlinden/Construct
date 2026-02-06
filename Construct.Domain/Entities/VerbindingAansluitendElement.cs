@@ -2,6 +2,7 @@
 
 //using Mechanica.LiggerSB;
 using System.Text.Json.Serialization;
+using Construct.Domain.Common;
 
 namespace Construct.Domain.Entities
 {
@@ -33,18 +34,30 @@ namespace Construct.Domain.Entities
         /// <summary>
         /// Normale constructor met father parameter (voor programmatisch gebruik)
         /// </summary>
+        /// 
         public VerbindingAansluitendElement(AssemblageEntity father)
         {
             Father = father;
         }
 
-        private AssemblageEntity? _aansluitendElement;
-        public AssemblageEntity? AansluitendElement
+        // ✅ NIEUW: AssemblageReference voor generieke assemblage-referentie-beheer
+        private readonly AssemblageReference _aansluitendElementRef = new();
+
+        public Guid? AansluitendElementId
         {
-            get => _aansluitendElement;
-            set => _aansluitendElement = value;
+            get => _aansluitendElementRef.EntityId;
+            set => _aansluitendElementRef.EntityId = value;
         }
 
+        [JsonIgnore]
+        public AssemblageEntity? AansluitendElement
+        {
+            get => _aansluitendElementRef.Entity;
+            set => _aansluitendElementRef.Attach(value);
+        }
+        
+
+        [JsonIgnore] 
         public AssemblageEntity Father { get; set; } = null!;
 
 
@@ -101,7 +114,7 @@ namespace Construct.Domain.Entities
             {
                 if (GebruikEigenOpgave) return LengteEigenOpgave;
                 double lengte = 1200;
-                if (_aansluitendElement is SteekTrapEntity steekTrap)
+                if (AansluitendElement is SteekTrapEntity steekTrap)
                 {
                     lengte = steekTrap.Breedte; // de lengte van de aansluiting is de breedte van de trap
                 }
@@ -115,7 +128,7 @@ namespace Construct.Domain.Entities
                 if (GebruikEigenOpgave) return BreedteEigenOpgave;
 
                 double breedte = 100;
-                if (_aansluitendElement is SteekTrapEntity steekTrap)
+                if (AansluitendElement is SteekTrapEntity steekTrap)
                 {
                     breedte = steekTrap.TandOpleggingBovenzijde?.TandLengte ?? 100; // de breedte van de aansluiting is de tandlengte van de trap
                 }
@@ -129,7 +142,7 @@ namespace Construct.Domain.Entities
             {
                 if (GebruikEigenOpgave) return HoogteEigenOpgave;
                 double hoogte = 105;
-                if (_aansluitendElement is SteekTrapEntity steekTrap)
+                if (AansluitendElement is SteekTrapEntity steekTrap)
                 {
                     var oplegging = steekTrap.TandOpleggingBovenzijde ?? steekTrap.TandOpleggingOnderzijde ?? null;
                     if (oplegging == null) return hoogte;
@@ -143,14 +156,26 @@ namespace Construct.Domain.Entities
         public (double G, double Q) Reacties
         {
             get
-            {
-                if (AansluitendElement == null) return (0, 0);
-                else if (AansluitendElement is SteekTrapEntity steektrap)
-                {
-                    return (steektrap.ReactieG, steektrap.ReactieQ);
-                }
-                else return (0, 0);
-            }
+             {
+                 if (AansluitendElement == null) return (0, 0);
+                 else if (AansluitendElement is SteekTrapEntity steektrap)
+                 {
+                     return (steektrap.ReactieG, steektrap.ReactieQ);
+                 }
+                 else return (0, 0);
+             }
+        }
+
+        /// <summary>
+        /// Herstelt assemblage-referenties na JSON-deserialisatie.
+        /// Wordt aangeroepen vanuit BordesEntity.RestoreReferencesAfterDeserialization().
+        /// </summary>
+        /// <param name="project">Het project met alle beschikbare assemblages</param>
+        public void RestoreAssemblageReference(ProjectEntity project)
+        {
+            _aansluitendElementRef.Restore(
+                guid => project.Assemblages.FirstOrDefault(a => a.Id == guid)
+            );
         }
         
 

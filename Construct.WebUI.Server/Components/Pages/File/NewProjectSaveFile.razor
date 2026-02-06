@@ -11,7 +11,7 @@
 
 
 
-<FluentCard AreaRestricted="false">
+<FluentCard AreaRestricted="false" Style="max-width:210mm; margin:5mm;">
     <h1>Projectinfo</h1>
     <ProjectInfo Model="@ViewModel" ModelChanged="BijwerkenProjectInfo"></ProjectInfo>
 
@@ -29,8 +29,7 @@
     {
         
             
-            <FluentCard 
-                AreaRestricted="false">
+            <FluentCard AreaRestricted="false" Style="max-width:210mm; margin:5mm;">
                 <h1>Grondslagen (EC0)</h1>
                 <Grondslagen Model="@ProjectStateService.CurrentProject.ProjectInfo.Grondslagen" />
             </FluentCard>

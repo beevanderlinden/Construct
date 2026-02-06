@@ -1386,6 +1386,14 @@ namespace Mechanica.SimpleBeam
                 return;
             }
 
+            // controleer of er bc's zijn. Anders crash... dit moet beter AI
+            if (LoadContext.BelastingCombinaties.Count == 0)
+            {
+                LoadContext.GenereerBelastingCombinaties(LoadContext, LoadContext.BelastingGevallen, LoadContext.CombinatiesTypes);
+                Console.WriteLine("Belastingcombinaties opnieuw aangemaakt!");
+
+            }
+
             // Meerdere combinaties
             BeamResultCollection results = new();
             ResultCollection resultCollection = new();

@@ -147,7 +147,7 @@ DeleteItemClicked="DeleteItem" />
             // wat voor ding is het?
             var ding = entity.GetType().Name;
 
-            list.Add(new AssemblageViewModel() { AssemblageEntity=entity, Guid = entity.Guid, Naam = entity.Naam, Merk = entity.Merk, MainPart = ding });
+            list.Add(new AssemblageViewModel() { AssemblageEntity=entity, Guid = entity.Id, Naam = entity.Naam, Merk = entity.Merk, MainPart = ding });
             if (entity is SteekTrapEntity steekTrap)
             {
                 //SteekTrapService service = new();
@@ -275,7 +275,7 @@ DeleteItemClicked="DeleteItem" />
         // map naar viewmodel
         if (_geselecteerdeAssemblage != null && Items != null)
         {
-            var viewModel = Items.FirstOrDefault(a => a.Guid == _geselecteerdeAssemblage.Guid);
+            var viewModel = Items.FirstOrDefault(a => a.Guid == _geselecteerdeAssemblage.Id);
             if (viewModel != null)
             {
                 viewModel.Naam = _geselecteerdeAssemblage.Naam;
@@ -306,7 +306,7 @@ DeleteItemClicked="DeleteItem" />
 
     private void EditItem(AssemblageViewModel viewModel)
     {
-        var assemblage = ProjectEntity?.Assemblages.FirstOrDefault(x => x.Guid == viewModel.Guid);
+        var assemblage = ProjectEntity?.Assemblages.FirstOrDefault(x => x.Id == viewModel.Guid);
         if (assemblage != null)
         {
             _geselecteerdeAssemblage = assemblage;
@@ -333,7 +333,7 @@ DeleteItemClicked="DeleteItem" />
             if (_geselecteerdeAssemblage != null && ProjectEntity != null)
             {
                 //await AssemblageService.DeleteAsync(_geselecteerdeSteekTrap.Guid);
-                await ProjectService.VerwijderAssemblage(ProjectEntity, _geselecteerdeAssemblage.Guid);
+                await ProjectService.VerwijderAssemblage(ProjectEntity, _geselecteerdeAssemblage.Id);
                 ProjectState?.MarkDirty();
                 LaadItems();
 
@@ -349,7 +349,7 @@ DeleteItemClicked="DeleteItem" />
     {
         if (viewModel != null && ProjectEntity != null)
         {
-            var assemblage = ProjectEntity.Assemblages.FirstOrDefault(x => x.Guid == viewModel.Guid);
+            var assemblage = ProjectEntity.Assemblages.FirstOrDefault(x => x.Id == viewModel.Guid);
             if (assemblage != null)
                 _geselecteerdeAssemblage = assemblage;
 
@@ -374,7 +374,7 @@ DeleteItemClicked="DeleteItem" />
         {
             var list = Items.ToList(); 
             ProjectEntity.Assemblages.Add(steekTrap);
-            list.Add(new AssemblageViewModel() { Guid = steekTrap.Guid, Naam = steekTrap.Naam, Merk = steekTrap.Merk });
+            list.Add(new AssemblageViewModel() { Guid = steekTrap.Id, Naam = steekTrap.Naam, Merk = steekTrap.Merk });
             Items = list.AsQueryable().OrderBy(a=>a.Merk);
         }
     }
@@ -405,7 +405,7 @@ DeleteItemClicked="DeleteItem" />
 
 
             list.Add(new AssemblageViewModel() { 
-                Guid = assemblageEntity.Guid, 
+                Guid = assemblageEntity.Id, 
                 AssemblageEntity = assemblageEntity,
                 Naam = assemblageEntity.Naam, 
                 Merk = assemblageEntity.Merk, 

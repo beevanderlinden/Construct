@@ -209,7 +209,7 @@
         if (Model?.Trap1 != null)
         {
             _selectedKeuze1 = Model.Trap1.AansluitendElement != null
-                ? _keuzes.FirstOrDefault(k => k.Value?.Guid == Model.Trap1.AansluitendElement.Guid)
+                ? _keuzes.FirstOrDefault(k => k.Value?.Id == Model.Trap1.AansluitendElement.Id)
                 : _keuzes.FirstOrDefault(k => k.Value == null);
         }
 
@@ -217,7 +217,7 @@
         if (Model?.Trap2 != null)
         {
             _selectedKeuze2 = Model.Trap2.AansluitendElement != null
-                ? _keuzes.FirstOrDefault(k => k.Value?.Guid == Model.Trap2.AansluitendElement.Guid)
+                ? _keuzes.FirstOrDefault(k => k.Value?.Id == Model.Trap2.AansluitendElement.Id)
                 : _keuzes.FirstOrDefault(k => k.Value == null);
         }
     }
@@ -240,7 +240,7 @@
             {
                 Model.Trap1.AansluitendElement = keuze?.Value;
                 // ✅ Sla GUID op
-                Model.Trap1AansluitendElementGuid = keuze?.Value?.Guid;
+                Model.Trap1AansluitendElementGuid = keuze?.Value?.Id;
             }
             OnModelChanged();
         }
@@ -264,7 +264,7 @@
             {
                 Model.Trap2.AansluitendElement = keuze?.Value;
                 // ✅ Sla GUID op
-                Model.Trap2AansluitendElementGuid = keuze?.Value?.Guid;
+                Model.Trap2AansluitendElementGuid = keuze?.Value?.Id;
             }
             OnModelChanged();
         }

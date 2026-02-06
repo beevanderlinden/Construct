@@ -27,16 +27,13 @@ namespace Construct.Domain.Entities
     public abstract class AssemblageEntity : BaseAssemblage
     {
         // JSON opslag
-        // ✅ VERWIJDERD: MateriaalJson - nu gebruiken we MateriaalId in plaats daarvan
+        // ✅ MateriaalReference beheert zowel EntityId als Entity
 
         // internal properties and methods can go here...
         internal BetonContext _beton = new("C45/55");
         
-        [JsonIgnore]
-        internal BaseMateriaal _materiaal = new BetonContext("C30/37");
-
-        // ✅ NIEUW: ID reference naar materiaal (kleine, primitieve type)
-        public Guid? MateriaalId { get; set; }
+        // ✅ NIEUW: MateriaalReference voor generieke materiaal-referentie-beheer
+        private readonly MateriaalReference _materiaalRef = new();
 
         private readonly List<BaseEurocodeContext> _toetsen = [];
         private readonly List<StrookEntity> _stroken = [];
@@ -44,8 +41,13 @@ namespace Construct.Domain.Entities
         private BelastingenContext _belastingen = new();
         private DekkingContext _plaatDekking = new();
         
+        [JsonPropertyOrder(100)]
         public virtual double Breedte { get; set; } = 1200;
+        
+        [JsonPropertyOrder(101)]
         public virtual double Lengte { get; set; } = 3000;
+        
+        [JsonPropertyOrder(102)]
         public virtual double Hoogte { get; set; } = 2200;
         
 
@@ -97,23 +99,27 @@ namespace Construct.Domain.Entities
             OnPropertyChanged(nameof(Belastingen));
         }
 
-        // public properties and methods can go here...
-        [Obsolete("Gebruik Materiaal")]
-        public BetonContext Beton // todo verplaats alle verwijziginen naar Materiaal of maak private?
+
+        /// <summary>
+        /// Het materiaal-ID van dit assemblage. Wordt geserialiseerd naar JSON.
+        /// Gekoppeld aan het werkelijke Materiaal object via MateriaalReference.
+        /// </summary>
+        [JsonPropertyOrder(-700)]
+        public Guid? MateriaalId
         {
-            get => _beton;
-            set => SetNestedProperty(ref _beton!, value);
+            get => _materiaalRef.EntityId;
+            set => _materiaalRef.EntityId = value;
         }
 
         /// <summary>
-        /// Het materiaal van dit assemblage (beton, staal, hout)
-        /// ⚠️ NIET geserialiseerd - gebruik MateriaalId voor referentie!
+        /// Het materiaal van dit assemblage (beton, staal, hout).
+        /// ⚠️ NIET geserialiseerd - gebruik MateriaalId voor JSON-opslag!
         /// </summary>
         [JsonIgnore]
-        public BaseMateriaal Materiaal
+        public BaseMateriaal? Materiaal
         {
-            get => _materiaal;
-            set => SetNestedProperty(ref _materiaal!, value);
+            get => _materiaalRef.Entity;
+            set => _materiaalRef.Attach(value);
         }
 
         /// <summary>
@@ -212,7 +218,6 @@ namespace Construct.Domain.Entities
             
         }
 
-        public AssemblageTypeEnum AssemblageTypeNotNull { get; set; } = AssemblageTypeEnum.HoutAssemblage;
 
         private GebruiksklasseEnum? _gebruiksklasse = GebruiksklasseEnum.B_kantoorgebouwen;
         public GebruiksklasseEnum? Gebruiksklasse 
@@ -231,14 +236,45 @@ namespace Construct.Domain.Entities
 
 
         /// <summary>
+        /// Herstelt materiaal-referenties na JSON-deserialisatie.
+        /// Wordt aangeroepen vanuit RestoreReferencesAfterDeserialization().
+        /// </summary>
+        /// <param name="project">Het project met alle beschikbare materialen</param>
+        protected void RestoreMaterialReference(ProjectEntity project)
+        {
+            _materiaalRef.Restore(
+                guid => project.Materialen.TryGetValue(guid, out var mat) ? mat : null
+            );
+        }
+
+        /// <summary>
         /// Herstelt object-referenties en relaties na JSON-deserialisatie.
         /// Roept slechts eenmaal aan via ProjectStateService.RestoreNavigationProperties()
         /// </summary>
-        public virtual void RestoreReferencesAfterDeserialization(ProjectInfoEntity projectInfo)
+        public virtual void RestoreReferencesAfterDeserialization(ProjectEntity project)
         {
-            // Basis implementatie: alleen ProjectInfo instellen
-            // Subclasses kunnen dit overschrijven voor meer specifieke herstel
+            if (project == null) return;
+
+            var projectInfo = project.ProjectInfo;
+
+            // ✅ ProjectInfo setter
             ProjectInfo = projectInfo;
+
+            // ✅ Belastingen getter/setter
+            Belastingen ??= new(grondslagen: ProjectInfo.Grondslagen);
+            Belastingen.Grondslagen = ProjectInfo.Grondslagen;
+
+            // ✅ Controleer of BelastingCombinaties leeg zijn en genereer indien nodig
+            if (Belastingen.BelastingCombinaties.Count == 0)
+            {
+                Belastingen.GenereerBelastingCombinaties(
+                    Belastingen,
+                    Belastingen.BelastingGevallen,
+                    Belastingen.CombinatiesTypes);
+            }
+
+            // ✅ NIEUW: Materiaal-referentie herstellen
+            RestoreMaterialReference(project);
         }
 
         public virtual void Bijwerken()
@@ -251,11 +287,5 @@ namespace Construct.Domain.Entities
 
     }
 
-
-
-
-
-
-
-
 }
+

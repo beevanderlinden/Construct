@@ -124,11 +124,14 @@ namespace Construct.Domain.Entities
             // herstel de parent-relatie (indien uit json geladen, moet dit opnieuw aangemaakt worden)
             Belastingen.Grondslagen = ProjectInfo.Grondslagen;
 
-            // Beton bevat het ORIGINELE object, 
-            // maak dus alleen een nieuw object aan indien niet aanwezig.
-            //Beton ??= new();
-            Materiaal ??= new BetonContext();
-
+            // ⚠️ CRITICAL FIX: Zet GEEN nieuw Materiaal als het al is ingesteld via RestoreReferencesAfterDeserialization!
+            // Materiaal ??= new BetonContext();  // ❌ REMOVED - Dit overwrites JSON values!
+            
+            // Nur initialize materiaal if BOTH null: Materiaal AND MateriaalId
+            if (Materiaal == null) // && !MateriaalId.HasValue) // <-- Safety check: als null is, altijd herstellen
+            {
+                Materiaal = new BetonContext();  // Fallback only if truly not set
+            }
 
             var beton = Materiaal as BetonContext;
 
@@ -388,16 +391,18 @@ namespace Construct.Domain.Entities
 
             ProjectInfo = new();
             //Beton = new();
-            Materiaal = new BetonContext();
-            var beton = Materiaal as BetonContext;
+            // ⚠️ REMOVED: Materiaal = new BetonContext();
+            // Materiaal zal worden ingesteld via JSON-deserialisatie of RestoreReferencesAfterDeserialization
+            
+            var beton = Materiaal as BetonContext ?? new();  // Fallback naar new indien null
             WapeningSchil = new();
-            PlaatDekking.Onder = new(grondslagen: ProjectInfo.Grondslagen, beton: beton ?? new())
+            PlaatDekking.Onder = new(grondslagen: ProjectInfo.Grondslagen, beton: beton)
             {
                 IsPlaatGeometrie = true,
                 IsKwaliteitsBeheersing = true,
                 SelectedMilieuklassen = [MilieuklasseEnum.XC1]
             };
-            PlaatDekking.Boven = new(grondslagen: ProjectInfo.Grondslagen, beton: beton ?? new())
+            PlaatDekking.Boven = new(grondslagen: ProjectInfo.Grondslagen, beton: beton)
             {
                 IsPlaatGeometrie = true,
                 IsKwaliteitsBeheersing = true,
@@ -462,10 +467,57 @@ namespace Construct.Domain.Entities
 
             _snedekrachten = new();
 
-            // Heel belangrijk! Init zodat het element goed is gekoppeld aan het project. 
+            // ✅ Voor NIEUWE steektrappen (via UI): roep Init() aan
+            // Voor GELADEN steektrappen (uit JSON): Init() wordt aangeroepen in RestoreReferencesAfterDeserialization()
             Init(projectInfo);
+            
             Console.WriteLine($"[SteekTrapEntity] aangemaakt ({sw.ElapsedMilliseconds} ms)");
         }
+
+        /// <summary>
+        /// Herstelt object-referenties na JSON-deserialisatie.
+        /// BELANGRIJK: Roept Init() aan NADAT Materiaal is hersteld!
+        /// </summary>
+        public override void RestoreReferencesAfterDeserialization(ProjectEntity project)
+        {
+            // ✅ EERST: Herstel alle basisreferenties (materiaal, belastingen, etc.)
+            base.RestoreReferencesAfterDeserialization(project);
+
+            // 🔍 BROKEN LINK DETECTION: MateriaalId is gezet, maar materiaal niet gevonden in dictionary
+            // Dit gebeurt als de JSON een MateriaalId bevat die niet (meer) bestaat in project.Materialen
+            if (Materiaal == null && MateriaalId.HasValue)
+            {
+                Console.WriteLine($"⚠️ [SteekTrapEntity] Materiaal met ID {MateriaalId} niet gevonden in project. Zoek bestaand C45/55 materiaal of maak nieuwe aan.");
+                
+                // Probeer eerst een bestaand C45/55 materiaal te vinden
+                var bestaandC45 = project.Materialen.Values
+                    .OfType<BetonContext>()
+                    .FirstOrDefault(b => b.Betonsterkteklasse == BetonsterkteklasseEnum.C45_55);
+                
+                if (bestaandC45 != null)
+                {
+                    Console.WriteLine($"✅ Bestaand C45/55 materiaal gevonden (ID: {bestaandC45.Id}). Gebruik deze.");
+                    Materiaal = bestaandC45;
+                    MateriaalId = bestaandC45.Id; // Update de MateriaalId naar het gevonden materiaal
+                }
+                else
+                {
+                    Console.WriteLine("⚠️ Geen bestaand C45/55 materiaal gevonden. Maak nieuwe aan.");
+                    var nieuwMateriaal = new BetonContext("C45/55"); 
+                    Materiaal = nieuwMateriaal;
+                    MateriaalId = nieuwMateriaal.Id;
+
+                    // Voeg toe aan project zodat het de volgende keer wel gevonden wordt
+                    project.Materialen[nieuwMateriaal.Id] = nieuwMateriaal;
+                }
+            }
+            
+            // ✅ DAARNA: Initialiseer Init() nu MET het echte Materiaal
+            //    (niet met een temp BetonContext zoals zou gebeuren als Init() in constructor wordt aangeroepen)
+            Init(ProjectInfo);
+        }
+
+
 
 
         //public SteekTrapEntity()

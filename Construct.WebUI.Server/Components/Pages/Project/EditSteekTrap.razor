@@ -611,7 +611,7 @@
     {
         string status = SteekTrap.IsAkkoord() ? "" : "warning";
 
-        await SetSvgStatusAsync(SteekTrap.Guid.ToString(), status);
+        await SetSvgStatusAsync(SteekTrap.Id.ToString(), status);
     }
 
 
@@ -845,7 +845,7 @@
     void KopieerEigenschappenClicked()
     {
         if (ProjectEntity == null) return;
-        DoelAssemblages = new(ProjectEntity.Assemblages.Where(a => a.Guid != SteekTrap?.Guid));
+        DoelAssemblages = new(ProjectEntity.Assemblages.Where(a => a.Id != SteekTrap?.Id));
         _kopieerEigenschappenVisible = true;
         Visible = false;
     }

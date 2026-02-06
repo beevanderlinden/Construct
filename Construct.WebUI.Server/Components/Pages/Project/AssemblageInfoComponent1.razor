@@ -20,7 +20,7 @@ else
         </KaskonInputContainer>
 
         @if (PS.CurrentProject != null && PS.CurrentProject.Assemblages.FirstOrDefault(asbly =>
-            asbly.Guid != Model.Guid &&
+            asbly.Id != Model.Id &&
             Normalize(asbly.Merk) == Normalize(Model.Merk)) is not null)
         {
             <p class="warning">Merknaam bestaat al, gebruik een andere naam.</p>

@@ -1983,7 +1983,7 @@
             SvgHelper svgHelper = new();
             SvgDocumentInfo? info = new()
             {
-                Id = kolom.Guid.ToString(),
+                Id = kolom.Id.ToString(),
                 Title = kolom.Merk ?? "KOLOM",
                 Description = "kolom",
                 Label = kolom.Merk ?? "LABEL",
@@ -2032,7 +2032,7 @@
             SvgHelper svgHelper = new();
             SvgDocumentInfo? info = new()
             {
-                Id = bordes.Guid.ToString(),
+                Id = bordes.Id.ToString(),
                 Title = bordes.Merk ?? "TRAP",
                 Description = "steektrap",
                 Label = bordes.Merk ?? "LABEL",
@@ -2115,74 +2115,14 @@
 
 
 
-            // No FEM analysis voor bordes
-            //SBL.SBLigger sbl = new SBL.SBLigger(bordes.Lengte * 0.001);
-
-            //var l1 = SBL.Examples.GetTest1();
-
-            //SBL.Examples.RunTest(l1);
-
-
-            // BEAM
-            BEAM.Examples.Run(withP: true, withRect: false, withTri: false);
-
-
-
-            // prutsen voor dwarskrachten en momenten
 
             double baseY = -bordes.Breedte / 2.0;
-            List<Punt> testShear = [new(0,baseY)];
-            List<Punt> testMoment = [new(0,baseY)];
 
-            Construct.Application.Interfaces.Beam.SimpleBeam _simpleBeam = new();
             double length = bordes.Lengte * 0.001;
-            _simpleBeam = new() { Length = length };
             double position = length * 0.5;
-            double magnitude = -3.00;
-            _simpleBeam.Loads.Add(new Construct.Application.Interfaces.Beam.PointLoad(position, magnitude));
-            //_simpleBeam.Loads.Add(new DistributedLoad(0, length, -5, -0));
-            _simpleBeam.SolveReactions();
-            
-            Console.WriteLine($"R_A = {_simpleBeam.StartReaction:0.0} kN, R_B = {_simpleBeam.EndReaction:0.0} kN");
 
-            List<double> positions = new();
-            for (double pos = 0; Math.Round(pos, 4) <= length; pos += 0.1)
-            {
-                positions.Add(Math.Round(pos, 4));
-            }
-            
 
-            foreach (var pos in positions)
-            {
-                double shear = _simpleBeam.ShearAt(pos);
-                double moment = _simpleBeam.MomentAt(pos);
-                Console.WriteLine($"x = {pos:0.0} m: V = {shear:0.00} kN, M = {moment:0.00} kNm");
-               
-                testShear.Add(new Punt((pos * 1000), (baseY - shear * 50)));
-                testMoment.Add(new Punt((pos * 1000),(baseY - moment * 100)));
-            }
-            testShear.Add(new(bordes.Lengte, baseY));
-            testMoment.Add(new(bordes.Lengte, baseY));
-
-            var shearPath = MakePath(testShear);
-            shearPath.Stroke = "blue";
-            shearPath.Fill = "none";
-
-            var momentPath = MakePath(testMoment);
-            momentPath.Stroke = "red";
-            momentPath.Fill = "none";
-
-            //svgPaths.Add(shearPath);
-            //svgPaths.Add(momentPath);
-
-            // todo, naar generieke svg-generator methode
             List<SvgDimLine> dimLines = TrapSvgGenerator.GenerateBordesDimLines(bordes);
-
-
-
-
-
-
             List<SvgText> teksten = TrapSvgGenerator.GenerateBordesSvgText(bordes);
 
             // Bepaal de viewBox
@@ -2331,7 +2271,7 @@
             SvgHelper svgHelper = new();
             SvgDocumentInfo? info = new()
             {
-                Id = trap.Guid.ToString(),
+                Id = trap.Id.ToString(),
                 Title = trap.Merk ?? "TRAP",
                 Description = "steektrap",
                 Label = trap.Merk ?? "LABEL",

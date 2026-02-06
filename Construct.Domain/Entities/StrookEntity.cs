@@ -95,20 +95,23 @@ namespace Construct.Domain.Entities
             Beam.Compute();
 
             // haal de absolute Vz op
-            var v1Max = Beam.ResultCollectionLegacy.Values.Max(x => Math.Abs(x.LeftReaction));
-            var v2Max = Beam.ResultCollectionLegacy.Values.Max(x => Math.Abs(x.RightReaction));
-            var mMin = Beam.ResultCollectionLegacy.Values.Min(x => x.MomentDiagram.Min(p => p.M));
+            //var v1Max = Beam.ResultCollectionLegacy.Values.Max(x => Math.Abs(x.LeftReaction));
+            //var v2Max = Beam.ResultCollectionLegacy.Values.Max(x => Math.Abs(x.RightReaction));
+            //var mMin = Beam.ResultCollectionLegacy.Values.Min(x => x.MomentDiagram.Min(p => p.M));
 
-            // juiste krachten
-            Snedekrachten.Vz = Math.Max(v1Max, v2Max);
-
-            Snedekrachten.My = mMin;
+           
 
             // bijwerken toetsen
             UpdateForceCollectionOpt(beam: Beam);
-            
-            
-            
+
+
+            // juiste krachten
+            Snedekrachten.Vz = Math.Max(
+                ForceCollection.Max(f=>f.Forces.Vz),
+                Math.Abs(ForceCollection.Min(f=>f.Forces.Vz))
+                );
+            Snedekrachten.My = ForceCollection.Min(fc=>fc.Forces.My);
+
             UpdateWapeningOpt();
             UpdateBendingResults(); // testfase
 
@@ -116,53 +119,7 @@ namespace Construct.Domain.Entities
             UpdateScheurwijdteCollectie();
             UpdateDwarskrachtCollectie();
 
-
             ApplyBijlegWapening();
-
-            //var resultaten = new List<BeamResult>();
-
-            //if (Father == null) return;
-
-            //foreach (var comb in Father!.Belastingen.BelastingCombinaties)
-            //{
-            // hier roep je jouw methode aan
-            //    var result = Beam.ComputeForCombination(comb);
-
-            // resultaat bewaren
-            //    resultaten.Add(result);
-            //}
-
-            // voorbeeld: tonen
-            //foreach (var r in resultaten)
-            //{
-            //var mMin = r.MomentDiagram.Min(m=>m.M);
-            //var mMax = r.MomentDiagram.Max(m=>m.M);
-
-            //var mMin = r.MomentDiagram.Aggregate((a, b) => a.M < b.M ? a : b);
-            //var mMax = r.MomentDiagram.Aggregate((a, b) => a.M > b.M ? a : b);
-
-
-            //Console.WriteLine($"{r.CombinationName} → Mmin = {mMin.M:0.0} (x= {mMin.x:0.000}, " +
-            //    $"Mmax = {mMax.M:0.0} (x={mMax.x:0.000})");
-            //}
-
-            // veldmoment Frequent
-
-            //var mFreqEdEntry = resultaten. 
-            //var frequentResults = resultaten
-            //    .Where(r => r.Combination.Type == BelastingCombinatieTypeEnum.Frequent); 
-
-            // Stap 2: pak alle MomentDiagram entries
-            //var allMoments = frequentResults
-            //    .SelectMany(r => r.MomentDiagram)
-            //    .ToList();
-
-            // Stap 3: vind minimale moment + positie
-            //var mFreqEdEntry = allMoments.Aggregate((a, b) => a.M < b.M ? a : b);
-
-            //Console.WriteLine($"M Frequent Ed: M = {mFreqEdEntry.M:0.0} kNm op x = {mFreqEdEntry.x:0.000}");
-
-
 
         }
 
@@ -248,13 +205,25 @@ namespace Construct.Domain.Entities
         {
             ForceCollection.Clear();
             ForceCollectionFrequent.Clear();
+
+            
+
+            // Check if beam has computed results
+            if (beam.ResultCollectionLegacy == null || beam.ResultCollectionLegacy.Values.Count == 0)
+                return;
+
             var vA = beam.ResultCollectionLegacy.Values.Select(r => Math.Abs(r.LeftReaction)).ToList();
             var vB = beam.ResultCollectionLegacy.Values.Select(r => Math.Abs(r.RightReaction)).ToList();
 
             // GROOTSTE NEGATIEVE MOMENT + POSITIE
-            var minMomentEntry = beam.ResultCollectionLegacy.Values
+            var allMoments = beam.ResultCollectionLegacy.Values
                 .SelectMany(r => r.MomentDiagram)
-                .Aggregate((a, b) => a.M < b.M ? a : b);
+                .ToList();
+
+            if (allMoments.Count == 0)
+                return;
+
+            var minMomentEntry = allMoments.Aggregate((a, b) => a.M < b.M ? a : b);
 
             // Punt C (grootste veldmoment)
             SectionForces fC = new(my: minMomentEntry.M);
@@ -281,13 +250,17 @@ namespace Construct.Domain.Entities
 
 
             // GROOTSTE FREQUENTE MOMENT
-            var mFreqEdEntry = beam.ResultCollectionLegacy.Values
-                .Where(x=>x.Combination.Type == BelastingCombinatieTypeEnum.Frequent)
+            var frequentMoments = beam.ResultCollectionLegacy.Values
+                .Where(x => x.Combination.Type == BelastingCombinatieTypeEnum.Frequent)
                 .SelectMany(r => r.MomentDiagram)
-                .Aggregate((a, b) => a.M < b.M ? a : b);
-            SectionForces fMFr = new(my: mFreqEdEntry.M);
-            ForceCollectionFrequent.Add(new(fMFr, mFreqEdEntry.x));
+                .ToList();
 
+            if (frequentMoments.Count > 0)
+            {
+                var mFreqEdEntry = frequentMoments.Aggregate((a, b) => a.M < b.M ? a : b);
+                SectionForces fMFr = new(my: mFreqEdEntry.M);
+                ForceCollectionFrequent.Add(new(fMFr, mFreqEdEntry.x));
+            }
         }
         
 

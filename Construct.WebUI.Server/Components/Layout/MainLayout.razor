@@ -158,9 +158,7 @@
 
     protected override void OnAfterRender(bool firstRender)
     {
-
         RenderCount++;
-        Console.WriteLine($"[{InstanceId}] OnAfterRender #{RenderCount}, first={firstRender}");
 
         if (!firstRender)return;
 
@@ -168,14 +166,14 @@
 
         _lastLine = LogService.LastLine;
         LogService.LogUpdated += OnLogUpdated;
-        LogService.WriteLine("Applicatie opgestart");
+        LogService.WriteLine("[OnAfterRender] Applicatie opgestart");
     }
 
-    protected override bool ShouldRender()
-    {
-        Console.WriteLine($"[{InstanceId}] ShouldRender called. _lastLine='{_lastLine}'");
-        return true; // for diagnostic purposes
-    }
+    //protected override bool ShouldRender()
+    //{
+        //Console.WriteLine($"[{InstanceId}] ShouldRender called. _lastLine='{_lastLine}'");
+    //    return true; // for diagnostic purposes
+    //}
 
    
 

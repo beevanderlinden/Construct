@@ -1,11 +1,13 @@
 ﻿@page "/"
 @attribute [Authorize]
 @using Construct.Domain
+@using Construct.WebUI.Server.Components.Debug
 @using Construct.WebUI.Server.Components.Pages.Project
 @inject IJSRuntime JS
 @inject IProjectStateService ProjectState
 @inject IToastService ToastService
 @inject NavigationManager NavigationManager
+@inject IWebHostEnvironment Env
 
 <PageTitle>Home</PageTitle>
 
@@ -13,10 +15,27 @@
 
 Welkom bij Construct. Engineer hier uw prefab betonelementen.
 
+@* ✅ DEVELOPMENT: Reference Validation Debug Panel *@
+@if (Env.IsDevelopment())
+{
+    <div style="margin: 2rem 0; border-top: 2px dashed #ccc; padding-top: 1rem;">
+        <h3 style="color: #666;">🔧 Development Tools</h3>
+        <ReferenceValidationDebug />
+    </div>
+}
+
 <h2>Snelle stappen</h2>
 
 <FluentButton OnClick="NaarNieuwProject">Nieuw project</FluentButton>
 <FluentButton OnClick="NaarOpenProject">Open project</FluentButton>
+
+@if(ProjectState.CurrentProject != null)
+{
+    <p>Huidig project:</p>
+    <ProjectInfo Model="null"></ProjectInfo>
+}
+
+
 @* <FluentButton OnClick="LaadProjectVanLocalStorage">Ga verder waar ik gebleven was</FluentButton> *@
 
 @code {

@@ -61,6 +61,7 @@
     private async void CreateAssemblage(AssemblageEntity assemblageEntity)
     {
         await CreateAssemblageClicked.InvokeAsync(assemblageEntity);
+        Console.WriteLine($"[AddAssemblage] Toegevoegd ({assemblageEntity})");
     }
 
 
@@ -148,27 +149,32 @@
         return houtMaterial;
     }
 
-    private KolomEntity GetKolom()
+     private KolomEntity GetKolom()
     {
+        var betonMaterialContext = GetOrAddBetonMaterial();
         KolomEntity kolom = new()
         {
-            Guid = Guid.NewGuid(),
+            Id = Guid.NewGuid(),
             ProjectInfo = ProjectEntity!.ProjectInfo,
             Naam = "kolom",
             Merk = "KL-1",
-            Materiaal = GetOrAddBetonMaterial(),  // ✅ Voeg materiaal toe
+            Materiaal = betonMaterialContext,  // ✅ Voeg materiaal toe
+            MateriaalId = betonMaterialContext.Id,  // ✅ En ID
         };
         kolom.Belastingen.GenereerBelastingCombinaties(kolom.Belastingen, kolom.Belastingen.BelastingGevallen, kolom.Belastingen.CombinatiesTypes);
         return kolom;
     }
 
-    private SteekTrapEntity GetSteekTrap()
+     private SteekTrapEntity GetSteekTrap()
     {
+        var betonMaterialContext = GetOrAddBetonMaterial();
         SteekTrapEntity steekTrap = new(ProjectEntity!.ProjectInfo)
         {
-            Guid = Guid.NewGuid(),
+            Id = Guid.NewGuid(),
             Naam = "steektrap",
             Merk = "TR-1",
+            Materiaal = betonMaterialContext,  // ✅ Voeg materiaal toe
+            MateriaalId = betonMaterialContext.Id,  // ✅ En ID
         };
 
         steekTrap.Belastingen.GenereerBelastingCombinaties(steekTrap.Belastingen, steekTrap.Belastingen.BelastingGevallen, steekTrap.Belastingen.CombinatiesTypes);
@@ -190,16 +196,18 @@
             switch (args.Value.ToLower())
             {
                 case "ligger (staal)":
+                    var staalMaterialContext = GetOrAddStaalMaterial();
                     var liggerStaal = new LiggerEntity()
                     {
                         ProjectInfo = ProjectEntity.ProjectInfo,
                         Belastingen = new(ProjectEntity.ProjectInfo.Grondslagen),
 
-                        Guid =  Guid.NewGuid(),
+                        Id =  Guid.NewGuid(),
                         Naam = "ligger staal",
                         Merk = "L-1",
                         AssemblageType = AssemblageEntity.AssemblageTypeEnum.StaalAssemblage,
-                        Materiaal = GetOrAddStaalMaterial(),
+                        Materiaal = staalMaterialContext,
+                        MateriaalId = staalMaterialContext.Id,
                         Profiel = Profielen.Staal.Doorsneden.HEB200,
                     };
                     liggerStaal.Beam.Profiel = liggerStaal.Profiel;
@@ -216,14 +224,17 @@
                     break;
 
                 case "ligger (beton)":
+                    var betonMaterialContext = GetOrAddBetonMaterial();
                     var liggerBeton = new LiggerEntity()
                     {
                         ProjectInfo = ProjectEntity.ProjectInfo,
                         Belastingen = new(ProjectEntity.ProjectInfo.Grondslagen),
+                        Id = Guid.NewGuid(),
                         Naam = "betonbalk",
                         Merk = "BB-1",
                         AssemblageType = AssemblageEntity.AssemblageTypeEnum.BetonAssemblage,
-                        Materiaal = GetOrAddBetonMaterial(),
+                        Materiaal = betonMaterialContext,
+                        MateriaalId = betonMaterialContext.Id,
                         Profiel = new Profielen.Beton.BetonProfiel(666,333),
                     };
                     liggerBeton.Beam.Materiaal = liggerBeton.Materiaal;
@@ -241,16 +252,18 @@
 
 
                 case "ligger (hout)":
+                    var houtMaterialContext = GetOrAddHoutMaterial();
                     var liggerHout = new LiggerEntity()
                     {
                         ProjectInfo = ProjectEntity.ProjectInfo,
                         Belastingen = new(ProjectEntity.ProjectInfo.Grondslagen),
 
-                        Guid = Guid.NewGuid(),
+                        Id = Guid.NewGuid(),
                         Naam = "houten balk",
                         Merk = "HB-1",
                         AssemblageType = AssemblageEntity.AssemblageTypeEnum.HoutAssemblage,
-                        Materiaal = GetOrAddHoutMaterial(),
+                        Materiaal = houtMaterialContext,
+                        MateriaalId = houtMaterialContext.Id,
                         Profiel = new ParametrischProfielContext()
                         {
                             Vorm = ParametrischeProfielVormEnum.Rechthoek,
@@ -288,15 +301,17 @@
                     CreateAssemblage(kolom);
                     break;
                 case "bordes":
+                    var betonMaterialContextBordes = GetOrAddBetonMaterial();
                     BordesEntity bordes = new()
                     {
                         ProjectInfo = ProjectEntity.ProjectInfo,
-                        Guid = Guid.NewGuid(),
+                        Id = Guid.NewGuid(),
                         Naam = "bordes",
                         Merk = "BD-1",
                         Breedte = 1300,
                         Lengte = 2700,
-                        Materiaal = GetOrAddBetonMaterial(),  // ✅ Voeg materiaal toe
+                        Materiaal = betonMaterialContextBordes,  // ✅ Voeg materiaal toe
+                        MateriaalId = betonMaterialContextBordes.Id,  // ✅ En ID
                     };
                     bordes.Trap1!.Randafstand = 100;
                     bordes.Trap2!.Randafstand = 100;
@@ -320,19 +335,19 @@
 
                         CreateAssemblage(steektrapVoorOpBordes);
                         bordes.Trap1.AansluitendElement = steektrapVoorOpBordes;
-                        bordes.Trap1AansluitendElementGuid = steektrapVoorOpBordes.Guid;
+                        bordes.Trap1AansluitendElementGuid = steektrapVoorOpBordes.Id;
 
                         bordes.Trap2.AansluitendElement = steektrapVoorOpBordes;
-                        bordes.Trap2AansluitendElementGuid = steektrapVoorOpBordes.Guid;
+                        bordes.Trap2AansluitendElementGuid = steektrapVoorOpBordes.Id;
                     }
                     else
                     {
                         var fod = trappen.FirstOrDefault();
                         bordes.Trap1.AansluitendElement = fod;
-                        bordes.Trap1AansluitendElementGuid = fod?.Guid;
+                        bordes.Trap1AansluitendElementGuid = fod?.Id;
 
                         bordes.Trap2.AansluitendElement = fod;
-                        bordes.Trap2AansluitendElementGuid = fod?.Guid;
+                        bordes.Trap2AansluitendElementGuid = fod?.Id;
 
                     }
 

@@ -1,4 +1,5 @@
 ﻿using Construct.Domain.Entities;
+using Construct.Domain.Common;
 
 namespace Construct.Application.Interfaces
 {
@@ -41,6 +42,12 @@ namespace Construct.Application.Interfaces
         Task SaveProjectToLocalStorageAsync();
         Task LoadProjectFromLocalStorageAsync();
 
+        /// <summary>
+        /// ✅ NIEUW: Valideer alle entity-referenties in het huidige project
+        /// Kan handmatig aangeroepen worden via Component code-behind
+        /// Retourneert detailed diagnostische informatie
+        /// </summary>
+        ReferenceValidationHelper.ValidationReport ValidateCurrentProjectReferences();
 
     }
 

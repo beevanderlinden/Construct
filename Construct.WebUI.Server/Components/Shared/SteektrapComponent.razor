@@ -15,9 +15,9 @@
                 └ Q<sub>k</sub> = @Model.Krachten.Puntlast_Qk.ToString("0.00 kN") 
             </td>
         </tr>
-        <tr><td>Betonsterkteklasse</td>        <td>@Model.Materiaal.UserFriendlyName</td></tr>
+        <tr><td>Betonsterkteklasse</td>        <td>@Model.Materiaal?.UserFriendlyName</td></tr>
         <tr><td>Betonstaal</td>                <td>@_betonstaal.BetonStaalKwaliteit</td></tr>
-        <tr><td>Milieuklasse</td>              <td>@Model.DekkingBoven.MilieuklassenUserFriendlyName</td></tr>
+        <tr><td>Milieuklasse</td>              <td>@Model?.DekkingBoven?.MilieuklassenUserFriendlyName</td></tr>
         <tr><td>Dekking c<sub>nom</sub></td>   <td>@Model.DekkingBoven.DekkingNom.ToString("0 mm")</td></tr>
         <tr><td>Dekking c<sub>prov</sub></td>  <td>@Model.DekkingBoven.DekkingToe.ToString("0 mm")</td></tr>
     </tbody>
