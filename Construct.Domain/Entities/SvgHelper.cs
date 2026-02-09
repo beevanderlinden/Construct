@@ -1,6 +1,7 @@
 ﻿namespace Construct.Domain.Entities
 {
     using Construct.Domain.Extensions;
+    using Microsoft.Extensions.Logging;
     using System.Globalization;
     using System.Runtime.CompilerServices;
     using System.Text;
@@ -259,7 +260,7 @@
         public string GetSvgStringOptimal(
             SvgDocumentInfo? documentInfo,
             SvgViewBox viewBox,
-            IEnumerable<SvgPath> paths,
+            IEnumerable<BaseSvg> paths,
             IEnumerable<SvgDimLine> dimLines,
             IEnumerable<SvgText> texts,
             double actualWidthPx = 1200,   // breedte in pixels (van style of container)
@@ -342,21 +343,19 @@
 
 
 
-            // Paths
-            foreach (var path in paths)
+            // ✅ NIEUW: Render alle BaseSvg objecten via hun Render() methode
+            // Dit ondersteunt nu ook SvgCircle, SvgLine, SvgGroup, etc. (niet alleen SvgPath)
+            foreach (var svgObj in paths)
             {
-                sb.AppendLine($@"<path d=""{path.D}""
-                stroke=""{path.Stroke}""
-                stroke-width=""{path.StrokeWidth.ToString("F2", CultureInfo.InvariantCulture)}""
-                fill=""{path.Fill}""
-                opacity=""{path.Opacity?.ToString("F2", CultureInfo.InvariantCulture)}""
-                fill-opacity=""{path.FillOpacity?.ToString("F2", CultureInfo.InvariantCulture)}""
-                stroke-dasharray=""{path.StrokeDashArray}""
-                stroke-linejoin=""{path.StrokeLineJoin}""
-                stroke-linecap=""{path.StrokeLineCap}""
-                fill-rule=""{path.FillRule}"" 
-                vector-effect=""{path.VectorEffect}""
-                />");
+                // teksten moeten verschaald worden (runtime)
+                if (svgObj is SvgText t)
+                {
+                    t.Scale = scale;
+                }
+                
+                
+                sb.AppendLine(svgObj.Render());
+                
             }
 
             // DimLines + tekst

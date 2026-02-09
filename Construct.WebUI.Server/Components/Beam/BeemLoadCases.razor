@@ -24,49 +24,43 @@
                 <BeamDiagram @bind-Beam="Beam"
                              Options="@GetLoadCaseDiagramOptions(null)" />
 
-                <KaskonInputContainer Label="schema">
-                    <FluentSelectEnum TEnum="SchemaType" @bind-EnumSelectedValue="@Beam.Schematisering" LabelPosition="LabelPosition.Top" /> 
-                </KaskonInputContainer>
 
-                <KaskonInputContainer Label="lengte">
-                    <FluentNumberField @bind-Value="Beam.Length" TValue="double" Step="0.1" Min="0" Max="40"></FluentNumberField>
-                </KaskonInputContainer>
+                @if (CanEdit)
+                {
+                    <KaskonInputContainer Label="schema">
+                        <FluentSelectEnum TEnum="SchemaType" @bind-EnumSelectedValue="@Beam.Schematisering" LabelPosition="LabelPosition.Top" />
+                    </KaskonInputContainer>
 
-
-
-                <KaskonInputContainer Label="profiel">
-                    <FluentTextField Disabled="true" Value="@Beam.Profiel?.Naam"></FluentTextField>
-                </KaskonInputContainer>
+                    <KaskonInputContainer Label="lengte">
+                        <FluentNumberField @bind-Value="Beam.Length" TValue="double" Step="0.1" Min="0" Max="40"></FluentNumberField>
+                    </KaskonInputContainer>
 
 
-                <KaskonInputContainer Label="grade">
-                    <FluentTextField Disabled="true" Value="@Beam.Materiaal?.Naam"></FluentTextField>
-                </KaskonInputContainer>
 
-                <KaskonInputContainer Label="EI">
-                    <FluentTextField Disabled="true" Value="@(Beam.EI.ToString("E"))"></FluentTextField>
-                </KaskonInputContainer>
+                    <KaskonInputContainer Label="profiel">
+                        <FluentTextField Disabled="true" Value="@Beam.Profiel?.Naam"></FluentTextField>
+                    </KaskonInputContainer>
+
+
+                    <KaskonInputContainer Label="grade">
+                        <FluentTextField Disabled="true" Value="@Beam.Materiaal?.Naam"></FluentTextField>
+                    </KaskonInputContainer>
+
+                    <KaskonInputContainer Label="EI">
+                        <FluentTextField Disabled="true" Value="@(Beam.EI.ToString("E"))"></FluentTextField>
+                    </KaskonInputContainer>
+                }
+
+                
 
 
                 @if (Beam.Profiel is BaseProfiel p)
                 {
-                    <BaseProfielView Profiel="p" />
+
+                    @* <BaseProfielView Profiel="p" /> *@
 
                 }
-                @if (Beam.Profiel is IBetonProfiel betonProfiel)
-                {
-                    // betonprofiel met wapening
-                    
-                }
-                @if (Beam.PlaatWapening != null)
-                {
-                    <PlaatWapeningTabelPosComponent Model="Beam.PlaatWapening" />
-                    <PlaatWapeningComponent Model="Beam.PlaatWapening" />
-                }
-                else
-                {
-                    <p>⁉️ Geen plaatwapening 🔎</p>
-                }
+               
 
                 @if (Beam.Materiaal is BaseMateriaal m)
                 {
@@ -92,17 +86,9 @@
                         <TableContentRenderer Table="tbl" />
                     }
                 }
-
-
-
-
-
             </Content>
-
         </FluentTab>
        
-
-
         @if (Beam.LoadContext != null)
         {
             @foreach (var lc in Beam.LoadContext.BelastingGevallen)
@@ -162,8 +148,7 @@
                                 var tblM = BeamResultsHelper.GetTabelBendingResults(Beam, profiel, beton);
                                 <TableContentRenderer Table="tblM.Hoofd" Title="Momentwapening" />
 
-                                <h3>Tabel dwarksrachtwapening</h3>
-                                <TableContentRenderer Table="tblM.Dwars" Title="Dwarskrachtwapning" />
+                                
 
                             }
 
@@ -213,6 +198,9 @@
 @code {
     [Parameter, EditorRequired] public SBLigger Beam { get; set; }
     [Parameter] public EventCallback<SBLigger> BeamChanged { get; set; }
+
+
+    private bool CanEdit { get; set; } = false; // voor de toekomst, nu alleen lezen;
 
     private static readonly Dictionary<string, Eurocode.Belastingen.BelastingCombinatieTypeEnum> _combiTabGroups =
     new()

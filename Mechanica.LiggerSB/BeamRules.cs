@@ -158,11 +158,11 @@ namespace Mechanica.SimpleBeam
             {
                 if (StartMagnitude == EndMagnitude)
                 {
-                    return StartMagnitude.ToString("0.#", CultureInfo.InvariantCulture);
+                    return StartMagnitude.ToString("0.0", CultureInfo.InvariantCulture);
                 }
                 else
                 {
-                    return ($"{StartMagnitude:0.#} - {EndMagnitude:0.#}");
+                    return ($"{StartMagnitude:0.0} - {EndMagnitude:0.0}");
                 }
             }
         }
@@ -171,7 +171,7 @@ namespace Mechanica.SimpleBeam
         {
             get
             {
-                return StartMagnitude.ToString("0.#", CultureInfo.InvariantCulture);
+                return StartMagnitude.ToString("0.0", CultureInfo.InvariantCulture);
             }
         }
 
@@ -183,7 +183,7 @@ namespace Mechanica.SimpleBeam
                 {
                     return "—";
                 }
-                return EndMagnitude.ToString("0.#", CultureInfo.InvariantCulture);
+                return EndMagnitude.ToString("0.0", CultureInfo.InvariantCulture);
             }
         }
 
@@ -192,6 +192,22 @@ namespace Mechanica.SimpleBeam
             get
             {
                 return StartX.ToString("0.000", CultureInfo.InvariantCulture);
+            }
+        }
+
+        string UserFriendlyFromTo
+        {
+            get
+            {
+                return UserFriendlyStartPos + "-" + UserFriendlyEndPos;
+            }
+        }
+
+        string UserFriendlyFromToValue
+        {
+            get
+            {
+                return UserFriendlyValue;
             }
         }
 

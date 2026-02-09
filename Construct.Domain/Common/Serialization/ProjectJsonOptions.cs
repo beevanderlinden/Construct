@@ -31,6 +31,7 @@ namespace Construct.Domain
                 Converters =
                 {
                     new MaterialenDictionaryConverter(),  // ✅ NIEUW: Custom converter voor Dictionary<Guid, BaseMateriaal>
+                    new BelastingCombinatieItemConverter(),  // ✅ NIEUW: Custom converter om circular references te voorkomen
                     new JsonStringEnumConverter()  // ✅ Serialiseer enums als strings
                 },
                 ReferenceHandler = ReferenceHandler.IgnoreCycles,
@@ -81,6 +82,7 @@ namespace Construct.Domain
                 Converters =
                 {
                     new MaterialenDictionaryConverter(),  // ✅ NIEUW: Custom converter voor Dictionary<Guid, BaseMateriaal>
+                    new BelastingCombinatieItemConverter(),  // ✅ NIEUW: Custom converter om circular references te voorkomen
                     new JsonStringEnumConverter()  // ✅ Serialiseer enums als strings
                 },
             };

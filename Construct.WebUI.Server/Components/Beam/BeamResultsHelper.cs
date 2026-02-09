@@ -262,6 +262,7 @@ public static class BeamResultsHelper
         [
             new(new("positie", "4cm")),
             new(new("vlak", "4cm")),
+            new(new("*d*")),
             new(new("*M~y,Ed~* [kNm]", "4cm")),
             new(new("*A~s,req~* [mm²]", "4cm")),
             new(new("*A~s,prov~* [mm²]", "4cm")),
@@ -313,6 +314,7 @@ public static class BeamResultsHelper
             hoofd.Rows.Add([
                 new(p.Position, "2cm"),
                 new(vlak, "2cm"),
+                new(bending.D.ToString("0.0"), "2cm"),
                 new(My.ToString("0.0", CultureInfo.InvariantCulture), "4cm"),
                 new(asReq.ToString("0", CultureInfo.InvariantCulture), "4cm"),
                 new($"{asProvTekst}", "4cm"),

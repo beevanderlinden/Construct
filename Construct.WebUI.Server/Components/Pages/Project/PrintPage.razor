@@ -1017,17 +1017,25 @@ else
                     section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
 
                     a.Belastingen.BelastingGevallen.AddToSection(section, isDraaiTabel: !true, "Belastinggevallen", "Kop 3");
+                    a.Belastingen.BelastingCombinaties.AddToSection(section, isDraaiTabel: !true, "Belastingcombinaties", "Kop 3");
+
 
                     section.AddParagraph("Materialen", "Kop 3");
                     var materialen = new List<BaseMateriaal>() { a.Materiaal };
                     section.Elements.Add(GetTableContentMaterialen(materialen));
 
 
+
                     if (a.AssemblageType == AssemblageEntity.AssemblageTypeEnum.BetonAssemblage)
                     {
                         // dekking en duurzaamheid
                         section.AddParagraph("Dekking en duurzaamheid", "Kop 3");
-                        section.Elements.Add(GetTableContentDekkingOpt(a.PlaatDekking));
+                        
+                        // ✅ Cast naar BetonAssemblageEntity om PlaatDekking te kunnen gebruiken
+                        if (a is BetonAssemblageEntity betonAssemblage)
+                        {
+                            section.Elements.Add(GetTableContentDekkingOpt(betonAssemblage.PlaatDekking));
+                        }
                     }
 
                     // als het een ligger is dan specifieke ligger data

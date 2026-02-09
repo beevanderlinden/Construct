@@ -29,9 +29,6 @@ namespace Construct.Domain.Entities
         // JSON opslag
         // ✅ MateriaalReference beheert zowel EntityId als Entity
 
-        // internal properties and methods can go here...
-        internal BetonContext _beton = new("C45/55");
-        
         // ✅ NIEUW: MateriaalReference voor generieke materiaal-referentie-beheer
         private readonly MateriaalReference _materiaalRef = new();
 
@@ -39,7 +36,6 @@ namespace Construct.Domain.Entities
         private readonly List<StrookEntity> _stroken = [];
         private ProjectInfoEntity _projectInfo = new();
         private BelastingenContext _belastingen = new();
-        private DekkingContext _plaatDekking = new();
         
         [JsonPropertyOrder(100)]
         public virtual double Breedte { get; set; } = 1200;
@@ -120,15 +116,6 @@ namespace Construct.Domain.Entities
         {
             get => _materiaalRef.Entity;
             set => _materiaalRef.Attach(value);
-        }
-
-        /// <summary>
-        /// Dekking context voor dekking en duurzaamheid aan de onderzijde en bovenzijde van een beton-element
-        /// </summary>
-        public DekkingContext PlaatDekking
-        {
-            get => _plaatDekking;
-            set => SetNestedProperty(ref (_plaatDekking!), value);
         }
 
 
@@ -264,14 +251,11 @@ namespace Construct.Domain.Entities
             Belastingen ??= new(grondslagen: ProjectInfo.Grondslagen);
             Belastingen.Grondslagen = ProjectInfo.Grondslagen;
 
-            // ✅ Controleer of BelastingCombinaties leeg zijn en genereer indien nodig
-            if (Belastingen.BelastingCombinaties.Count == 0)
-            {
-                Belastingen.GenereerBelastingCombinaties(
-                    Belastingen,
-                    Belastingen.BelastingGevallen,
-                    Belastingen.CombinatiesTypes);
-            }
+            // We genereren de belastingcombinaties hier opnieuw.
+            // Momenteel kan de gebruiker hier niet zelf in wijzigen, maar in de toekomst misschien wel.
+            // Voor nu doen we het zo
+            Belastingen.GenereerBelastingCombinaties(Belastingen, Belastingen.BelastingGevallen, Belastingen.CombinatiesTypes);
+           
 
             // ✅ NIEUW: Materiaal-referentie herstellen
             RestoreMaterialReference(project);

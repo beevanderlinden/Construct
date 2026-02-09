@@ -109,7 +109,7 @@ namespace Construct.Domain.Entities
 
 
 
-    public class SteekTrapEntity : AssemblageEntity
+    public class SteekTrapEntity : BetonAssemblageEntity
     {
         /// <summary>
         /// Na het deserialiseren van de json moeten we de nested properties instellen. Dit doen we met deze Init methode.
@@ -775,7 +775,7 @@ namespace Construct.Domain.Entities
             {
                 this.IsAkkoord();
             }
-            if (ReferenceEquals(sender, _beton))
+            if (ReferenceEquals(sender, Beton))
             {
                 this.IsAkkoord();
             }

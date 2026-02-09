@@ -3,6 +3,13 @@
 
 @if (Model != null)
 {
+    <KaskonInputContainer Label="plaatdikte [mm]">
+        <FluentNumberField TValue="double"
+                           @bind-Value="Model.Dikte"
+                           Step="10" Min="180" Max="400"></FluentNumberField>
+    </KaskonInputContainer>
+
+
     <KaskonInputContainer Label="breedte [mm]">
         <FluentNumberField TValue="double" 
             @bind-Value="Model.Breedte" 
@@ -17,13 +24,9 @@
             Step="100" Min="2000" Max="5000"></FluentNumberField>
     </KaskonInputContainer>
 
-    <KaskonInputContainer Label="dikte [mm]">
-        <FluentNumberField TValue="double" 
-            @bind-Value="Model.Dikte" 
-            Step="10" Min="180" Max="400"></FluentNumberField>
-    </KaskonInputContainer>
+   
 
-    <KaskonInputContainer Label="breedte v.s. [mm]">
+    <KaskonInputContainer Label="versterkte strookbreedte [mm]">
         <FluentNumberField TValue="double" 
                            @bind-Value="Model.BreedteVersterkteStrook"
                            @bind-Value:after="OnModelChanged"
@@ -44,7 +47,6 @@
         </select>
     </KaskonInputContainer>
 
-    <p>keuze:@SelectedKeuze1?.Label merk:@SelectedKeuze1?.Value?.Merk</p>
 
     if(Model.Trap1?.AansluitendElement != null)
     {
@@ -66,6 +68,7 @@
             <FluentTextField Value="@_reactie1" Disabled="true">
             </FluentTextField>
         </KaskonInputContainer>
+        <br />
     }
 
     <KaskonInputContainer Label="trap rechts">
@@ -95,9 +98,15 @@
                                @bind-Value:after="OnModelChanged"
                                Step="100" Min="800" Max="3000"></FluentNumberField>
         </KaskonInputContainer>
+
+        <KaskonInputContainer Label="reactie">
+            <FluentTextField Value="@_reactie2" Disabled="true">
+            </FluentTextField>
+        </KaskonInputContainer>
+        <br />
     }
 
-    <KaskonInputContainer Label="basisstrook profiel">
+  @*   <KaskonInputContainer Label="basisstrook profiel">
         <FluentTextField Disabled="true" Value="@Model.BasisStrook?.Profiel?.ToString()" />
     </KaskonInputContainer>
 
@@ -131,7 +140,7 @@
     else
     {
         <p>GEEN PLAATWAPENING??!</p>
-    }
+    } *@
 
 
 
@@ -153,6 +162,20 @@
         {
             string reactie = "Rg=onbekend";
             if (Model?.Trap1?.AansluitendElement is SteekTrapEntity trap)
+            {
+                reactie = $"R={trap.ReactieG:0.0} ({trap.ReactieQ:0.0}) kN/m¹";
+            }
+            return reactie;
+        }
+    }
+
+
+    private string _reactie2
+    {
+        get
+        {
+            string reactie = "Rg=onbekend";
+            if (Model?.Trap2?.AansluitendElement is SteekTrapEntity trap)
             {
                 reactie = $"R={trap.ReactieG:0.0} ({trap.ReactieQ:0.0}) kN/m¹";
             }

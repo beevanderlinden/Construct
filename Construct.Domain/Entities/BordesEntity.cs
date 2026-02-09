@@ -23,7 +23,7 @@ using System.Text.Json.Serialization;
 
 namespace Construct.Domain.Entities
 {
-    public class BordesEntity : AssemblageEntity
+    public class BordesEntity : BetonAssemblageEntity
     {
         public BordesEntity()
         {
@@ -31,7 +31,14 @@ namespace Construct.Domain.Entities
             this.Naam = "Bordes";
             this.Merk = "BD-?";
 
-            
+            // ✅ Zet Materiaal VOOR InitBasisStrook() zodat Beton property beschikbaar is
+            Materiaal = new BetonContext("C45/55");
+
+            // ✅ Genereer BelastingCombinaties zodat Beam.LoadContext correct werkt
+            Belastingen.GenereerBelastingCombinaties(
+                Belastingen,
+                Belastingen.BelastingGevallen,
+                Belastingen.CombinatiesTypes);
 
             Trap1 = new VerbindingAansluitendElement(this);
             Trap2 = new VerbindingAansluitendElement(this);
@@ -132,6 +139,12 @@ namespace Construct.Domain.Entities
             PlaatDekking.Boven.Grondslagen = ProjectInfo.Grondslagen;
             PlaatDekking.Boven.Beton = beton ?? new();
 
+            // ✅ Update _basisStrook.Beton na materiaal restore
+            if (_basisStrook != null && beton != null)
+            {
+                _basisStrook.Beton = beton;
+            }
+
             // Create basiswapening without direct call to the ReferentieDekking setter (use reflection)
             var hoofdwapOnder = new WapeningContext()
             {
@@ -201,6 +214,7 @@ namespace Construct.Domain.Entities
                     VerdeelWapening = verdeelwapBoven,
                     LaagHoofdwapening = 2,
                     DiameterVerdeel = 8,
+                    
 
                 },
                 Onder = new PlaatWapeningGroep()
@@ -249,8 +263,9 @@ namespace Construct.Domain.Entities
             strook.Beam.Length = this.Lengte * 1e-3;
             strook.Beam.Materiaal = this.Materiaal;
             strook.Beam.Profiel = strook.Profiel;
-            strook.PlaatWapening = this.PlaatWapening!; // basisstrook is gelijk aan deze plaatwapening
+            strook.PlaatWapening = this.PlaatWapening?.Clone(); // Clone om referentie delen te voorkomen
             strook.Beam.PlaatWapening = strook.PlaatWapening;
+            strook.Beam.EI = 1e-9 * strook.Beam.Profiel.Iy * strook.Beam.Materiaal?.E ?? 1;
 
 
 
@@ -258,14 +273,15 @@ namespace Construct.Domain.Entities
 
             if (Belastingen.BelastingGevallen.Count > 0)
             {
+                double werkendeBreedte = 1.0;
                 var perm = Belastingen.BelastingGevallen[0];
-                var dl1g = new DistributedLoad(perm, "L1",0, LengteM, -VlaklastG);
+                var dl1g = new DistributedLoad(perm, "L1~Gk~",0, LengteM, -VlaklastG) { Description = $"{-VlaklastG:0.0} kN/m² × {werkendeBreedte:0.0}m" }; ;
                 dl1g.Description = $"eigen gewicht + afwerking";
                 //dl1g.StartMagnitude = dl1g.EndMagnitude = 0; // tijdelijk nul zetten
                 strook.Beam.Loads.Add(dl1g);
 
                 var veranderlijk = Belastingen.BelastingGevallen[1];
-                var dl1q = new DistributedLoad(veranderlijk, "L1", 0, LengteM, -veranderlijk.OpgelegdeBelastingen.Vlaklast);
+                var dl1q = new DistributedLoad(veranderlijk, "L1~Qk~", 0, LengteM, -veranderlijk.OpgelegdeBelastingen.Vlaklast);
                 dl1q.Description = "opgelegde belasting vlaklast";
                 //dl1q.StartMagnitude = dl1q.EndMagnitude = 0; // tijdelijk nul zetten
 
@@ -350,23 +366,24 @@ namespace Construct.Domain.Entities
             // vlaklast
             var vlaklastG = this.VlaklastG;
             var belastingBreedteMM = strook.Profiel?.Breedte ?? 1000;
-            var q1G = Math.Round(-vlaklastG * belastingBreedteMM * 0.001, 2);
-            var q1Q = Math.Round(-bg2.OpgelegdeBelastingen.Vlaklast * belastingBreedteMM * 0.001,2);
+            var werkendeBreedte = belastingBreedteMM * 0.001;
+            var q1G = Math.Round(-vlaklastG * werkendeBreedte, 2);
+            var q1Q = Math.Round(-bg2.OpgelegdeBelastingen.Vlaklast * werkendeBreedte,2);
 
             int nr = 1;
 
-            DistributedLoad dl1G = new(bg1, $"L{nr++}", 0, L, q1G);
+            DistributedLoad dl1G = new(bg1, $"L{nr}~Gk~", 0, L, q1G) { Description = $"{-vlaklastG:0.0} kN/m² × {werkendeBreedte:0.0}m" };
             beam.Loads.Add(dl1G);
-            DistributedLoad dl1Q = new(bg2, $"L{nr}", 0, L, q1Q);
+            DistributedLoad dl1Q = new(bg2, $"L{nr++}~Qk~", 0, L, q1Q) { Description = $"{-bg2.OpgelegdeBelastingen.Vlaklast:0.0} kN/m² × {werkendeBreedte:0.0}m" };
             beam.Loads.Add(dl1Q);
 
 
 
-            foreach (var l in GetTrapDistrubutedLoads(Trap1, bg1, bg2, $"L{nr++}"))
+            foreach (var l in GetTrapDistrubutedLoads(this, Trap1, bg1, bg2, $"L{nr++}~Qk~"))
             {
                 beam.Loads.Add(l);
             }
-            foreach (var l in GetTrapDistrubutedLoads(Trap2, bg1, bg2, $"L{nr++}"))
+            foreach (var l in GetTrapDistrubutedLoads(this, Trap2, bg1, bg2, $"L{nr++}~Qk~"))
             {
                 beam.Loads.Add(l);
             }
@@ -377,13 +394,46 @@ namespace Construct.Domain.Entities
             strook.PlaatWapening.Onder!.BasisWapening.ReferentieLengte = strookbreedte;
             strook.PlaatWapening.Boven!.BasisWapening.ReferentieLengte = strookbreedte;
 
+            // aanvullen met bijlegwapening
+            this.BijlegWapening = new() { 
+                Tekst = "0r8", 
+                ReferentieVlak = ReferentieVlakEnum.Onder, 
+                LaagNummer = 2 };
 
 
             strook.Beam.PlaatWapening = strook.PlaatWapening;
+            strook.Beam.EI = 1e-9 * strook.Beam.Profiel?.Iy * strook.Beam.Materiaal?.E ?? 1;
+
 
 
 
             strook.BerekenStrook();
+
+            // bijwerken bijleg,
+            var rMin = strook.BendingResults.OrderBy(r => r.Moment).First();
+            var req = rMin.AsRequired;
+            var prov = rMin.AsApplied;
+            if (req > prov)
+            {
+                var bijlegReq = req - prov;
+                int n = (int)((strook.Profiel?.B ?? 200.0) / 100.0);
+
+                // kijk eerst of nØ8 voldoende is, anders nØ10, etc.
+                List<double> diams = new() { 8, 10, 12, 16, 20, 25, 32, 40, 50 };
+                foreach (var d in diams)
+                {
+                    var asBijleg = n * Math.PI * Math.Pow(d, 2) / 4.0;
+                    if (asBijleg >= bijlegReq)
+                    {
+                        this.BijlegWapening.Tekst = $"{n}r{d}";
+                        break;
+                    }
+                }
+
+                strook.Beam.PlaatWapening.Onder.BasisWapening.Tekst += $"+{this.BijlegWapening.Tekst}";
+
+            }
+
 
         }
 
@@ -393,19 +443,31 @@ namespace Construct.Domain.Entities
             return (t.ReactieG, t.ReactieQ);
         }
 
-        public static List<DistributedLoad> GetTrapDistrubutedLoads(VerbindingAansluitendElement t, BelastingGeval bg1, BelastingGeval bg2, string name)
+        public static double GetDompFactor(BordesEntity bordes)
+        {
+            return bordes.Breedte / (bordes.Breedte - bordes.BreedteVersterkteStrook * 0.5);
+        }
+
+        public static List<DistributedLoad> GetTrapDistrubutedLoads(BordesEntity bordes, VerbindingAansluitendElement t, BelastingGeval bg1, BelastingGeval bg2, string name)
         {
             if (t == null || t.AansluitendElement == null) 
                 return [];
+
+            double dompFactor = GetDompFactor(bordes);
             
+
+
             if (t.AansluitendElement is SteekTrapEntity steekTrap)
             {
-                var g = new DistributedLoad(bg1, name, t.PosM.Start, t.PosM.End, Math.Round(-steekTrap.ReactieG,2));
-                var q = new DistributedLoad(bg2, name, t.PosM.Start, t.PosM.End, Math.Round(-steekTrap.ReactieQ,2));
+                double gValue = -steekTrap.ReactieG * dompFactor;
+                var g = new DistributedLoad(bg1, name, t.PosM.Start, t.PosM.End, Math.Round(gValue,2));
+
+                double qValue = -steekTrap.ReactieQ * dompFactor;
+                var q = new DistributedLoad(bg2, name, t.PosM.Start, t.PosM.End, Math.Round(qValue,2));
 
                 // omschrijving
-                g.Description = $"<i>R<sub>Gk</sub></i> uit {steekTrap.Merk}";
-                q.Description = $"<i>R<sub>Qk</sub></i> uit {steekTrap.Merk}";
+                g.Description = $"uit {steekTrap.Merk} (R<sub>Gk</sub> = {steekTrap.ReactieG:0.##}) × {dompFactor:0.##} (domp)";
+                q.Description = $"uit {steekTrap.Merk} (R<sub>Qk</sub> = {steekTrap.ReactieQ:0.##}) × {dompFactor:0.##} (domp)";
 
                 return [g, q];
             }
@@ -598,6 +660,13 @@ namespace Construct.Domain.Entities
             set => SetNestedProperty(ref _plaatWapening, value);
         }
 
+        private WapeningContext? _bijlegWapening;
+        public WapeningContext? BijlegWapening
+        {
+            get => _bijlegWapening;
+            set => SetNestedProperty(ref _bijlegWapening, value);
+        }
+
         public BendingResults? BasisStrook
         {
             get => _basisStrook;
@@ -610,7 +679,7 @@ namespace Construct.Domain.Entities
         {
             _basisStrook = new BendingResults()
             {
-                Beton = _beton,
+                Beton = Beton ?? new(),
                 ConstructiefModel = Schematisering.ConstructiefModelEnum.Plaat,
                 Profiel = new()
                 {

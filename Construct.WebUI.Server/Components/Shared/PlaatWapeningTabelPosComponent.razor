@@ -1,4 +1,4 @@
-@using System
+﻿@using System
 @using Eurocode.BetonConstructies
 
 @if (Model == null)
@@ -18,20 +18,53 @@ else
             </tr>
         </thead>
         <tbody>
-            @RenderPosRow(Model.Boven, "Boven", "Boven", 1)
-            @RenderPosRow(Model.Onder, "Onder", "Onder", 1)
+            @RenderPosRow(Model.Boven, Model.Boven?.ReferentieVlak.ToString() ?? "?", "Boven", Model.Boven?.LaagHoofdwapening ?? 2)
+                @RenderPosRow(Model.Onder, Model.Onder?.ReferentieVlak.ToString() ?? "?", "Onder", Model.Onder?.LaagHoofdwapening ?? 2)
         </tbody>
     </table>
     </div>
 }
 
 @code {
-    [Parameter] public PlaatWapening? Model { get; set; }
-    [Parameter] public EventCallback OnChanged { get; set; }
-    // Support @bind-Model
-    [Parameter] public EventCallback<PlaatWapening?> ModelChanged { get; set; }
+[Parameter] public PlaatWapening? Model { get; set; }
+[Parameter] public EventCallback OnChanged { get; set; }
+// Support @bind-Model
+[Parameter] public EventCallback<PlaatWapening?> ModelChanged { get; set; }
 
-    RenderFragment RenderPosRow(PlaatWapeningGroep? groep, string positie, string vlak, int laag) => @<tr>
+protected override void OnParametersSet()
+{
+    base.OnParametersSet();
+        
+    // Detecteer of Boven en Onder dezelfde groep instantie zijn (dit zou NIET moeten gebeuren)
+    if (Model?.Boven != null && Model?.Onder != null && ReferenceEquals(Model.Boven, Model.Onder))
+    {
+        Console.WriteLine("⚠️ WARNING: PlaatWapening.Boven en Onder delen dezelfde referentie!");
+    }
+        
+    // Detecteer of BasisWapening gedeeld wordt tussen groepen (dit zou NIET moeten gebeuren)
+    if (Model?.Boven?.BasisWapening != null && 
+        Model?.Onder?.BasisWapening != null && 
+        ReferenceEquals(Model.Boven.BasisWapening, Model.Onder.BasisWapening))
+    {
+        Console.WriteLine("⚠️ WARNING: BasisWapening wordt gedeeld tussen Boven en Onder!");
+            
+        // Fix: maak een clone voor Onder
+        Model.Onder.BasisWapening = Model.Onder.BasisWapening.Clone();
+    }
+        
+    // Detecteer of VerdeelWapening gedeeld wordt tussen groepen
+    if (Model?.Boven?.VerdeelWapening != null && 
+        Model?.Onder?.VerdeelWapening != null && 
+        ReferenceEquals(Model.Boven.VerdeelWapening, Model.Onder.VerdeelWapening))
+    {
+        Console.WriteLine("⚠️ WARNING: VerdeelWapening wordt gedeeld tussen Boven en Onder!");
+            
+        // Fix: maak een clone voor Onder
+        Model.Onder.VerdeelWapening = Model.Onder.VerdeelWapening.Clone();
+    }
+}
+
+RenderFragment RenderPosRow(PlaatWapeningGroep? groep, string positie, string vlak, int laag) =>@<tr>
         <td>@positie</td>
         @{
             var basis = groep?.BasisWapening;
@@ -46,9 +79,10 @@ else
         <td>
             @if (groep != null)
             {
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <input type="checkbox" checked="@(groep.LaagHoofdwapening == 1)" @onchange="@(e => ToggleLaagHoofdCheckbox(groep, e))" />
-                </div>
+                @groep.LaagHoofdwapening;
+                // <div style="display:flex; gap:8px; align-items:center;">
+                //     <input disabled type="checkbox" checked="@(groep.LaagHoofdwapening == 1)" @onchange="@(e => ToggleLaagHoofdCheckbox(groep, e))" />
+                // </div>
             }
         </td>
     </tr>;
@@ -56,7 +90,13 @@ else
     void SetHoofdTekst(PlaatWapeningGroep? groep, string tekst)
     {
         if (groep == null) return;
-        if (groep.BasisWapening == null) groep.BasisWapening = new WapeningContext();
+        
+        // Zorg dat we een nieuwe instantie hebben die niet gedeeld wordt
+        if (groep.BasisWapening == null)
+        {
+            groep.BasisWapening = new WapeningContext();
+        }
+        
         groep.BasisWapening.Tekst = tekst;
         groep.BasisWapening.SetZRef();
         OnChanged.InvokeAsync();
@@ -66,7 +106,13 @@ else
     void SetVerdeelTekst(PlaatWapeningGroep? groep, string tekst)
     {
         if (groep == null) return;
-        if (groep.VerdeelWapening == null) groep.VerdeelWapening = new WapeningContext();
+        
+        // Zorg dat we een nieuwe instantie hebben die niet gedeeld wordt
+        if (groep.VerdeelWapening == null)
+        {
+            groep.VerdeelWapening = new WapeningContext();
+        }
+        
         groep.VerdeelWapening.Tekst = tekst;
         groep.VerdeelWapening.SetZRef();
         OnChanged.InvokeAsync();

@@ -495,7 +495,7 @@ svg.has-warning line{
 [id^="svgContainer_"] svg * {
     /*fill: var(--fill-color);*/ /* switch tussen dark en light */
     
-    stroke: var(--accent-fill-rest); /* switch tussen dark en light */
+    /*stroke: var(--accent-fill-rest);*/ /* switch tussen dark en light */
 }
 
 /* Tekst buiten de preview */

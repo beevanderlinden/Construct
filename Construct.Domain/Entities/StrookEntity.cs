@@ -119,7 +119,7 @@ namespace Construct.Domain.Entities
             UpdateScheurwijdteCollectie();
             UpdateDwarskrachtCollectie();
 
-            ApplyBijlegWapening();
+            //ApplyBijlegWapening();
 
         }
 
@@ -175,11 +175,15 @@ namespace Construct.Domain.Entities
             if (Father == null) 
                 return;
 
-            WapBoven.ReferentieDekking = Father.PlaatDekking.Boven.DekkingToe;
-            WapBoven.Tekst = "r6-150";
-            
-            WapOnder.ReferentieDekking = Father.PlaatDekking.Onder.DekkingToe;
-            WapOnder.Tekst = "r8-150";
+            // ✅ Check of Father een BetonAssemblageEntity is (alleen beton heeft PlaatDekking)
+            if (Father is BetonAssemblageEntity betonFather)
+            {
+                WapBoven.ReferentieDekking = betonFather.PlaatDekking.Boven.DekkingToe;
+                WapBoven.Tekst = "r6-150";
+                
+                WapOnder.ReferentieDekking = betonFather.PlaatDekking.Onder.DekkingToe;
+                WapOnder.Tekst = "r8-150";
+            }
 
             PlaatWapening.Boven ??= new();
             PlaatWapening.Onder ??= new();
@@ -318,6 +322,9 @@ namespace Construct.Domain.Entities
 
             var beton = Father.Materiaal as BetonContext;
 
+            // ✅ Check of Father een BetonAssemblageEntity is
+            var betonFather = Father as BetonAssemblageEntity;
+
             ScheurwijdteCollectie.Clear();
             foreach (var fx in ForceCollectionFrequent)
             {
@@ -327,7 +334,7 @@ namespace Construct.Domain.Entities
                     Wapening = WapOnder,
                     Snedekrachten = fx.Forces,
                     Profiel = this.Profiel,
-                    Dekking = this.Father.PlaatDekking.Onder,
+                    Dekking = betonFather?.PlaatDekking.Onder, // ✅ Null-safe access
                     PosLabel = fx.Pos.ToString("0.000", CultureInfo.InvariantCulture),
                     
                 };

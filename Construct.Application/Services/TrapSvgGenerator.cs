@@ -33,6 +33,7 @@
     using static Tekla.Structures.Filtering.Categories.ReinforcingBarFilterExpressions;
     using BEAM = Mechanica.SimpleBeam;
     using SBL = Mechanica.LiggerSB;
+    using Plotly.Blazor.ConfigLib;
 
     public struct PuntXY
     {
@@ -300,7 +301,7 @@
                 if (showValue)
                 {
                     group.Add(new SvgText(
-                        $"{Math.Abs(pl.Magnitude):0.##}",
+                        $"{Math.Abs(pl.Magnitude):0.0}",
                         x: pl.Position,
                         y: yTop - 2/scale,
                         dominantBaseLine: "base",
@@ -370,7 +371,7 @@
 
                 // label = body-handle
                 string label = showValue
-                    ? $"{Math.Abs(Math.Max(dl.StartMagnitude, dl.EndMagnitude)):0.##}"
+                    ? $"{Math.Abs(Math.Max(Math.Abs(dl.StartMagnitude), Math.Abs(dl.EndMagnitude))):0.0}"
                     : dl.Name;
 
 
@@ -667,12 +668,14 @@
 
                         tableContent.Headers = [
                             new(){CellContent = new("naam")},
-                                            new(){CellContent = new("omschrijving")},
-                                            new(){CellContent = new("startpos.")},
-                                            new(){CellContent = new("eindpos.")},
-                                            new(){CellContent = new("startwaarde")},
-                                            new(){CellContent = new("eindwaarde")},
-                                            new(){CellContent = new("eenheid")},
+                            new(){CellContent = new("omschrijving")},
+                            new(){CellContent = new("van-tot")},              
+                            //new(){CellContent = new("van [m]")},
+                            //new(){CellContent = new("tot [m]")},
+                                            //new(){CellContent = new("start")},
+                                            //new(){CellContent = new("eind")},
+                            new(){CellContent = new("waarde")},
+                            new(){CellContent = new("eenheid")},
                             ];
 
 
@@ -682,10 +685,13 @@
                             [
                               new TableCellContent(l.Name, "20mm"),
                                               new TableCellContent(l.Description ?? "..." , "100mm"),
-                                              new TableCellContent(l.UserFriendlyStartPos, "12mm"),
-                                              new TableCellContent(l.UserFriendlyEndPos, "12mm"),
-                                              new TableCellContent(l.UserFriendlyStartValue, "12mm"),
-                                              new TableCellContent(l.UserFriendlyEndValue, "12mm"),
+                                              //new TableCellContent(l.UserFriendlyStartPos, "12mm"),
+                                              //new TableCellContent(l.UserFriendlyEndPos, "12mm"),
+                                              new TableCellContent(l.UserFriendlyFromTo, "24mm"),
+                                              new TableCellContent(l.UserFriendlyFromToValue, "12mm"),
+
+                                              //new TableCellContent(l.UserFriendlyStartValue, "12mm"),
+                                              //new TableCellContent(l.UserFriendlyEndValue, "12mm"),
                                               new TableCellContent(l.Unit, "12mm")
                             ]);
 
@@ -1991,7 +1997,7 @@
 
             // 💡maak de paden en maatlijnen
             List<Punt> punten = [new(), new(kolom.Breedte, 0), new(kolom.Breedte, -kolom.Hoogte), new(0, -kolom.Hoogte)];
-            List<SvgPath> svgPaths = [MakePath(punten)];
+            List<BaseSvg> svgPaths = [MakePath(punten)]; // ✅ BaseSvg i.p.v. SvgPath voor toekomstige uitbreidingen
             List<SvgDimLine> dimLines = TrapSvgGenerator.GenerateKolomDimLines(kolom);
             List<SvgText> teksten = [];
             // Bepaal de viewBox
@@ -2027,7 +2033,7 @@
         }
 
 
-        public static string GenerateBordesSvgXml(BordesEntity bordes, BoundingBox bb, double actualWidthPx, double actualHeightPx, string style = "width:auto; height:auto;", bool toonMaatlijnen = true)
+        public static string GenerateBordesSvgXml(BordesEntity bordes, BoundingBox bb, double actualWidthPx, double actualHeightPx, string style = "width:auto; height:auto;", bool toonMaatlijnen = true, bool toonWapening = false)
         {
             SvgHelper svgHelper = new();
             SvgDocumentInfo? info = new()
@@ -2041,7 +2047,16 @@
 
             // 💡maak de paden en maatlijnen
             List<Punt> punten = [new(),new(bordes.Lengte, 0), new(bordes.Lengte, -bordes.Breedte), new(0, -bordes.Breedte) ];
-            List<SvgPath> svgPaths = [MakePath(punten)];
+            var basisPath = MakePath(punten);
+            
+            // Als wapening getoond wordt, geometrie transparant maken
+            if (toonWapening)
+            {
+                basisPath.FillOpacity = 0.1;
+                basisPath.Opacity = 0.1;
+            }
+            
+            List<BaseSvg> svgPaths = [basisPath]; // ✅ Wijziging: BaseSvg i.p.v. SvgPath voor wapening support
 
             if(bordes.Trap1?.AansluitendElement != null)
             {
@@ -2055,6 +2070,13 @@
 
                 var path1 = MakePath(trap1);
                 path1.Fill = "yellow";
+                
+                // Transparant maken bij wapening weergave
+                if (toonWapening)
+                {
+                    path1.FillOpacity = 0.1;
+                    path1.Opacity = 0.1;
+                }
 
                 svgPaths.Add(path1);
             }
@@ -2070,6 +2092,14 @@
 
                 var path2 = MakePath(trap2);
                 path2.Fill = "yellow";
+                
+                // Transparant maken bij wapening weergave
+                if (toonWapening)
+                {
+                    path2.FillOpacity = 0.1;
+                    path2.Opacity = 0.1;
+                }
+                
                 svgPaths.Add(path2);
             }
 
@@ -2085,6 +2115,13 @@
             vsPath.FillOpacity = 0.1;
             vsPath.Stroke = "red";
             vsPath.StrokeDashArray = "60,20,10,20";
+            
+            // Bij wapening: versterkte strook ook transparant
+            if (toonWapening)
+            {
+                vsPath.Opacity = 0.1;
+            }
+            
             svgPaths.Add(vsPath);
 
 
@@ -2093,6 +2130,13 @@
             var hartPath = MakePath(hart);
             hartPath.StrokeWidth = 0.5;
             hartPath.StrokeDashArray = "2,10";
+            
+            // Bij wapening: hartlijn ook transparant
+            if (toonWapening)
+            {
+                hartPath.Opacity = 0.1;
+            }
+            
             svgPaths.Add(hartPath);
 
             var yStart = bordes.Trap1?.Breedte ??  100;
@@ -2104,6 +2148,13 @@
             opLinksPath.Stroke = "red";
             opLinksPath.StrokeDashArray = "5,5";
             opLinksPath.Fill = "none";
+            
+            // Bij wapening: oplegging ook transparant
+            if (toonWapening)
+            {
+                opLinksPath.Opacity = 0.1;
+            }
+            
             svgPaths.Insert(0, opLinksPath);
 
             List<Punt> opRechts = [new(bordes.Lengte, -yStart), new(bordes.Lengte -breedteOplegging, -yStart), new(bordes.Lengte - breedteOplegging, -bordes.Breedte), new(bordes.Lengte, -bordes.Breedte)];
@@ -2111,6 +2162,13 @@
             opRechtsPath.Stroke = "red";
             opRechtsPath.StrokeDashArray = "5,5";
             opRechtsPath.Fill = "none";
+            
+            // Bij wapening: oplegging ook transparant
+            if (toonWapening)
+            {
+                opRechtsPath.Opacity = 0.1;
+            }
+            
             svgPaths.Insert(0, opRechtsPath);
 
 
@@ -2121,9 +2179,28 @@
             double length = bordes.Lengte * 0.001;
             double position = length * 0.5;
 
+            // ✅ Initialiseer dimLines en teksten
+            List<SvgDimLine> dimLines = [];
+            List<SvgText> teksten = [];
 
-            List<SvgDimLine> dimLines = TrapSvgGenerator.GenerateBordesDimLines(bordes);
-            List<SvgText> teksten = TrapSvgGenerator.GenerateBordesSvgText(bordes);
+            // ✅ Wapening en verdeellijnen alleen toevoegen als toonWapening = true
+            if (toonWapening)
+            {
+                var (wapeningElements, verdeelLijnen) = TrapSvgGenerator.GenerateBordesWapeningMetVerdeelLijnen(
+                    bordes, 
+                    toonVerdeelLijnen: true,
+                    verdeelLijnXPositie: 0.15); // 15% van de lengte vanaf links
+                
+                svgPaths.AddRange(wapeningElements);
+                dimLines.AddRange(verdeelLijnen);
+            }
+
+            // ✅ Normale maatlijnen en teksten NIET toevoegen als wapening getoond wordt
+            if (!toonWapening && toonMaatlijnen)
+            {
+                dimLines.AddRange(TrapSvgGenerator.GenerateBordesDimLines(bordes));
+                teksten = TrapSvgGenerator.GenerateBordesSvgText(bordes);
+            }
 
             // Bepaal de viewBox
             var x = Math.Min(bb.MinX, 0);
@@ -2150,6 +2227,7 @@
             var status = "";
             //bordes.Akkoord ? "" : "has-warning";
 
+            // ✅ Geen OfType<SvgPath> filter meer nodig! GetSvgStringOptimal accepteert nu BaseSvg
             var svg2 = svgHelper.GetSvgStringOptimal(info, vbWithMargins, svgPaths, dimLines, teksten, actualWidthPx, actualHeightPx, style, status);
 
 
@@ -2373,6 +2451,359 @@
 
 
             return list;
+        }
+
+
+        /// <summary>
+        /// Genereert wapening als SVG elementen voor een bordes.
+        /// Toont wapening voor basisstrook (onder) en versterkte strook (boven).
+        /// </summary>
+        /// <param name="bordes">Het bordes waarvoor wapening wordt gegenereerd</param>
+        /// <param name="toonVerdeelLijnen">Toon maatlijnen voor wapeningsposities</param>
+        /// <param name="verdeelLijnXPositie">X-positie voor verticale verdeellijnen (relatief: 0.0=links, 0.5=midden, 1.0=rechts)</param>
+        /// <returns>Tuple met wapening elementen en optionele verdeellijnen</returns>
+        public static (List<BaseSvg> WapeningElements, List<SvgDimLine> VerdeelLijnen) GenerateBordesWapeningMetVerdeelLijnen(
+            BordesEntity bordes, 
+            bool toonVerdeelLijnen = true,
+            double verdeelLijnXPositie = 0.15)
+        {
+            List<BaseSvg> wapeningElements = [];
+            List<SvgDimLine> verdeelLijnen = [];
+            double scale = 1.0; // teksten worden runtime verschaald, hier op 1 laten staan.
+
+            // ✅ DEBUG: Log om te zien of deze methode wordt aangeroepen
+            Console.WriteLine($"[DEBUG] GenerateBordesWapeningMetVerdeelLijnen aangeroepen voor bordes {bordes.Merk}");
+            Console.WriteLine($"[DEBUG] PlaatWapening is null: {bordes.PlaatWapening == null}");
+            
+            if (bordes.PlaatWapening == null)
+            {
+                Console.WriteLine($"⚠️ [DEBUG] PlaatWapening is NULL! Geen wapening toegevoegd.");
+                return (wapeningElements, verdeelLijnen);
+            }
+            
+            Console.WriteLine($"[DEBUG] PlaatWapening.Onder is null: {bordes.PlaatWapening.Onder == null}");
+            Console.WriteLine($"[DEBUG] PlaatWapening.Boven is null: {bordes.PlaatWapening.Boven == null}");
+
+            // Bereken X-positie voor verticale verdeellijnen
+            double xVerdeel = verdeelLijnXPositie;
+
+            // ===============================================
+            // 1️⃣ BASISSTROOK WAPENING (ONDER)
+            // ===============================================
+            if (bordes.PlaatWapening?.Onder?.BasisWapening != null)
+            {
+                var wapOnder = bordes.PlaatWapening.Onder.BasisWapening;
+                double yBasis = -bordes.Breedte + 2 * bordes.PlaatDekking.Onder.DekkingToe +150; 
+                double dekking = wapOnder.ReferentieDekking;
+
+                // Parse wapening tekst (bijv. "r8-150" of "r8-150+r6-500")
+                string laagOnder = wapOnder.ToStringWithLaag() ?? "?";
+                string laagBoven = "";
+                string wapeningTekst = $"o:{wapOnder}";
+
+                
+                if (bordes.PlaatWapening?.Boven?.BasisWapening != null)
+                {
+                    var wapBoven = bordes.PlaatWapening.Boven.BasisWapening;
+                    laagBoven = wapBoven.ToStringWithLaag() ?? "?";
+                    
+                    if (wapBoven.ToString() != wapOnder.ToString())
+                    {
+                        wapeningTekst += $" b:{wapBoven}";
+                    }
+                    else
+                    {
+                        wapeningTekst = $"{wapBoven}";
+                    }
+
+
+                }
+
+
+                // Hoofdwapening lijn (horizontaal)
+                var hoofdwapeningLijn = new SvgLine
+                {
+                    X1 = dekking,
+                    Y1 = yBasis,
+                    X2 = bordes.Lengte - dekking,
+                    Y2 = yBasis,
+                    Stroke = "black",
+                    StrokeWidth = 2,
+                };
+                wapeningElements.Add(hoofdwapeningLijn);
+
+                // Wapeningsnotatie tekst
+                var wapTekst = new SvgText(
+                    wapeningTekst,
+                    x: bordes.Lengte / 2,
+                    y: yBasis,
+                    scale: scale
+                )
+                {
+                    Anchor = "middle",
+                    DominantBaseLine = "base",
+                    Fill = "red",
+                    DY = -10
+                };
+                wapeningElements.Add(wapTekst);
+
+                // Wapeningsnotatie tekst
+                var laagText = new SvgText(
+                    laagOnder,
+                    x: bordes.Lengte / 4,
+                    y: yBasis,
+                    scale: scale
+                )
+                {
+                    Anchor = "middle",
+                    DominantBaseLine = "base",
+                    Fill = "red",
+                    DY = 0,
+                };
+                wapeningElements.Add(laagText);
+
+                // Wapeningsnotatie tekst
+                var laagBovenText = new SvgText(
+                    laagBoven,
+                    x: bordes.Lengte / 4,
+                    y: yBasis,
+                    scale: scale
+                )
+                {
+                    Anchor = "middle",
+                    DominantBaseLine = "hanging",
+                    Fill = "red",
+                    DY = -4,
+                    DX = 24
+                };
+                wapeningElements.Add(laagBovenText);
+
+
+
+
+
+
+                // ✅ NIEUW: Verdeellijn (verticale maatlijn) voor wapeningspositie
+                if (toonVerdeelLijnen)
+                {
+                    var verdeelLijn = new SvgDimLine
+                    {
+                        Mode = DimLineMode.Vertical,
+                        X1 = xVerdeel,
+                        Y1 = 0, 
+                        X2 = xVerdeel,
+                        Y2 = -bordes.Breedte,
+                        Offset = 0,
+                        OffsetLines = 2,
+                        Text = $"basis",
+                        StrokeWidth = 0.5,
+                        StrokeColor = "red"
+                    };
+                    verdeelLijnen.Add(verdeelLijn);
+                }
+            }
+
+            // ===============================================
+            // 2️⃣ VERSTERKTE STROOK WAPENING (BOVEN)
+            // ===============================================
+            if (bordes.Trap1.AansluitendElement != null || 
+                bordes.Trap2.AansluitendElement != null)
+            {
+                var wapening = bordes.BijlegWapening;
+                double yVSstart = -bordes.Trap1.Breedte;
+                double yVSend = yVSstart - bordes.BreedteVersterkteStrook;
+                double yVS = yVSstart - 2 * bordes.PlaatDekking.Onder.DekkingToe;
+                double dekking = bordes.PlaatDekking.Onder.DekkingToe;
+
+                string wapeningTekst = wapening?.ToString() ?? "NULL";
+                string laagTekst = wapening?.ToStringWithLaag() ?? "";
+
+                // Hoofdwapening lijn versterkte strook
+                var vsWapeningLijn = new SvgLine
+                {
+                    X1 = dekking,
+                    Y1 = yVS,
+                    X2 = bordes.Lengte - dekking,
+                    Y2 = yVS,
+                    Stroke = "darkred",
+                    StrokeWidth = 2,
+                };
+                wapeningElements.Add(vsWapeningLijn);
+
+                // Wapeningsnotatie tekst
+                var wapTekst = new SvgText(
+                    wapeningTekst,
+                    x: bordes.Lengte / 2,
+                    y: yVS,
+                    scale: scale
+                )
+                {
+                    Anchor = "middle",
+                    DominantBaseLine = "base",
+                    Fill = "darkred",
+                    DY = -10,
+                };
+                wapeningElements.Add(wapTekst);
+
+                var bijlegLaag = new SvgText(
+                    laagTekst,
+                    x: bordes.Lengte / 4,
+                    y: yVS,
+                    scale: scale
+                )
+                {
+                    Anchor = "middle",
+                    DominantBaseLine = "base",
+                    Fill = "darkred",
+                };
+                wapeningElements.Add(bijlegLaag);
+
+
+
+                // ✅ NIEUW: Verdeellijn voor versterkte strook wapening
+                if (toonVerdeelLijnen)
+                {
+                    var verdeelLijn = new SvgDimLine
+                    {
+                        Mode = DimLineMode.Vertical,
+                        X1 = xVerdeel,
+                        Y1 = yVSstart,
+                        X2 = xVerdeel,
+                        Y2 = yVSend,
+                        Offset = 0,
+                        OffsetLines = 1,
+                        Text = $"v.s.",
+                        StrokeWidth = 0.5,
+                        StrokeColor = "darkred",
+                        
+                    };
+                    verdeelLijnen.Add(verdeelLijn);
+                }
+            }
+
+            // ===============================================
+            // 3️⃣ BIJLEGSTAVEN ONDER TRAPPEN (indien van toepassing)
+            // ===============================================
+            if (bordes.Trap1?.AansluitendElement != null && bordes.PlaatWapening?.Onder?.BasisWapening != null)
+            {
+                var c = bordes.Trap1;
+                var wap = bordes.PlaatWapening.Onder.BasisWapening;
+                
+                int aantalBijlegStaven = (int)wap.AantalBijlegStaven;
+                double bijlegDiameter = wap.DiameterBijlegStaven;
+                
+                if (aantalBijlegStaven > 0)
+                {
+                    double bijlegSpacing = c.Lengte / (aantalBijlegStaven + 1);
+                    
+                    for (int i = 1; i <= aantalBijlegStaven; i++)
+                    {
+                        double xBijleg = c.Randafstand + i * bijlegSpacing;
+                        double yStart = -c.Breedte / 2.0;
+                        double yEnd = -(c.Breedte + bordes.BreedteVersterkteStrook / 2.0);
+                        
+                        // Verticale lijn van basisstrook naar versterkte strook
+                        var bijlegLijn = new SvgLine
+                        {
+                            X1 = xBijleg,
+                            Y1 = yStart,
+                            X2 = xBijleg,
+                            Y2 = yEnd,
+                            Stroke = "orange",
+                            StrokeWidth = bijlegDiameter / 2.0,
+                            StrokeDashArray = "5,3"
+                        };
+                        wapeningElements.Add(bijlegLijn);
+
+                        // ✅ NIEUW: Horizontale verdeellijn voor bijlegstaven (alleen voor eerste staaf)
+                        if (toonVerdeelLijnen && i == 1)
+                        {
+                            double yVerdeelBijleg = (yStart + yEnd) / 2.0;
+                            
+                            var bijlegVerdeelLijn = new SvgDimLine
+                            {
+                                Mode = DimLineMode.Horizontal,
+                                X1 = c.Randafstand,
+                                Y1 = yVerdeelBijleg,
+                                X2 = c.Randafstand + c.Lengte,
+                                Y2 = yVerdeelBijleg,
+                                Offset = 0,
+                                OffsetLines = 1,
+                                Text = $"{aantalBijlegStaven}Ø{bijlegDiameter:0.#}",
+                                StrokeWidth = 0.5,
+                                StrokeColor = "orange"
+                            };
+                            verdeelLijnen.Add(bijlegVerdeelLijn);
+                        }
+                    }
+                }
+            }
+
+            // Herhaal voor Trap2
+            if (bordes.Trap2?.AansluitendElement != null && bordes.PlaatWapening?.Onder?.BasisWapening != null)
+            {
+                var c = bordes.Trap2;
+                var wap = bordes.PlaatWapening.Onder.BasisWapening;
+                
+                int aantalBijlegStaven = (int)wap.AantalBijlegStaven;
+                double bijlegDiameter = wap.DiameterBijlegStaven;
+                
+                if (aantalBijlegStaven > 0)
+                {
+                    double bijlegSpacing = c.Lengte / (aantalBijlegStaven + 1);
+                    
+                    for (int i = 1; i <= aantalBijlegStaven; i++)
+                    {
+                        double xBijleg = (bordes.Lengte - c.Randafstand - c.Lengte) + i * bijlegSpacing;
+                        double yStart = -c.Breedte / 2.0;
+                        double yEnd = -(c.Breedte + bordes.BreedteVersterkteStrook / 2.0);
+                        
+                        var bijlegLijn = new SvgLine
+                        {
+                            X1 = xBijleg,
+                            Y1 = yStart,
+                            X2 = xBijleg,
+                            Y2 = yEnd,
+                            Stroke = "orange",
+                            StrokeWidth = bijlegDiameter / 2.0,
+                            StrokeDashArray = "5,3"
+                        };
+                        wapeningElements.Add(bijlegLijn);
+
+                        // ✅ NIEUW: Horizontale verdeellijn voor bijlegstaven (alleen voor eerste staaf)
+                        if (toonVerdeelLijnen && i == 1)
+                        {
+                            double yVerdeelBijleg = (yStart + yEnd) / 2.0;
+                            
+                            var bijlegVerdeelLijn = new SvgDimLine
+                            {
+                                Mode = DimLineMode.Horizontal,
+                                X1 = bordes.Lengte - c.Randafstand - c.Lengte,
+                                Y1 = yVerdeelBijleg,
+                                X2 = bordes.Lengte - c.Randafstand,
+                                Y2 = yVerdeelBijleg,
+                                Offset = 0,
+                                OffsetLines = 1,
+                                Text = $"{aantalBijlegStaven}Ø{bijlegDiameter:0.#}",
+                                StrokeWidth = 0.5,
+                                StrokeColor = "orange"
+                            };
+                            verdeelLijnen.Add(bijlegVerdeelLijn);
+                        }
+                    }
+                }
+            }
+
+            return (wapeningElements, verdeelLijnen);
+        }
+
+        /// <summary>
+        /// Backwards compatible wrapper - gebruikt de nieuwe methode maar retourneert alleen wapening elementen
+        /// </summary>
+        public static List<BaseSvg> GenerateBordesWapening(BordesEntity bordes)
+        {
+            var (wapeningElements, _) = GenerateBordesWapeningMetVerdeelLijnen(bordes, toonVerdeelLijnen: false);
+            return wapeningElements;
         }
 
 

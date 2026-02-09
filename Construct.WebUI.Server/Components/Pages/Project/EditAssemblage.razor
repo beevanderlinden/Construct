@@ -62,13 +62,34 @@
 
                         @if (Model is BordesEntity bordes)
                         {
-                            <FluentTab Label="platen">
-                                <Header><FluentIcon Value="@(new Icons.Regular.Size32.Clipboard())" />platen</Header>
+                            <FluentTab Label="plaatwapening">
+                                <Header><FluentIcon Value="@(new Icons.Regular.Size32.Clipboard())" />wapening</Header>
                                 <Content>
-
+                                    <h3>Plaatwapening</h3>
                                     <PlaatWapeningTabelPosComponent @bind-Model="@bordes.PlaatWapening" />
 
-                                    <p>Plaatwapening: @bordes.PlaatWapening</p>
+                                    
+
+
+
+                                    <h2>Bijlegwapening</h2>
+                                    @if (bordes.BijlegWapening != null)
+                                    {
+                                        <KaskonInputContainer Label="bijleg onder">
+                                            <FluentTextField @bind-Value="@bordes.BijlegWapening.Tekst"></FluentTextField>
+                                        </KaskonInputContainer>
+                                        <KaskonInputContainer Label="laag">
+                                            @bordes.BijlegWapening.LaagNummer
+                                        </KaskonInputContainer>
+
+                                    }
+                                  
+
+
+
+
+
+                                   @*  <p>Plaatwapening: @bordes.PlaatWapening</p>
                                     <p>Boven basis: @bordes.PlaatWapening?.Boven?.BasisWapening.Tekst</p>
                                     <p>Boven bijleg: n.v.t.</p>
 
@@ -90,7 +111,7 @@
 
 
 
-                                    <p>Plaatwapening @bordes.PlaatWapening</p>
+                                    <p>Plaatwapening @bordes.PlaatWapening</p> *@
 
                                 </Content>
                             </FluentTab>
@@ -141,14 +162,10 @@
                         @Model.Merk
                     </div>
                     <AssemblageSvg @bind-Model=Model Style="width:auto; height:auto; border:solid 0px;" ToonDownloadButtons="!true" />
+                    <AssemblageSvg @bind-Model=Model Style="width:auto; height:auto; border:solid 0px;" ToonDownloadButtons="!true" ToonWapening="true" />
 
                     @* <StrookSvg @bind-Strook="SelectedStrook" Style="width:auto; height:auto; border: solid 1px red;" /> *@
 
-                    @if (SelectedStrook != null)
-                    {
-                        <span>@SelectedStrook.Naam</span>
-                        
-                    }
 
                 </div>
             </Panel2>
