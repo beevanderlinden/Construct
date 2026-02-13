@@ -1,4 +1,5 @@
 ﻿@using Construct.Application.Interfaces
+@using Microsoft.Extensions.Hosting
 @rendermode InteractiveServer
 @inject IProjectStateService ProjectState
 @inject IProjectService ProjectService
@@ -8,6 +9,7 @@
 @inject IToastService ToastService
 @inject ILogService Log
 @inject NavigationManager NavigationManager
+@inject IHostEnvironment HostEnvironment
 
 @implements IDisposable
 
@@ -49,6 +51,14 @@
 
                     </FluentNavGroup>
                 }
+
+                @if (HostEnvironment.IsDevelopment())
+                {
+                    <FluentNavGroup Title="Examples" Icon="@(new Icons.Regular.Size28.Teaching())" Tooltip="Development voorbeelden">
+                        <FluentNavLink Href="/examples/balk-demo" Icon="@(new Icons.Regular.Size20.RectangleLandscape())">Betonbalk Doorsnede</FluentNavLink>
+                    </FluentNavGroup>
+                }
+
      
 
                 @if (projectLoaded)

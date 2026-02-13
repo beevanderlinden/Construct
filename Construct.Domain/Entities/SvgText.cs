@@ -70,7 +70,7 @@ namespace Construct.Domain.Entities
             double x = 0, double y = 0,
             double x2 = double.NaN, double y2 = double.NaN,
             double angle = 0,
-            double scale = 100,
+            double scale = 1,
             string anchor = "middle",
             double? dx = null,
             double? dy= null,
@@ -183,13 +183,27 @@ namespace Construct.Domain.Entities
             
             if (FontFamily != null)
                 sb.AppendLine(@$" font-family=""{FontFamily}""");
+            
             sb.AppendLine(@$" fill=""{Fill}""");
-            if(Angle != 0)
+
+            if (DX.HasValue)
+            {
+                sb.AppendLine($@" dx=""{DX:0.###}""");
+            }
+            if (DY.HasValue)
+            {
+                sb.AppendLine($@" dy=""{DY:0.###}""");
+            }
+
+
+            if (Angle != 0)
             {
                 sb.AppendLine(@$" transform=""rotate({Angle.ToSvg()},{X.ToSvg()},{Y.ToSvg()})""");
             }
 
             sb.AppendLine($@">");
+
+           
 
             //sb.AppendLine(
             //    $@"<text x=""{X.ToSvg()}"" y=""{Y.ToSvg()}"" text-anchor=""{Anchor}"" font-size=""{textSize.ToSvg()}"" 
@@ -231,29 +245,27 @@ namespace Construct.Domain.Entities
         /// <summary>
         /// Renderen inclusief inner text
         /// </summary>
+        public string Render(double scale)
+        {
+            // Gebruik ToSvg(scale) voor correcte schaling
+            return ToSvg(scale);
+        }
+
+        /// <summary>
+        /// Rendert tekst zonder schaling (tekst schaalt mee met SVG).
+        /// Dit is de standaard Render() van BaseSvg.
+        /// </summary>
         public override string Render()
         {
-            Attributes.Clear();
-            ApplyAttributes();
+            // Gebruik interne Scale property als deze is ingesteld
+            //if (Scale > 0 && Scale != 1.0)
+            //{
+            //    return ToSvg(Scale);
+            //}
 
-            var sb = new StringBuilder();
-            sb.Append('<').Append(TagName);
-
-            // alle attribuut key/value behalve __InnerText
-            foreach (var kv in Attributes.Where(kv => kv.Key != "__InnerText"))
-            {
-                sb.Append(' ').Append(kv.Key).Append("=\"").Append(kv.Value).Append('"');
-            }
-
-            sb.Append('>');
-
-            // inner text
-            if (Attributes.TryGetValue("__InnerText", out var inner))
-                sb.Append(inner);
-
-            sb.Append("</").Append(TagName).Append('>');
-
-            return sb.ToString();
+            // Anders gewone render zonder schaling (scale = 1)
+            //return base.Render();
+            return ToSvg(1.0);
         }
 
         public override BoundingBox GetBoundingBox()

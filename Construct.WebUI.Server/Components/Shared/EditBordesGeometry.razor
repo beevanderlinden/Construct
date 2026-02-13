@@ -33,6 +33,32 @@
                            Step="50" Min="200" Max="500"></FluentNumberField>
     </KaskonInputContainer>
 
+    <KaskonInputContainer Label="afwerking [kN/m²]" >
+        <FluentNumberField TValue="double"
+                           @bind-Value="Model.AfwerkingVlaklast"
+                           @bind-Value:after="OnModelChanged"
+                           Step="0.1" Min="0" Max="5"></FluentNumberField>
+    </KaskonInputContainer>
+
+
+    <KaskonInputContainer Label="dekking c<sub>prov,boven</sub> [mm]">
+        <FluentNumberField TValue="double"
+                           @bind-Value="Model.PlaatDekking.Boven.DekkingToe"
+                           @bind-Value:after="OnModelChanged"
+                           Step="1" Min="15" Max="70"></FluentNumberField>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="dekking c<sub>prov,onder</sub> [mm]">
+        <FluentNumberField TValue="double"
+                           @bind-Value="Model.PlaatDekking.Onder.DekkingToe"
+                           @bind-Value:after="OnModelChanged"
+                           Step="1" Min="15" Max="70"></FluentNumberField>
+    </KaskonInputContainer>
+
+
+
+
+
     <br/>
    
     <KaskonInputContainer Label="trap links">

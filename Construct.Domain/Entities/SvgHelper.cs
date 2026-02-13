@@ -215,13 +215,27 @@
         }
 
        
+       
         public string GetSvgContentXml(IEnumerable<BaseSvg> svgObjects)
         {
             var sb = new StringBuilder();
             sb.AppendLine(AddDefs());
+            
             foreach (var tag in svgObjects)
             {
-                sb.AppendLine(tag.Render());
+                // Als het een SvgDimLineGroup is, vouw deze uit naar individuele DimLines
+                if (tag is SvgDimLineGroup dimGroup)
+                {
+                    var dimLines = dimGroup.GenerateDimLines();
+                    foreach (var dimLine in dimLines)
+                    {
+                        sb.AppendLine(dimLine.Render());
+                    }
+                }
+                else
+                {
+                    sb.AppendLine(tag.Render());
+                }
             }
 
             return sb.ToString();
@@ -358,9 +372,16 @@
                 
             }
 
+
+            foreach (var dimLine in dimLines)
+            {
+                sb.AppendLine(dimLine.Render(scale));
+            }
+
             // DimLines + tekst
             foreach (var d in dimLines)
             {
+                continue; // bewaar code totdat Render() en Render(scale) werkt!
                 var (x1o, y1o, x2o, y2o, angle) = d.GetOffsetPoints(12, 1.5, scale);
 
                 sb.AppendLine($@"<line 
@@ -373,16 +394,13 @@
                 vector-effect=""non-scaling-stroke""
                 />");
 
-                //double textY = d.MidY - textOffset; // omhoog = kleinere Y in SVG (Y groeit naar beneden)
 
                 // text boven de maatlijn
                 var (midX, midY) = d.GetMidPoint(12, 1.5, scale);
 
-
                 sb.AppendLine(
                     $@"<text x=""{midX.ToSvg()}"" y=""{(midY - 2 / scale).ToSvg()}"" 
                     text-anchor=""middle"" 
-                    
                     font-size=""{textSize.ToSvg()}"" 
                     font-family=""Arial"" 
                     transform=""rotate({d.Angle.ToSvg()},{midX.ToSvg()},{midY.ToSvg()})"">
@@ -401,13 +419,11 @@
                     x2=""{x2o.ToSvg()}"" y2=""{y2o.ToSvg()}"" 
                     stroke=""{d.StrokeColor}"" stroke-width=""0.5"" stroke-dasharray=""2,2"" vector-effect=""non-scaling-stroke""/>");
                 }
-
             }
-
 
             foreach (var t in texts)
             {
-                sb.Append(t.ToSvg(scale));
+                sb.Append(t.Render(scale));
             }
 
 

@@ -28,6 +28,10 @@
                             </Content>
                         </FluentTab>
 
+
+                            
+
+
                         <FluentTab Label="geometrie">
                             <Header>
                                 <FluentIcon Value="@(new Icons.Regular.Size32.Ruler())" />geometrie
@@ -36,6 +40,12 @@
                                 @if (Model is BordesEntity bordes)
                                 {
                                     <EditBordesGeometry Model="bordes" />
+
+
+
+                                    <EurocodeRazorClassLibrary.Beton.EurocodeBetonDuurzaamheid @bind-Model="@bordes.PlaatDekking.Boven" OnStateChanged="StateHasChanged" />
+                                    <EurocodeRazorClassLibrary.Beton.EurocodeBetonDuurzaamheid @bind-Model="@bordes.PlaatDekking.Boven" OnStateChanged="StateHasChanged" />
+
                                 }
                                 else if (Model is SteekTrapEntity steektrap)
                                 {
@@ -44,16 +54,6 @@
                                 else if (Model is LiggerEntity ligger)
                                 {
                                     <Construct.WebUI.Server.Components.Beam.BeemLoadCases Beam="ligger.Beam"/>
-
-                                   @*  foreach (var bg in ligger.Beam.LoadContext.BelastingGevallen)
-                                    {
-                                        
-                                        <Construct.WebUI.Server.Components.Beam.BeemLoadCase Beam="@ligger.Beam"
-                                                                                             LoadCase="bg" />
-                                    } *@
-
-
-                                    
                                 }
 
 
@@ -70,6 +70,10 @@
 
                                     
 
+                                    <PlaatProfielVisualisatie Wapening="@bordes.PlaatWapening"
+                                                              Breedte="500"
+                                                              Hoogte="@bordes.Hoogte"
+                                                              MaxDisplayHeight="300" />
 
 
                                     <h2>Bijlegwapening</h2>
@@ -84,48 +88,11 @@
 
                                     }
                                   
-
-
-
-
-
-                                   @*  <p>Plaatwapening: @bordes.PlaatWapening</p>
-                                    <p>Boven basis: @bordes.PlaatWapening?.Boven?.BasisWapening.Tekst</p>
-                                    <p>Boven bijleg: n.v.t.</p>
-
-                                    @if(bordes.PlaatWapening?.Onder is PlaatWapeningGroep g)
-                                    {
-                                        <p>basis: @g.BasisWapening.Tekst (@g.BasisWapening.AsBasis.ToString("0 mm²") = @g.BasisWapening.As.ToString("0 mm²"))</p>
-                                        <p>bijleg?: n.v.t.</p>
-
-                                    }
-
-                                    <p>Onder basis: @bordes.PlaatWapening?.Onder?.BasisWapening.Tekst</p>
-                                    <p>Onder bijleg: n.v.t.</p>
-                                    <p>Onder laag hoofdwap.: @bordes.PlaatWapening?.Onder?.LaagHoofdwapening</p>
-                                    <p>Onder c<sub>onder,laag1</sub> : @bordes.PlaatWapening?.Onder?.Dekking.DekkingToe.ToString("0 mm")</p>
-                                    <p>Onder c<sub>onder,laag2</sub> : @bordes.PlaatWapening?.Onder?.Dekking.DekkingToe.ToString("0 mm")</p>
-
-                                    <p>Onder Ø<sub>EQ</sub> : @bordes.PlaatWapening?.Onder?.BasisWapening.GemiddeldeDiameter.ToString("0.# mm")</p>
-                                    <p>Onder Ø<sub>verdeel</sub> : @bordes.PlaatWapening?.Onder?.DiameterVerdeel.ToString("0.# mm")</p>
-
-
-
-                                    <p>Plaatwapening @bordes.PlaatWapening</p> *@
-
                                 </Content>
                             </FluentTab>
                         }
 
-                        <FluentTab Label="toetsen">
-                            <Header><FluentIcon Value="@(new Icons.Regular.Size32.CheckmarkCircle())" />toetsing</Header>
-                            <Content>
-                                @foreach (var t in Model.Toetsen)
-                                {
-                                    <EurocodeRazorClassLibrary.Shared.MyGridFor Model="t" />
-                                }
-                            </Content>
-                        </FluentTab>
+                       
 
                        
 

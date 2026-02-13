@@ -3,7 +3,7 @@
 <div class="print-navmenu @(IsVisible ? "visible" : "hidden")">
     <input type="checkbox" title="Menu expand/collapse toggle" id="print-navmenu-toggle" class="print-navmenu-icon" @bind="expanded" />
     <label for="print-navmenu-toggle" class="print-navmenu-icon">
-        <FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" />
+        <FluentIcon Value="@(new Icons.Regular.Size32.Navigation())" Color="Color.Fill" />
     </label>
     
     <nav class="print-sitenav" aria-labelledby="print-menu">
@@ -16,42 +16,32 @@
 
             <FluentNavLink OnClick="@HandlePrintClick"
                           Disabled="@(!IsVisible)"
-                          Icon="@(new Icons.Regular.Size20.Print())"
-                          IconColor="Color.Accent"
-                          Title="Afdrukken">
+                          Icon="@(new Icons.Regular.Size32.Print())"
+                          IconColor="Color.Accent">
                 Afdrukken
             </FluentNavLink>
 
             <FluentDivider Style="margin: 8px 0;" />
 
             <FluentNavLink OnClick="@HandleDownloadRtfClick"
-                          Icon="@(new Icons.Regular.Size20.ArrowDownload())"
-                          IconColor="Color.Accent"
-                          Title="Download RTF bestand">
+                          Icon="@(new Icons.Regular.Size32.ArrowDownload())"
+                          IconColor="Color.Accent">
                 Download RTF
             </FluentNavLink>
 
             <FluentNavLink OnClick="@HandleRefreshClick"
-                          Icon="@(new Icons.Regular.Size20.ArrowRedo())"
-                          IconColor="Color.Accent"
-                          Title="Document opnieuw genereren">
+                          Icon="@(new Icons.Regular.Size32.ArrowRedo())"
+                          IconColor="Color.Accent">
                 Bijwerken
             </FluentNavLink>
 
             <FluentNavLink OnClick="@HandleToggleInfoClick"
-                          Icon="@(new Icons.Regular.Size20.Info())"
-                          IconColor="Color.Accent"
-                          Title="@InfoButtonText">
+                          Icon="@(new Icons.Regular.Size32.Info())"
+                          IconColor="Color.Accent">
                 @InfoButtonText
             </FluentNavLink>
 
-            <FluentDivider Style="margin: 8px 0;" />
-
-            <FluentNavLink OnClick="@HandleTestMarkdownClick"
-                          Icon="@(new Icons.Regular.Size20.Document())"
-                          Title="Test markdown document">
-                Test MD
-            </FluentNavLink>
+           
 
         </FluentNavMenu>
     </nav>
@@ -187,7 +177,7 @@
     [Parameter] public EventCallback OnToggleInfoClick { get; set; }
     [Parameter] public EventCallback OnTestMarkdownClick { get; set; }
 
-    private bool expanded = true;
+    private bool expanded = !true;
 
     // Wrapper methods die de expanded state behouden
     private async Task HandlePrintClick()

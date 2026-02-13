@@ -12,14 +12,26 @@ else
         <thead>
             <tr>
                 <th>Positie</th>
+                <th>c<sub>1</sub> / c<sub>2</sub></th>
                 <th>Hoofdwapening</th>
                 <th>Verdeelwapening</th>
-                <th>Hoofdwap. in 1e laag?</th>
+                <th>Laag hoofdwapening</th>
             </tr>
         </thead>
         <tbody>
-            @RenderPosRow(Model.Boven, Model.Boven?.ReferentieVlak.ToString() ?? "?", "Boven", Model.Boven?.LaagHoofdwapening ?? 2)
-                @RenderPosRow(Model.Onder, Model.Onder?.ReferentieVlak.ToString() ?? "?", "Onder", Model.Onder?.LaagHoofdwapening ?? 2)
+                @{
+                    var dekkingB1 = Model.Boven?.DekkingLaag1.ToString("0") ?? "?";
+                    var dekkingB2 = Model.Boven?.DekkingLaag2.ToString("0") ?? "?";
+                    var dekkingBoven = $"{dekkingB1} / {dekkingB2}";
+
+                    var dekkingO1 = Model.Onder?.DekkingLaag1.ToString("0") ?? "?";
+                    var dekkingO2 = Model.Onder?.DekkingLaag2.ToString("0") ?? "?";
+                    var dekkingOnder = $"{dekkingO1} / {dekkingO2}";
+
+
+                }
+            @RenderPosRow(Model.Boven, Model.Boven?.ReferentieVlak.ToString() ?? "?", dekkingBoven, Model.Boven?.LaagHoofdwapening ?? 2)
+            @RenderPosRow(Model.Onder, Model.Onder?.ReferentieVlak.ToString() ?? "?", dekkingOnder, Model.Onder?.LaagHoofdwapening ?? 2)
         </tbody>
     </table>
     </div>
@@ -70,6 +82,10 @@ RenderFragment RenderPosRow(PlaatWapeningGroep? groep, string positie, string vl
             var basis = groep?.BasisWapening;
             var verdeel = groep?.VerdeelWapening;
         }
+        <td>
+            @vlak
+        </td>
+
         <td>
             <FluentTextField Value="@(basis?.Tekst ?? string.Empty)" ValueChanged="@(v => SetHoofdTekst(groep, v))" />
         </td>

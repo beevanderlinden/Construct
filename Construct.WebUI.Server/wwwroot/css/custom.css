@@ -46,6 +46,65 @@ i {
 }
 
 
+/* ====== BETONBALK VISUALISATIE STYLING ====== */
+.beton-balk-visualisatie {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--neutral-layer-1);
+    border-radius: 8px;
+}
+
+.wapening-legenda {
+    padding: 1rem;
+    background: var(--neutral-layer-2);
+    border-radius: 4px;
+    border: 1px solid var(--neutral-stroke-rest);
+}
+
+.wapening-legenda h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--neutral-foreground-rest);
+}
+
+.legenda-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    font-size: 0.85rem;
+}
+
+.legenda-symbool {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.legenda-symbool.beugel {
+    background: linear-gradient(90deg, #666, #999, #666);
+    border: 2px solid #333;
+}
+
+.legenda-symbool.boven {
+    background: #e74c3c;
+    border: 2px solid #c0392b;
+}
+
+.legenda-symbool.onder {
+    background: #3498db;
+    border: 2px solid #2980b9;
+}
+
+.legenda-symbool.zij {
+    background: #f39c12;
+    border: 2px solid #d68910;
+}
+
 /* ====== NAVIGATIE MENU STYLING ====== */
 
 /* Subtiele achtergrondkleur voor NavMenu */
@@ -414,7 +473,7 @@ nav.sitenav {
     background: var(--neutral-fill-layer-rest);
     /*background: none;*/
     padding: 0;
-    padding-right: 270px; /* Ruimte voor PrintPageMenu: 250px menu + 20px offset + 20px extra = 290px */
+    padding-right: 25px; /* Ruimte voor PrintPageMenu: ingeklapt  */
     gap: 4.95mm;
     box-sizing: border-box; /* Zorg dat padding binnen de breedte blijft */
     /* lichte blauwe lijntjes */

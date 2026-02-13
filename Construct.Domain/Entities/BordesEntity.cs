@@ -126,6 +126,7 @@ namespace Construct.Domain.Entities
                 PlaatDekking.Onder = new BetonDekkingContext();
                 PlaatDekking.Onder.IsKwaliteitsBeheersing = true;
                 PlaatDekking.Onder.IsPlaatGeometrie = true;
+
             }
             PlaatDekking.Onder.Grondslagen = ProjectInfo.Grondslagen;
             PlaatDekking.Onder.Beton = beton ?? new();
@@ -215,6 +216,7 @@ namespace Construct.Domain.Entities
                     LaagHoofdwapening = 2,
                     DiameterVerdeel = 8,
                     
+                    
 
                 },
                 Onder = new PlaatWapeningGroep()
@@ -275,8 +277,9 @@ namespace Construct.Domain.Entities
             {
                 double werkendeBreedte = 1.0;
                 var perm = Belastingen.BelastingGevallen[0];
-                var dl1g = new DistributedLoad(perm, "L1~Gk~",0, LengteM, -VlaklastG) { Description = $"{-VlaklastG:0.0} kN/m² × {werkendeBreedte:0.0}m" }; ;
-                dl1g.Description = $"eigen gewicht + afwerking";
+                var dl1g = new DistributedLoad(perm, "L1~Gk~",0, LengteM-.2, -VlaklastG) { Description = $"{-VlaklastG:0.0} kN/m² × {werkendeBreedte:0.0}m" }; ;
+                dl1g.Description = $"e.g. ({EigenGewicht:0.0})";
+                if (AfwerkingVlaklast != 0) dl1g.Description += $" + afw. ({AfwerkingVlaklast:0.0})";
                 //dl1g.StartMagnitude = dl1g.EndMagnitude = 0; // tijdelijk nul zetten
                 strook.Beam.Loads.Add(dl1g);
 
@@ -287,7 +290,7 @@ namespace Construct.Domain.Entities
 
                 strook.Beam.Loads.Add(dl1q);
 
-                var pl = new MovingPointLoad(LengteM/3.0, -veranderlijk.OpgelegdeBelastingen.Puntlast) { 
+                var pl = new MovingPointLoad(LengteM/2.12, 10 * -veranderlijk.OpgelegdeBelastingen.Puntlast) { 
                     StartPos = 0.05,
                     EndPos = LengteM - 0.05,
                     Name = "P1",
@@ -706,6 +709,7 @@ namespace Construct.Domain.Entities
             _plaatWapening.Onder = new PlaatWapeningGroep()
             {
                 Heading = "plaatwapening onder",
+                DekkingBuitensteLaag = PlaatDekking.Onder,
                 BasisWapening = _basisStrook.Wapening,
                 VerdeelWapening = new WapeningContext()
                 {
@@ -720,6 +724,7 @@ namespace Construct.Domain.Entities
             _plaatWapening.Boven = new PlaatWapeningGroep()
             {
                 Heading = "plaatwapening boven",
+                DekkingBuitensteLaag = PlaatDekking.Boven,
                 BasisWapening = _basisStrook.Wapening,
                 VerdeelWapening = new WapeningContext()
                 {

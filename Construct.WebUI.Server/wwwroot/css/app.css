@@ -56,8 +56,7 @@ body {
     align-self: stretch;
     height: calc(100dvh - 70px) !important;
     display: flex;
-    padding-left: 12px;
-    padding-right: 12px;
+    padding: 3px;
 }
 
 .content {

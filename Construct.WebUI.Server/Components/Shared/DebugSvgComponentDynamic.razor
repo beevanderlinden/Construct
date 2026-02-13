@@ -1,0 +1,208 @@
+﻿@using Construct.Domain.Entities
+@using Construct.Domain.Extensions
+@using System.Globalization
+@using System.Text
+@inject IJSRuntime JS
+
+<div style="width: 100%; max-width: 800px; margin: 20px auto; padding: 20px; border: 2px solid #9c27b0; background: #f3e5f5;">
+    <h3 style="margin: 0 0 10px 0; color: #9c27b0;">⚡ Dynamic Scale Debug SVG Component</h3>
+    
+    <div id="@_containerId" style="width: 100%; height: 400px; border: 1px solid #333; background: white;">
+        @((MarkupString)SvgXml)
+    </div>
+    
+    <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-family: monospace; font-size: 12px;">
+        <div><strong>Mode:</strong> Dynamic Scale (tekst blijft 12px)</div>
+        <div><strong>Container:</strong> @widthPx.ToString("F0") x @heightPx.ToString("F0") px</div>
+        <div><strong>ViewBox:</strong> @_viewBox</div>
+        <div><strong>Scale:</strong> @_scale.ToString("F4")</div>
+        <div><strong>Rect:</strong> @RectWidth x @RectHeight mm</div>
+    </div>
+</div>
+
+@code {
+    private string SvgXml = "";
+    private readonly string _containerId = $"svgDynamicDebug_{Guid.NewGuid():N}";
+    
+    private double widthPx = 800;
+    private double heightPx = 400;
+    private double _scale = 1.0;
+    private string _viewBox = "";
+    
+    private double Marge => 80;
+    private double RectWidth => 400;
+    private double RectHeight => 500;
+    
+    private DotNetObjectReference<DebugSvgComponentDynamic>? objRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            objRef = DotNetObjectReference.Create(this);
+            await UpdateSvgAsync();
+            await JS.InvokeVoidAsync("svgHelpers.registerResizeCallback", _containerId, objRef);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnContainerResize(double width, double height)
+    {
+        widthPx = width;
+        heightPx = height;
+        await UpdateSvgAsync();
+    }
+
+    private async Task UpdateSvgAsync()
+    {
+        // Bereken viewBox en scale zoals in SvgHelper
+        var totalWidth = RectWidth + (Marge * 2) + 100;
+        var totalHeight = RectHeight + (Marge * 2) + 100;
+        
+        _viewBox = $"0 0 {totalWidth.ToString("F0", CultureInfo.InvariantCulture)} {totalHeight.ToString("F0", CultureInfo.InvariantCulture)}";
+        
+        // Bereken scale: pixels / viewBox units
+        double scaleX = widthPx / totalWidth;
+        double scaleY = heightPx / totalHeight;
+        _scale = Math.Min(scaleX, scaleY);
+        
+        SvgXml = GenerateDynamicSvg();
+        StateHasChanged();
+    }
+
+    private string GenerateDynamicSvg()
+    {
+        var sb = new StringBuilder();
+        
+        // SVG header
+        sb.AppendLine($@"<svg xmlns=""http://www.w3.org/2000/svg"" 
+            viewBox=""{_viewBox}"" 
+            preserveAspectRatio=""xMidYMid meet""
+            style=""width: 100%; height: 100%;"">");
+        
+        // Defs
+        sb.AppendLine("  <defs>");
+        sb.AppendLine(@"    <marker id=""arrowhead-dyn"" markerWidth=""10"" markerHeight=""7"" 
+                refX=""9"" refY=""3.5"" orient=""auto-start-reverse"">
+                <polygon points=""0 0, 10 3.5, 0 7"" fill=""#9c27b0"" />
+            </marker>");
+        sb.AppendLine(@"    <marker id=""circle-cross-dyn"" markerWidth=""8"" markerHeight=""8"" 
+                refX=""4"" refY=""4"" orient=""auto"">
+                <circle cx=""4"" cy=""4"" r=""3"" fill=""none"" stroke=""#9c27b0"" stroke-width=""1""/>
+                <line x1=""1"" y1=""4"" x2=""7"" y2=""4"" stroke=""#9c27b0"" stroke-width=""1""/>
+                <line x1=""4"" y1=""1"" x2=""4"" y2=""7"" stroke=""#9c27b0"" stroke-width=""1""/>
+            </marker>");
+        sb.AppendLine("  </defs>");
+        
+        // Rechthoek
+        var rect = new SvgRect
+        {
+            X = Marge,
+            Y = Marge,
+            Width = RectWidth,
+            Height = RectHeight,
+            Fill = "#fff3e0",
+            Stroke = "#e65100",
+            StrokeWidth = 2
+        };
+        sb.AppendLine(rect.Render());
+        
+        // Tekst in het midden (met scale voor uniform 12px)
+        var text = new SvgText
+        {
+            X = Marge + RectWidth / 2,
+            Y = Marge + RectHeight / 2,
+            Text = "DYNAMIC",
+            Anchor = "middle",
+            DominantBaseLine = "middle",
+            Pts = 12,
+            Fill = "#e65100"
+        };
+        sb.AppendLine(text.Render(_scale));
+        
+        // Maatlijn onder (horizontaal) met Render(scale)
+        var dimOnder = new SvgDimLine
+        {
+            X1 = Marge,
+            Y1 = Marge + RectHeight,
+            X2 = Marge + RectWidth,
+            Y2 = Marge + RectHeight,
+            Offset = 0,
+            OffsetLines = -2,
+            Mode = DimLineMode.Horizontal,
+            ShowExtensionLines = true,
+            StrokeColor = "#9c27b0",
+            StrokeWidth = 1.5,
+            Text = $"{RectWidth:F0}",
+            MarkerStart = "arrowhead-dyn",
+            MarkerEnd = "arrowhead-dyn"
+        };
+        sb.AppendLine(dimOnder.Render(_scale));
+        
+        // Maatlijn rechts (verticaal) met Render(scale)
+        var dimRechts = new SvgDimLine
+        {
+            X1 = Marge + RectWidth,
+            Y1 = Marge,
+            X2 = Marge + RectWidth,
+            Y2 = Marge + RectHeight,
+            Offset = 0,
+            OffsetLines = 2,
+            Mode = DimLineMode.Vertical,
+            ShowExtensionLines = true,
+            StrokeColor = "#4caf50",
+            StrokeWidth = 1.5,
+            Text = $"{RectHeight:F0}",
+            MarkerStart = "arrowhead-dyn",
+            MarkerEnd = "arrowhead-dyn"
+        };
+        sb.AppendLine(dimRechts.Render(_scale));
+        
+        // Reversed horizontaal (boven)
+        var dimBoven = new SvgDimLine
+        {
+            X1 = Marge + RectWidth,
+            Y1 = Marge,
+            X2 = Marge,
+            Y2 = Marge,
+            Offset = 0,
+            OffsetLines = 2,
+            Mode = DimLineMode.Horizontal,
+            ShowExtensionLines = true,
+            StrokeColor = "#ff9800",
+            StrokeWidth = 1.5,
+            Text = "REVERSED H",
+            MarkerStart = "arrowhead-dyn",
+            MarkerEnd = "arrowhead-dyn"
+        };
+        sb.AppendLine(dimBoven.Render(_scale));
+        
+        // Reversed verticaal (links)
+        var dimLinks = new SvgDimLine
+        {
+            X1 = Marge,
+            Y1 = Marge + RectHeight,
+            X2 = Marge,
+            Y2 = Marge,
+            Offset = 0,
+            OffsetLines = -2,
+            Mode = DimLineMode.Vertical,
+            ShowExtensionLines = true,
+            StrokeColor = "#2196f3",
+            StrokeWidth = 1.5,
+            Text = "REVERSED V",
+            MarkerStart = "circle-cross-dyn",
+            MarkerEnd = "circle-cross-dyn"
+        };
+        sb.AppendLine(dimLinks.Render(_scale));
+        
+        sb.AppendLine("</svg>");
+        
+        return sb.ToString();
+    }
+
+    public void Dispose()
+    {
+        objRef?.Dispose();
+    }
+}

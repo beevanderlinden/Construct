@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Razor.TagHelpers;
+using System.Text;
 
 namespace Construct.Domain.Entities
 {
@@ -155,10 +156,16 @@ namespace Construct.Domain.Entities
             _group.Content.Children.Clear();
             double fontPx = 12;
             double lineHeight = 1.5;
-            double scale = Scale; // neem schaal van buiten
-            //double textSize = fontPx / scale;
+            double scale = Scale;
 
             var (x1o, y1o, x2o, y2o, angle) = GetOffsetPoints(fontPx, lineHeight, scale);
+
+            // Bepaal de richting voor marker orientation
+            bool isReversed = false;
+            if (Mode == DimLineMode.Horizontal && x2o < x1o)
+                isReversed = true;
+            else if (Mode == DimLineMode.Vertical && y2o < y1o)
+                isReversed = true;
 
             // --- 1. Hoofdmaatlijn ---
             var mainLine = new SvgLine
@@ -169,31 +176,44 @@ namespace Construct.Domain.Entities
                 Y2 = y2o,
                 Stroke = StrokeColor,
                 StrokeWidth = StrokeWidth,
-                MarkerStart = MarkerStart,
-                MarkerEnd = MarkerEnd,
+                MarkerStart = isReversed ? MarkerEnd : MarkerStart,
+                MarkerEnd = isReversed ? MarkerStart : MarkerEnd,
                 VectorEffect = "non-scaling-stroke",
-                
             };
 
             _group.Content.Children.Add(mainLine);
 
-
             // --- 2. Tekst ---
             var (mx, my) = GetMidPoint(fontPx, lineHeight, scale);
-            var dy = -fontPx / scale * 0.67;
+            
+            double dx = 0;
+            double dy = 0;
+            
+            if (Mode == DimLineMode.Horizontal)
+            {
+                dy = -fontPx / scale * 0.67;
+            }
+            else if (Mode == DimLineMode.Vertical)
+            {
+                // Voor verticale tekst: offset naar rechts (in geroteerde ruimte)
+                // Met -90° rotatie wordt dit "links" van de lijn
+                // Dus we willen positieve dx voor offset naar rechts vóór rotatie
+                dx = fontPx / scale * 0.67;
+            }
+            else // Aligned
+            {
+                dy = -fontPx / scale * 0.67;
+            }
 
-            var text = new SvgText(DisplayValue, x: mx, y: my + dy)
+            var text = new SvgText(DisplayValue, x: mx + dx, y: my + dy)
             {
                 Anchor = "middle",
                 Pts = fontPx,
                 Scale = Scale,
-                //FontFamily = "Arial",
                 Angle = angle,
-
             };
 
             _group.Content.Children.Add(text);
-
 
             // --- 3. Extension lines ---
             if (ShowExtensionLines)
@@ -227,9 +247,170 @@ namespace Construct.Domain.Entities
             }
         }
 
+        /// <summary>
+        /// Rendert maatlijn met dynamische schaling (tekst blijft uniform ongeacht zoom).
+        /// Voor gebruik in SvgHelper waar tekst altijd 12px moet zijn.
+        /// </summary>
+        public string Render(double scale)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("<g>");
+    
+            double fontPx = 12;
+            double lineHeight = 1.5;
+
+            var (x1o, y1o, x2o, y2o, angle) = GetOffsetPoints(fontPx, lineHeight, scale);
+
+            // Bepaal de richting voor marker orientation
+            bool isReversed = false;
+            if (Mode == DimLineMode.Horizontal && x2o < x1o)
+                isReversed = true;
+            else if (Mode == DimLineMode.Vertical && y2o < y1o)
+                isReversed = true;
+
+            // --- 1. Hoofdmaatlijn ---
+            var mainLine = new SvgLine
+            {
+                X1 = x1o,
+                Y1 = y1o,
+                X2 = x2o,
+                Y2 = y2o,
+                Stroke = StrokeColor,
+                StrokeWidth = StrokeWidth,
+                MarkerStart = isReversed ? MarkerEnd : MarkerStart,
+                MarkerEnd = isReversed ? MarkerStart : MarkerEnd,
+                VectorEffect = "non-scaling-stroke",
+            };
+            sb.AppendLine(mainLine.Render());
+
+            // --- 2. Tekst (met scale!) ---
+            var (mx, my) = GetMidPoint(fontPx, lineHeight, scale);
+            
+            double dx = 0;
+            double dy = 0;
+            
+            if (Mode == DimLineMode.Horizontal)
+            {
+                dy = -fontPx / scale * 0.67;
+            }
+            else if (Mode == DimLineMode.Vertical)
+            {
+                dx = -fontPx / scale * 0.67;
+            }
+            else
+            {
+                dy = -fontPx / scale * 0.67;
+            }
+
+            var text = new SvgText(DisplayValue, x: mx + dx, y: my + dy)
+            {
+                Anchor = "middle",
+                Pts = fontPx,
+                Angle = angle,
+            };
+            // ✅ Gebruik Render(scale) voor de tekst!
+            sb.AppendLine(text.Render(scale));
+
+            // --- 3. Extension lines ---
+            if (ShowExtensionLines)
+            {
+                var ext1 = new SvgLine
+                {
+                    X1 = X1, Y1 = Y1, X2 = x1o, Y2 = y1o,
+                    Stroke = StrokeColor, StrokeWidth = 0.5,
+                    StrokeDashArray = "2,2", VectorEffect = "non-scaling-stroke"
+                };
+                var ext2 = new SvgLine
+                {
+                    X1 = X2, Y1 = Y2, X2 = x2o, Y2 = y2o,
+                    Stroke = StrokeColor, StrokeWidth = 0.5,
+                    StrokeDashArray = "2,2", VectorEffect = "non-scaling-stroke"
+                };
+                sb.AppendLine(ext1.Render());
+                sb.AppendLine(ext2.Render());
+            }
+
+            sb.AppendLine("</g>");
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Rendert maatlijn zonder dynamische schaling (tekst schaalt mee met SVG).
+        /// </summary>
         public override string Render()
         {
-            Build();
+            _group.Content.Children.Clear();
+            double fontPx = 12;
+            double lineHeight = 1.5;
+            double scale = Scale;
+
+            var (x1o, y1o, x2o, y2o, angle) = GetOffsetPoints(fontPx, lineHeight, scale);
+
+            bool isReversed = false;
+            if (Mode == DimLineMode.Horizontal && x2o < x1o)
+                isReversed = true;
+            else if (Mode == DimLineMode.Vertical && y2o < y1o)
+                isReversed = true;
+
+            var mainLine = new SvgLine
+            {
+                X1 = x1o,
+                Y1 = y1o,
+                X2 = x2o,
+                Y2 = y2o,
+                Stroke = StrokeColor,
+                StrokeWidth = StrokeWidth,
+                MarkerStart = isReversed ? MarkerEnd : MarkerStart,
+                MarkerEnd = isReversed ? MarkerStart : MarkerEnd,
+                VectorEffect = "non-scaling-stroke",
+            };
+            _group.Content.Children.Add(mainLine);
+
+            var (mx, my) = GetMidPoint(fontPx, lineHeight, scale);
+            
+            double dx = 0;
+            double dy = 0;
+            
+            if (Mode == DimLineMode.Horizontal)
+            {
+                dy = -fontPx / scale * 0.67;
+            }
+            else if (Mode == DimLineMode.Vertical)
+            {
+                dx = -fontPx / scale * 0.67; // ✅ Negatief voor links/boven in geroteerde ruimte
+            }
+            else
+            {
+                dy = -fontPx / scale * 0.67;
+            }
+
+            var text = new SvgText(DisplayValue, x: mx + dx, y: my + dy)
+            {
+                Anchor = "middle",
+                Pts = fontPx,
+                Scale = Scale,
+                Angle = angle,
+            };
+            _group.Content.Children.Add(text);
+
+            if (ShowExtensionLines)
+            {
+                var ext1 = new SvgLine
+                {
+                    X1 = X1, Y1 = Y1, X2 = x1o, Y2 = y1o,
+                    Stroke = StrokeColor, StrokeWidth = 0.5,
+                    StrokeDashArray = "2,2", VectorEffect = "non-scaling-stroke"
+                };
+                var ext2 = new SvgLine
+                {
+                    X1 = X2, Y1 = Y2, X2 = x2o, Y2 = y2o,
+                    Stroke = StrokeColor, StrokeWidth = 0.5,
+                    StrokeDashArray = "2,2", VectorEffect = "non-scaling-stroke"
+                };
+                _group.Content.Children.Add(ext1);
+                _group.Content.Children.Add(ext2);
+            }
+
             return _group.Render();
         }
 
@@ -241,173 +422,7 @@ namespace Construct.Domain.Entities
     }
 
 
-    public class SvgDimLineBAK
-    {
-        public double X1 { get; set; }
-        public double Y1 { get; set; }
-        public double X2 { get; set; }
-        public double Y2 { get; set; }
-
-        private double _value;
-        public double Value
-        {
-            get => _value;
-            set
-            {
-                if (_value != value)
-                {
-                    _value = value;
-                    ValueChanged.InvokeAsync(value);
-                }
-            }
-        }
-
-        public EventCallback<double> ValueChanged { get; set; }
-
-
-        // Optionele tekst
-        public string? Text { get; set; }
-
-        public double StrokeWidth { get; set; } = 1;
-        public string StrokeColor { get; set; } = "black";
-        public double Offset = 0;                // afstand van maatlijn tot objectlijn
-
-
-
-        // Tekststijl info voor omzetting naar units
-        public double FontSizePx { get; set; } = 12;
-        public double LineHeight { get; set; } = 1.5;
-
-        public int OffsetLines { get; set; } = 0;
-        public double DimScale { get; set; } = 1.0;
-
-
-
-
-        public bool ShowExtensionLines = true;    // hulplijnen aan/uit
-        public DimLineMode Mode = DimLineMode.Aligned;
-
-
-        // Berekende properties voor het component
-
-        private double TextLineSpaceUnits =>
-       (FontSizePx / DimScale) * LineHeight;
-
-        private double OffsetTotal =>
-            Offset + OffsetLines * TextLineSpaceUnits;
-
-
-
-        public double MidX => (X1o + X2o) / 2;
-        public double MidY => (Y1o + Y2o) / 2;
-        public double Angle
-        {
-            get
-            {
-                return Mode switch
-                {
-                    DimLineMode.Aligned =>
-                        Math.Atan2(Y2 - Y1, X2 - X1) * 180.0 / Math.PI,
-                    DimLineMode.Horizontal => 0.0,
-                    DimLineMode.Vertical => -90.0,
-                    _ => 0.0
-                };
-            }
-        }
-
-        private double dx => X2 - X1;
-        private double dy => Y2 - Y1;
-        private double len => Math.Sqrt(dx * dx + dy * dy);
-        private double nx => -dy / len;  // normaal vector (unit)
-        private double ny => dx / len;
-
-
-
-        //public double X1o => X1 + nx * Offset;
-        //public double Y1o => Y1 + ny * Offset;
-        //public double X2o => X2 + nx * Offset;
-        //public double Y2o => Y2 + ny * Offset;
-
-
-        // Offset-punten (hangen af van Mode)
-        public double X1o
-        {
-            get
-            {
-                return Mode switch
-                {
-                    DimLineMode.Aligned => X1 + nx * OffsetTotal,
-                    DimLineMode.Horizontal => X1,
-                    DimLineMode.Vertical => Math.Min(X1, X2) - OffsetTotal,
-                    _ => X1
-                };
-            }
-        }
-
-        public double Y1o
-        {
-            get
-            {
-                return Mode switch
-                {
-                    DimLineMode.Aligned => Y1 + ny * OffsetTotal,
-                    DimLineMode.Horizontal => Math.Min(Y1, Y2) - OffsetTotal,
-                    DimLineMode.Vertical => Y1,
-                    _ => Y1
-                };
-            }
-        }
-
-        public double X2o
-        {
-            get
-            {
-                return Mode switch
-                {
-                    DimLineMode.Aligned => X2 + nx * OffsetTotal,
-                    DimLineMode.Horizontal => X2,
-                    DimLineMode.Vertical => Math.Min(X1, X2) - OffsetTotal,
-                    _ => X2
-                };
-            }
-        }
-
-        public double Y2o
-        {
-            get
-            {
-                return Mode switch
-                {
-                    DimLineMode.Aligned => Y2 + ny * OffsetTotal,
-                    DimLineMode.Horizontal => Math.Min(Y1, Y2) - OffsetTotal,
-                    DimLineMode.Vertical => Y2,
-                    _ => Y2
-                };
-            }
-        }
-
-        public string DisplayValue
-        {
-            get
-            {
-                if (!string.IsNullOrWhiteSpace(Text))
-                    return Text;
-
-                double length = Mode switch
-                {
-                    DimLineMode.Aligned => Math.Sqrt((X2 - X1) * (X2 - X1) + (Y2 - Y1) * (Y2 - Y1)),
-                    DimLineMode.Horizontal => Math.Abs(X2 - X1),
-                    DimLineMode.Vertical => Math.Abs(Y2 - Y1),
-                    _ => 0
-                };
-
-                return length.ToString("0.##"); // 2 decimalen
-            }
-        }
-
-
-
-    }
+   
 }
 
 

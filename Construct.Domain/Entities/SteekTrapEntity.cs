@@ -400,7 +400,8 @@ namespace Construct.Domain.Entities
             {
                 IsPlaatGeometrie = true,
                 IsKwaliteitsBeheersing = true,
-                SelectedMilieuklassen = [MilieuklasseEnum.XC1]
+                SelectedMilieuklassen = [MilieuklasseEnum.XC1],
+                WapeningDiameterGelijkwaardig = 12
             };
             PlaatDekking.Boven = new(grondslagen: ProjectInfo.Grondslagen, beton: beton)
             {
@@ -446,7 +447,7 @@ namespace Construct.Domain.Entities
 
             // Profiel voor de schil, bepaalt de schildikte
             ProfielSchil = new() { Breedte = 1000, Hoogte = 120 };
-            WapeningSchil = new("12-150", PlaatDekking.Onder);
+            WapeningSchil = new("12-150", PlaatDekking.Onder.DekkingToe);
 
 
             
@@ -964,7 +965,7 @@ namespace Construct.Domain.Entities
             this.DoorbuigingContext.LengteMM = this.LengteSchuin;
             this.DoorbuigingContext.Lijnlast = this.Krachten.qEqp * this.FactorProjectieZToLocalZ;
             this.DoorbuigingContext.LijnlastG = this.Krachten.qG * this.FactorProjectieZToLocalZ;
-            this.DoorbuigingContext.D = this.SchilDikte - this.WapeningSchil.ZRef;
+            this.DoorbuigingContext.D = this.SchilDikte - this.WapeningSchil.ReferentieAfstand;
             Debug.WriteLine("doorbuiging context bijgewerkt");
 
             this.DoorbuigingContext.BerekenEnValideer();

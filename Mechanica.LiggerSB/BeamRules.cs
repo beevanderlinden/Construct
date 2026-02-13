@@ -199,7 +199,7 @@ namespace Mechanica.SimpleBeam
         {
             get
             {
-                return UserFriendlyStartPos + "-" + UserFriendlyEndPos;
+                return UserFriendlyStartPos + " - " + UserFriendlyEndPos;
             }
         }
 
@@ -1048,7 +1048,7 @@ namespace Mechanica.SimpleBeam
             var list = new List<(double x, double V)>();
             double L = beam.Length;
 
-            var positions = beam.GetPositions();
+            var positions = beam.GetPositions(8);
             positions.Add(beam.GetShearZeroPosition());
 
             foreach (var pos in positions.OrderBy(p=>p))
@@ -1108,7 +1108,7 @@ namespace Mechanica.SimpleBeam
             var normalMoments = new List<(double x, double M)>();
             var accidentalMoments = new List<(double x, double M)>();
 
-            var positions = beam.GetPositions(8);
+            var positions = beam.GetPositions(32);
             positions.Add(beam.GetShearZeroPosition());
 
             // Stap 1: Verzamel normale momenten om het minimum te vinden

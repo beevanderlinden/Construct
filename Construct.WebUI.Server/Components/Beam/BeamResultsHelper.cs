@@ -6,6 +6,7 @@ using ExportFactory.MigraDocContentModels;
 using Mechanica.SimpleBeam;
 using Microsoft.AspNetCore.Http;
 using System.Globalization;
+using Construct.Application.Services;
 
 namespace Construct.WebUI.Server.Components.Beam;
 
@@ -746,6 +747,18 @@ public static class BeamResultsHelper
         }
 
         return table;
+    }
+
+    /// <summary>
+    /// Genereert een tabel met belastingen voor een belastinggeval
+    /// Wrapper rond LoadTableHelper voor backwards compatibility
+    /// </summary>
+    /// <param name="loads">IEnumerable van ILoad objecten</param>
+    /// <param name="title">Optionele titel voor de tabel</param>
+    /// <returns>TableContent voor MigraDoc/HTML export</returns>
+    public static TableContent GetTabelBelastingen(IEnumerable<ILoad> loads, string? title = null)
+    {
+        return LoadTableHelper.GetTabelBelastingen(loads, title);
     }
 }
 

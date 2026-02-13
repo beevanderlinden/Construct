@@ -660,43 +660,8 @@
 
                         var loads = beam.Loads.Where(l => l.LoadCase == geval);
 
-                        TableContent tableContent = new()
-                        {
-                            HideHeaders = false,
-                            Title = ""
-                        };
-
-                        tableContent.Headers = [
-                            new(){CellContent = new("naam")},
-                            new(){CellContent = new("omschrijving")},
-                            new(){CellContent = new("van-tot")},              
-                            //new(){CellContent = new("van [m]")},
-                            //new(){CellContent = new("tot [m]")},
-                                            //new(){CellContent = new("start")},
-                                            //new(){CellContent = new("eind")},
-                            new(){CellContent = new("waarde")},
-                            new(){CellContent = new("eenheid")},
-                            ];
-
-
-                        foreach (var l in loads)
-                        {
-                            tableContent.Rows.Add(
-                            [
-                              new TableCellContent(l.Name, "20mm"),
-                                              new TableCellContent(l.Description ?? "..." , "100mm"),
-                                              //new TableCellContent(l.UserFriendlyStartPos, "12mm"),
-                                              //new TableCellContent(l.UserFriendlyEndPos, "12mm"),
-                                              new TableCellContent(l.UserFriendlyFromTo, "24mm"),
-                                              new TableCellContent(l.UserFriendlyFromToValue, "12mm"),
-
-                                              //new TableCellContent(l.UserFriendlyStartValue, "12mm"),
-                                              //new TableCellContent(l.UserFriendlyEndValue, "12mm"),
-                                              new TableCellContent(l.Unit, "12mm")
-                            ]);
-
-
-                        }
+                        // ✅ Gebruik de herbruikbare helper methode
+                        var tableContent = LoadTableHelper.GetTabelBelastingen(loads);
 
                         section.Elements.Add(tableContent.Clone());
                     }
@@ -888,7 +853,12 @@
         }
 
 
-        public static List<BaseSvg> GenerateBeamShearDiagram(double scale, Mechanica.SimpleBeam.SBLigger beam, List<BeamResult> results, string fill, string stroke)
+        public static List<BaseSvg> GenerateBeamShearDiagram(
+            double scale, Mechanica.SimpleBeam.SBLigger beam, 
+            List<BeamResult> results, 
+            string fill, 
+            string stroke,
+            bool combineerGrafieken = !true)
         {
             List<BaseSvg> svgTags = [];
             
@@ -925,23 +895,49 @@
                    .DefaultIfEmpty(1)
                    .Max();
 
-            //foreach (var e in verticalExtents)
-            //{
-            //    svgTags.Add(new SvgLine()
-            //    {
-            //        X1 = e.X,
-            //        Y1 = e.MinY * -scaleY,
-            //        X2 = e.X,
-            //        Y2 = e.MaxY * -scaleY,
-            //        Stroke = stroke,
-            //        StrokeWidth = 0.5,
-            //    });
+            // Keuze: individueel of gecombineerd (envelope)
+            if (!combineerGrafieken)
+            {
+                // ORIGINEEL: Teken alle lijnen individueel
+                foreach (var pts in ptsCollection)
+                {
+                    svgTags.Add(MakePath(pts, -scaleY, close: true, fill: fill, stroke: stroke));
+                }
+            }
+            else
+            {
+                // NIEUW: Envelope aanpak voor dwarskrachten
+                var allShearPoints = new List<(double x, double v)>();
+                
+                foreach (var r in results)
+                {
+                    if (r?.ShearDiagram != null)
+                    {
+                        allShearPoints.AddRange(r.ShearDiagram);
+                    }
+                }
 
+                if (allShearPoints.Count > 0)
+                {
+                    var envelope = BuildEnvelopePolygonOpt(allShearPoints, beam.Length);
+                    
+                    if (envelope.Count > 0)
+                    {
+                        var svgPunten = envelope.Select(p => new Punt(p.x, p.m)).ToList();
+                        var envelopePath = MakePath(svgPunten, -scaleY, true);
+                        envelopePath.Fill = fill;
+                        envelopePath.Stroke = stroke;
+                        envelopePath.StrokeWidth = 2;
+                        svgTags.Add(envelopePath);
+                        
+                        Console.WriteLine($"✅ Shear EnvelopeOpt: {envelope.Count} punten");
+                    }
+                }
+            }
 
-
-            //    //svgTags.Add(new SvgText($"{e.MinY:0.#}", e.X, e.MinY * -scaleY, angle: -90, scale: scale));
-            //}
-
+            // Vertical extent lijnen en labels (altijd tonen)
+            //var verticalExtents = points.ToVerticalExtents();
+            
             foreach (var e in verticalExtents)
             {
                 // lijn tekenen
@@ -1029,14 +1025,6 @@
                                 dominantBaseLine: "middle"));
                     }
                 }
-            }
-
-
-
-
-            foreach (var pts in ptsCollection)
-            {
-                svgTags.Add(MakePath(pts, -scaleY, close: true, fill: fill, stroke: stroke));
             }
 
 
@@ -1130,7 +1118,7 @@
             return svgTags;
         }
 
-        public static List<BaseSvg> GenerateBeamMomentDiagram(double scale, Mechanica.SimpleBeam.SBLigger beam, List<BeamResult> results, string fill, string stroke)
+        public static List<BaseSvg> GenerateBeamMomentDiagram(double scale, Mechanica.SimpleBeam.SBLigger beam, List<BeamResult> results, string fill, string stroke, bool combineerGrafieken = true)
         {
             List<BaseSvg> svgTags = [];
             if (beam != null)
@@ -1149,7 +1137,7 @@
                     StrokeWidth = 0.5,
                 });
 
-                // ORIGINEEL: Bouw polygonen van beide diagrammen (INDIVIDUEEL TEKENEN)
+                // Bouw polygonen van beide diagrammen
                 List<List<Punt>> momentPointsCollection = [];
 
                 foreach (var r in results)
@@ -1185,95 +1173,397 @@
                     momentData.AddRange(list);
                 }
 
+                var orderedList = momentData.OrderBy(md => md.Y).ToList();
+                var min = orderedList.FirstOrDefault().Y;
+                var max = orderedList.LastOrDefault().Y;
+                var delta = Math.Abs(min) + Math.Abs(max);
+
+
                 var scaleY = grafiekAmplitude /
-                    momentData
-                    .Select(p => Math.Abs(p.Y))
-                    .DefaultIfEmpty(1)
-                    .Max();
+                   delta;
 
-                // ORIGINEEL: Teken alle lijnen individueel (meerdere door elkaar)
-                foreach (var list in momentPointsCollection)
+                // 2. Keuze: individueel of gecombineerd tekenen
+                if (!combineerGrafieken)
                 {
-                    var p = MakePath(list, -scaleY, true);
-                    p.Fill = fill;
-                    p.Stroke = stroke;
-                    svgTags.Add(p);
-                }
-
-                // NIEUW: Teken ook met Clipper merged versie (TEST)
-                // Uncomment dit als je de merged versie wilt testen
-                /*
-                List<(double x, double m)> normalPolygon = [];
-                List<(double x, double m)> accidentalPolygon = [];
-
-                foreach (var r in results)
-                {
-                    if (r != null)
+                    // ORIGINEEL: Teken alle lijnen individueel (meerdere door elkaar)
+                    foreach (var list in momentPointsCollection)
                     {
-                        normalPolygon.AddRange(r.MomentDiagram);
-                        accidentalPolygon.AddRange(r.MomentDiagramAccidentalFixity);
-                    }
-                }
-
-                if (normalPolygon.Count > 0)
-                {
-                    var mergedPolygon = MergePolygonsWithClipper(
-                        BuildMomentPolygon(normalPolygon, beam.Length),
-                        BuildMomentPolygon(accidentalPolygon, beam.Length));
-
-                    if (mergedPolygon.Count > 0)
-                    {
-                        var svgPunten = mergedPolygon.Select(p => new Punt(p.x, p.m)).ToList();
-                        var p = MakePath(svgPunten, -scaleY, true);
-                        p.Fill = "yellow"; // Ander kleur zodat je het verschil ziet
-                        p.Stroke = "red";
+                        var p = MakePath(list, -scaleY, true);
+                        p.Fill = fill;
+                        p.Stroke = stroke;
                         svgTags.Add(p);
                     }
                 }
-                */
-
-                // 6. Toon min/max waarden
-                var minDataPoint = momentData.OrderBy(p => p.Y).FirstOrDefault();
-                var maxDataPoint = momentData.OrderBy(p => p.Y).LastOrDefault();
-
-                if (Math.Abs(minDataPoint.Y) > 0.001)
+                else
                 {
-                    SvgText txtM = new(minDataPoint.Y.ToString("0.#"), x: minDataPoint.X, y: minDataPoint.Y * -scaleY, scale: scale);
-                    txtM.DY = 3.0 / scale;
-                    txtM.DominantBaseLine = minDataPoint.Y < 0 ? "hanging" : "base";
-                    svgTags.Add(txtM);
+                    // NIEUW: Envelope aanpak - voor elke X de min/max Y bepalen
+                    var allPolygons = new List<List<(double x, double m)>>();
+
+                    // Verzamel alle punten van alle results
+                    var allPoints = new List<(double x, double m)>();
+                    
+                    foreach (var r in results)
+                    {
+                        if (r?.MomentDiagram != null)
+                        {
+                            allPoints.AddRange(r.MomentDiagram);
+                        }
+                        if (r?.MomentDiagramAccidentalFixity != null)
+                        {
+                            allPoints.AddRange(r.MomentDiagramAccidentalFixity);
+                        }
+                    }
+
+                    if (allPoints.Count > 0)
+                    {
+                        // Bouw envelope polygon met OPTIMALE methode
+                        var envelope = BuildEnvelopePolygonOpt(allPoints, beam.Length);
+                        
+                        if (envelope.Count > 0)
+                        {
+                            var svgPunten = envelope.Select(p => new Punt(p.x, p.m)).ToList();
+                            var envelopePath = MakePath(svgPunten, -scaleY, true);
+                            envelopePath.Fill = fill;
+                            envelopePath.Stroke = stroke;
+                            envelopePath.StrokeWidth = 1;
+                            svgTags.Add(envelopePath);
+                            
+                        }
+                    }
+
+                    /* 🐛 DEBUG CODE - UITGECOMMENT
+                    // OUDE CLIPPER2 AANPAK MET ZERO-CROSSING DETECTION
+                    List<List<(double x, double m)>> allPolygons = [];
+
+                    // Bouw voor elk result aparte polygonen (kan meerdere zijn per diagram!)
+                    foreach (var r in results)
+                    {
+                        if (r != null)
+                        {
+                            // Voeg normale momentdiagram polygonen toe (kan meerdere zijn bij sign changes)
+                            if (r.MomentDiagram.Count > 0)
+                            {
+                                allPolygons.AddRange(BuildMomentPolygons(r.MomentDiagram.ToList(), beam.Length));
+                            }
+                            
+                            // Voeg accidental fixity polygonen toe
+                            if (r.MomentDiagramAccidentalFixity.Count > 0)
+                            {
+                                allPolygons.AddRange(BuildMomentPolygons(r.MomentDiagramAccidentalFixity.ToList(), beam.Length));
+                            }
+                        }
+                    }
+
+                    // 🐛 DEBUG: Teken ALLE individuele polygonen met verschillende kleuren
+                    string[] debugColors = ["red", "blue", "green", "orange", "purple", "brown", "pink", "cyan"];
+                    for (int i = 0; i < allPolygons.Count; i++)
+                    {
+                        var poly = allPolygons[i];
+                        var svgPunten = poly.Select(p => new Punt(p.x, p.m)).ToList();
+                        var debugPath = MakePath(svgPunten, -scaleY, true);
+                        debugPath.Fill = debugColors[i % debugColors.Length];
+                        debugPath.FillOpacity = 0.3;
+                        debugPath.Stroke = debugColors[i % debugColors.Length];
+                        debugPath.StrokeWidth = 2;
+                        svgTags.Add(debugPath);
+                    }
+
+                    // Merged polygon (dikke zwarte lijn eroverheen)
+                    if (allPolygons.Count > 0)
+                    {
+                        var mergedPolygon = MergeMultiplePolygonsWithClipper(allPolygons);
+
+                        if (mergedPolygon.Count > 0)
+                        {
+                            var svgPunten = mergedPolygon.Select(p => new Punt(p.x, p.m)).ToList();
+                            var p = MakePath(svgPunten, -scaleY, true);
+                            p.Fill = "none";
+                            p.Stroke = "black";
+                            p.StrokeWidth = 3;
+                            p.StrokeDashArray = "5,5";
+                            svgTags.Add(p);
+                        }
+                    }
+                    */
                 }
 
-                if (Math.Abs(maxDataPoint.Y) > 0.001)
+                // 3. Toon min/max waarden
+                List<Punt> keyPoints = [];
+
+                keyPoints.Add(momentData.Where(d => d.X == 0).OrderBy(d => d.Y).LastOrDefault());
+                keyPoints.Add(momentData.Where(d => d.X == beam.Length).OrderBy(d => d.Y).LastOrDefault());
+                keyPoints.Add(momentData.OrderBy(p => p.Y).FirstOrDefault());
+
+                
+                foreach (var kp in keyPoints)
                 {
-                    SvgText txtM = new(maxDataPoint.Y.ToString("0.#"), x: maxDataPoint.X, y: maxDataPoint.Y * -scaleY, scale: scale);
-                    txtM.DY = -3.0 / scale;
-                    txtM.DominantBaseLine = maxDataPoint.Y < 0 ? "hanging" : "base";
-                    svgTags.Add(txtM);
+                    if (Math.Abs(kp.Y) > 0.001)
+                    {
+                        SvgText txtM = new(kp.Y.ToString("0.#"), x: kp.X, y: kp.Y * -scaleY, scale: scale);
+                        txtM.DY = Math.Sign(kp.Y) * -3.0 / scale;
+                        txtM.DominantBaseLine = kp.Y < 0 ? "hanging" : "base";
+                        svgTags.Add(txtM);
+                    }
                 }
+
+              
             }
             return svgTags;
         }
 
         /// <summary>
-        /// Bouwt een gesloten polygon voor het momentdiagram
+        /// Bouwt een omhullende polygon - OPTIMALE VERSIE.
+        /// Simpele logica: sorteer op X, bottom line = min(Y,0), top line reversed = max(Y,0).
         /// </summary>
-        private static List<(double x, double m)> BuildMomentPolygon(List<(double x, double m)> points, double beamLength)
+        private static List<(double x, double m)> BuildEnvelopePolygonOpt(
+            List<(double x, double m)> allPoints,
+            double beamLength)
+        {
+            if (allPoints.Count == 0) return [];
+
+            // Sorteer alle punten op X-positie
+            var sortedPoints = allPoints.OrderBy(p => p.x).ToList();
+
+            // Groepeer per X om min/max te vinden
+            var byX = sortedPoints
+                .GroupBy(p => p.x)
+                .Where(g => g.Count() > 2)
+                .OrderBy(g => g.Key)
+                .ToList();
+
+            var envelope = new List<(double x, double m)>();
+
+            // BOTTOM LINE: links → rechts, neem min(Y, 0)
+            foreach (var group in byX)
+            {
+                double x = group.Key;
+                double minY = group.Min(p => p.m);
+                
+                // Neem kleinste Y, maar maximaal 0
+                double yBottom = Math.Min(minY, 0);
+                envelope.Add((x, yBottom));
+            }
+
+            // TOP LINE: rechts → links, neem max(Y, 0)
+            foreach (var group in byX.Reverse<IGrouping<double, (double x, double m)>>())
+            {
+                double x = group.Key;
+                double maxY = group.Max(p => p.m);
+                
+                // Neem grootste Y, maar minimaal 0
+                double yTop = Math.Max(maxY, -0);
+                envelope.Add((x, yTop));
+            }
+
+            Console.WriteLine($"📐 EnvelopeOpt: {byX.Count} unieke X → {envelope.Count} punten (bottom+top)");
+            
+            return envelope;
+        }
+
+        /// <summary>
+        /// Bouwt een omhullende polygon door voor elke X-positie de min/max Y te bepalen.
+        /// Dit creëert een "envelope" die alle momentenlijnen omvat.
+        /// </summary>
+        private static List<(double x, double m)> BuildEnvelopePolygon(
+            List<(double x, double m)> allPoints,
+            double beamLength)
+        {
+            if (allPoints.Count == 0) return [];
+
+            // Groepeer alle punten per X-coördinaat
+            var groupedByX = allPoints
+                .GroupBy(p => p.x)
+                .OrderBy(g => g.Key)
+                .ToList();
+
+            var envelope = new List<(double x, double m)>();
+
+            // Start altijd bij (0, 0)
+            envelope.Add((0, 0));
+
+            // Bottom line: van links naar rechts, met MINIMALE Y per X
+            foreach (var group in groupedByX)
+            {
+                double x = group.Key;
+                double minY = group.Min(p => p.m);
+                
+                // Alleen toevoegen als negatief (onder de nul-lijn)
+                if (minY < -1e-9)
+                {
+                    envelope.Add((x, minY));
+                }
+            }
+
+            // Rechtsonder hoek (einde beam, op nul-lijn)
+            double lastX = groupedByX.Last().Key;
+            if (Math.Abs(lastX - beamLength) > 1e-6)
+            {
+                envelope.Add((beamLength, 0));
+            }
+            else
+            {
+                envelope.Add((lastX, 0));
+            }
+
+            // Top line: van rechts naar links, met MAXIMALE Y per X
+            foreach (var group in groupedByX.Reverse<IGrouping<double, (double x, double m)>>())
+            {
+                double x = group.Key;
+                double maxY = group.Max(p => p.m);
+                
+                // Alleen toevoegen als positief (boven de nul-lijn)
+                if (maxY > 1e-9)
+                {
+                    envelope.Add((x, maxY));
+                }
+            }
+
+            // Polygon sluiten (impliciet door Z in SVG path)
+            
+            Console.WriteLine($"📐 Envelope: {groupedByX.Count} unieke X-posities → {envelope.Count} omhullende punten");
+            
+            return envelope;
+        }
+
+        /// <summary>
+        /// Bouwt gesloten polygonen voor het momentdiagram.
+        /// Detecteert zero-crossings en splitst in positieve/negatieve gebieden.
+        /// </summary>
+        private static List<List<(double x, double m)>> BuildMomentPolygons(
+            List<(double x, double m)> points, 
+            double beamLength)
         {
             if (points.Count == 0) return [];
 
-            var polygon = new List<(double x, double m)> { (0, 0) };
-            var sorted = points.OrderBy(p => p.x).ToList();
+            var polygons = new List<List<(double x, double m)>>();
             
-            foreach (var pt in sorted)
-                polygon.Add(pt);
+            // Stap 1: Interpoleer nulpunten waar de lijn door nul gaat
+            var expandedPoints = new List<(double x, double m)>();
             
-            polygon.Add((beamLength, 0));
+            for (int i = 0; i < points.Count; i++)
+            {
+                var current = points[i];
+                expandedPoints.Add(current);
+                
+                // Check of er een zero-crossing is naar het volgende punt
+                if (i < points.Count - 1)
+                {
+                    var next = points[i + 1];
+                    
+                    // Als sign change EN niet beide nul
+                    if (Math.Sign(current.m) != Math.Sign(next.m) && 
+                        Math.Abs(current.m) > 1e-9 && 
+                        Math.Abs(next.m) > 1e-9)
+                    {
+                        // Lineair interpoleren om x-positie van nulpunt te vinden
+                        double ratio = Math.Abs(current.m) / (Math.Abs(current.m) + Math.Abs(next.m));
+                        double xZero = current.x + ratio * (next.x - current.x);
+                        
+                        expandedPoints.Add((xZero, 0));
+                        Console.WriteLine($"   🔍 Zero-crossing gedetecteerd bij x={xZero:F3}");
+                    }
+                }
+            }
             
-            foreach (var pt in sorted.AsEnumerable().Reverse())
-                polygon.Add(pt);
-
-            return polygon;
+            // Stap 2: Groepeer in continue segmenten (positief of negatief)
+            var segments = new List<List<(double x, double m)>>();
+            List<(double x, double m)>? currentSegment = null;
+            int? currentSign = null;
+            
+            foreach (var pt in expandedPoints)
+            {
+                int sign = Math.Sign(pt.m);
+                
+                // Bij nulpunt (sign=0): voeg toe aan huidig segment en sluit af
+                if (sign == 0)
+                {
+                    if (currentSegment != null)
+                    {
+                        currentSegment.Add(pt);
+                        if (currentSegment.Count > 1)
+                        {
+                            segments.Add(currentSegment);
+                        }
+                        currentSegment = null;
+                        currentSign = null;
+                    }
+                }
+                else if (currentSign == null || sign == currentSign)
+                {
+                    // Zelfde sign: voeg toe aan huidig segment
+                    if (currentSegment == null)
+                    {
+                        currentSegment = new List<(double x, double m)>();
+                        currentSign = sign;
+                    }
+                    currentSegment.Add(pt);
+                }
+                else
+                {
+                    // Sign change zonder nulpunt (zou niet moeten gebeuren na interpolatie)
+                    if (currentSegment != null && currentSegment.Count > 0)
+                    {
+                        segments.Add(currentSegment);
+                    }
+                    currentSegment = new List<(double x, double m)> { pt };
+                    currentSign = sign;
+                }
+            }
+            
+            // Laatste segment toevoegen
+            if (currentSegment != null && currentSegment.Count > 0)
+            {
+                segments.Add(currentSegment);
+            }
+            
+            // Stap 3: Maak gesloten polygonen voor elk segment
+            foreach (var segment in segments)
+            {
+                if (segment.Count < 2) continue;
+                
+                var polygon = new List<(double x, double m)>();
+                
+                double xStart = segment[0].x;
+                double xEnd = segment[^1].x;
+                
+                // Als eerste punt niet op nul-lijn ligt, start daar
+                if (Math.Abs(segment[0].m) > 1e-9)
+                {
+                    polygon.Add((xStart, 0));
+                }
+                
+                // Voeg alle segment punten toe
+                polygon.AddRange(segment);
+                
+                // Als laatste punt niet op nul-lijn ligt, sluit daar
+                if (Math.Abs(segment[^1].m) > 1e-9)
+                {
+                    polygon.Add((xEnd, 0));
+                }
+                
+                if (polygon.Count >= 3) // Minimaal 3 punten voor een polygon
+                {
+                    polygons.Add(polygon);
+                }
+            }
+            
+            // Fallback: lege polygon als er niets is
+            if (polygons.Count == 0)
+            {
+                polygons.Add([(0, 0), (beamLength, 0)]);
+            }
+            
+            Console.WriteLine($"🔧 BuildMomentPolygons: {points.Count} punten → {expandedPoints.Count} met zero-crossings → {polygons.Count} polygonen");
+            foreach (var (poly, idx) in polygons.Select((p, i) => (p, i)))
+            {
+                var minM = poly.Min(pt => pt.m);
+                var maxM = poly.Max(pt => pt.m);
+                var xMin = poly.Min(pt => pt.x);
+                var xMax = poly.Max(pt => pt.x);
+                Console.WriteLine($"   Polygon {idx}: {poly.Count} punten, X=[{xMin:F2}, {xMax:F2}], M=[{minM:F2}, {maxM:F2}]");
+            }
+            
+            return polygons;
         }
 
         /// <summary>
@@ -1308,6 +1598,64 @@
             catch
             {
                 return polygon1;
+            }
+        }
+
+        /// <summary>
+        /// Merged meerdere polygonen met Clipper2 library (UNION operation)
+        /// </summary>
+        private static List<(double x, double m)> MergeMultiplePolygonsWithClipper(
+            List<List<(double x, double m)>> polygons)
+        {
+            if (polygons.Count == 0) return [];
+            if (polygons.Count == 1) return polygons[0];
+
+            try
+            {
+                // Converteer alle polygonen naar Clipper2 PathsD
+                var paths = new Clipper2Lib.PathsD();
+                
+                foreach (var polygon in polygons)
+                {
+                    if (polygon.Count > 2) // Minimaal 3 punten voor een polygon
+                    {
+                        var path = new Clipper2Lib.PathD(
+                            polygon.Select(p => new Clipper2Lib.PointD(p.x, p.m)).ToList());
+                        
+                        // Zorg voor correcte orientatie (positief = counter-clockwise voor Clipper2)
+                        if (!Clipper2Lib.Clipper.IsPositive(path))
+                        {
+                            path.Reverse();
+                        }
+                        
+                        paths.Add(path);
+                    }
+                }
+
+                if (paths.Count == 0) return polygons[0];
+
+                // Gebruik Union om alle polygonen samen te voegen
+                // FillRule.Positive voor buitenste omhullende (beste voor moment diagrammen)
+                var solution = Clipper2Lib.Clipper.Union(paths, Clipper2Lib.FillRule.Positive);
+
+                if (solution.Count == 0)
+                {
+                    Console.WriteLine($"⚠️ Clipper2 Union gaf 0 resultaten");
+                    return polygons[0];
+                }
+
+                // Neem de grootste resulterende polygon (de omhullende)
+                var largestPath = solution.OrderByDescending(p => Math.Abs(Clipper2Lib.Clipper.Area(p))).First();
+                
+                Console.WriteLine($"✅ Clipper2 merged {paths.Count} polygonen → 1 omhullende met {largestPath.Count} punten");
+                
+                return largestPath.Select(pt => (pt.x, pt.y)).ToList();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Clipper2 merge gefaald: {ex.Message}");
+                Console.WriteLine($"   Stack: {ex.StackTrace}");
+                return polygons[0]; // Fallback naar eerste polygon
             }
         }
 
@@ -2070,6 +2418,7 @@
 
                 var path1 = MakePath(trap1);
                 path1.Fill = "yellow";
+                path1.FillOpacity = 0.3;
                 
                 // Transparant maken bij wapening weergave
                 if (toonWapening)
@@ -2092,6 +2441,7 @@
 
                 var path2 = MakePath(trap2);
                 path2.Fill = "yellow";
+                path2.FillOpacity = 0.3;
                 
                 // Transparant maken bij wapening weergave
                 if (toonWapening)
@@ -2431,7 +2781,7 @@
                 var c = bordes.Trap1;
                 
                 if (c.AansluitendElement != null)
-                    list.Add(new SvgText(c.AansluitendElement?.Merk ?? "TRAP" , c.Randafstand, 100, c.Randafstand + c.Lengte, 100));
+                    list.Add(new SvgText(c.AansluitendElement?.Merk ?? "TRAP" , c.Randafstand, 10, c.Randafstand + c.Lengte, 10) { DominantBaseLine = "hanging"});
                 
                 double yVS = c.Breedte + bordes.BreedteVersterkteStrook / 2.0;
                 list.Add(new SvgText("versterkte strook",x: 0, y: -yVS, x2:bordes.Lengte, y2:-yVS, scale:1));
@@ -2442,7 +2792,7 @@
                 var c = bordes.Trap2;
 
                 if (c.AansluitendElement != null)
-                    list.Add(new SvgText(c.AansluitendElement?.Merk ?? "TRAP", bordes.Lengte - c.Randafstand - c.Lengte, 100, bordes.Lengte -  c.Randafstand, 100));
+                    list.Add(new SvgText(c.AansluitendElement?.Merk ?? "TRAP", bordes.Lengte - c.Randafstand - c.Lengte, 10, bordes.Lengte -  c.Randafstand, 10) { DominantBaseLine = "hanging"});
             }
 
             

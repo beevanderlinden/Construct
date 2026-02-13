@@ -600,7 +600,7 @@
         if (SteekTrap == null) return;
         SteekTrap.DoorbuigingContext.LengteMM = SteekTrap.LengteSchuin;
         SteekTrap.DoorbuigingContext.Lijnlast = SteekTrap.Krachten.Gk * SteekTrap.FactorProjectieZToLocalZ;
-        SteekTrap.DoorbuigingContext.D = SteekTrap.SchilDikte - SteekTrap.WapeningSchil.ZRef;
+        SteekTrap.DoorbuigingContext.D = SteekTrap.SchilDikte - SteekTrap.WapeningSchil.ReferentieAfstand;
         SteekTrap.DoorbuigingValidatie.BerekenEnValideer();
         //SteekTrap.Doorbuiging.BerekenEnValideer();
 

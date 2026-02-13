@@ -1,0 +1,892 @@
+﻿@page "/examples/balk-demo"
+@using Eurocode.BetonConstructies
+
+<PageTitle>Betonbalk Doorsnede Demo</PageTitle>
+
+<div class="page-container">
+    
+   
+    
+    <div class="demo-grid">
+        <div class="visualisatie-panel">
+            <h3>Doorsnede visualisatie</h3>
+            <BetonBalkDoorsnedeVisualisatie 
+                Breedte="@breedte"
+                Hoogte="@hoogte"
+                BeugelWapening="@beugelWapening"
+                WapeningBoven="@wapeningBoven"
+                WapeningOnder="@wapeningOnder"
+                WapeningZijLinks="@wapeningZijLinks"
+                WapeningZijRechts="@wapeningZijRechts"
+                ToonMaatvoering="@toonMaatvoering"
+                ToonLegenda="@toonLegenda"
+                FocusElement="@focusElement"/>
+        </div>
+        
+        <!-- Verticale tab menu -->
+        <div class="tab-menu">
+            <button class="tab-btn @(activeTab == "geometrie" ? "active" : "")" @onclick='() => activeTab = "geometrie"'>
+                <span class="tab-icon">📐</span>
+                <span class="tab-label">Geometrie</span>
+            </button>
+            <button class="tab-btn @(activeTab == "beugels" ? "active" : "")" @onclick='() => activeTab = "beugels"'>
+                <span class="tab-icon">⭕</span>
+                <span class="tab-label">Beugels</span>
+            </button>
+            <button class="tab-btn @(activeTab == "langswapening" ? "active" : "")" @onclick='() => activeTab = "langswapening"'>
+                <span class="tab-icon">🔩</span>
+                <span class="tab-label">Langs</span>
+            </button>
+            <button class="tab-btn @(activeTab == "resultaten" ? "active" : "")" @onclick='() => activeTab = "resultaten"'>
+                <span class="tab-icon">📊</span>
+                <span class="tab-label">Resultaten</span>
+            </button>
+        </div>
+        
+        <div class="controls-panel">
+            <h3>Parameters</h3>
+            
+            @if (activeTab == "geometrie")
+            {
+            <div class="control-section">
+                <h4>Doorsnede afmetingen</h4>
+                <label>
+                    <span>Breedte (B):</span>
+                    <input type="number" @bind="breedte" min="200" max="800" step="50" 
+                           @onfocus='() => focusElement = "geometrie-breedte"' 
+                           @onblur='() => focusElement = ""'/>
+                    <span>mm</span>
+                </label>
+                <label>
+                    <span>Hoogte (H):</span>
+                    <input type="number" @bind="hoogte" min="200" max="1200" step="50"
+                           @onfocus='() => focusElement = "geometrie-hoogte"' 
+                           @onblur='() => focusElement = ""'/>
+                    <span>mm</span>
+                </label>
+            </div>
+            
+            <div class="control-section">
+                <h4>Materiaal</h4>
+                <label>
+                    <span>Betonklasse:</span>
+                    <select @bind="betonContext.Betonsterkteklasse">
+                        <option value="@BetonsterkteklasseEnum.C12_15">C12/15</option>
+                        <option value="@BetonsterkteklasseEnum.C16_20">C16/20</option>
+                        <option value="@BetonsterkteklasseEnum.C20_25">C20/25</option>
+                        <option value="@BetonsterkteklasseEnum.C25_30">C25/30</option>
+                        <option value="@BetonsterkteklasseEnum.C30_37">C30/37</option>
+                        <option value="@BetonsterkteklasseEnum.C35_45">C35/45</option>
+                        <option value="@BetonsterkteklasseEnum.C40_50">C40/50</option>
+                        <option value="@BetonsterkteklasseEnum.C45_55">C45/55</option>
+                        <option value="@BetonsterkteklasseEnum.C50_60">C50/60</option>
+                    </select>
+                    <span></span>
+                </label>
+                <label>
+                    <span>Wapeningsklasse:</span>
+                    <select @bind="betonContext.BetonStaal.BetonStaalKwaliteit">
+                        <option value="@BetonStaalKwaliteitEnum.B400A">B400A</option>
+                        <option value="@BetonStaalKwaliteitEnum.B500A">B500A</option>
+
+                    </select>
+                    <span></span>
+                </label>
+            </div>
+            }
+            
+            @if (activeTab == "beugels")
+            {
+            <div class="control-section">
+                <h4>Beugels</h4>
+                <label>
+                    <span>Diameter:</span>
+                    <select @bind="beugelWapening.Diameter" @bind:after="UpdateBuigstraal"
+                            @onfocus='() => focusElement = "beugel-diameter"' 
+                            @onblur='() => focusElement = ""'>
+                        <option value="5">Ø5</option>
+                        <option value="6">Ø6</option>
+                        <option value="8">Ø8</option>
+                        <option value="10">Ø10</option>
+                        <option value="12">Ø12</option>
+                    </select>
+                    <span></span>
+                </label>
+                <label>
+                    <span>Aantal sneden:</span>
+                    <select @bind="beugelWapening.AantalSneden"
+                            @onfocus='() => focusElement = "beugel-sneden"' 
+                            @onblur='() => focusElement = ""'>
+                        <option value="2">2-snedig</option>
+                        <option value="3">3-snedig</option>
+                        <option value="4">4-snedig</option>
+                    </select>
+                    <span></span>
+                </label>
+                <label>
+                    <span>Hart-op-hart (s):</span>
+                    <input type="number" @bind="beugelWapening.Hoh" min="50" max="400" step="10"
+                           @onfocus='() => focusElement = "beugel-hoh"' 
+                           @onblur='() => focusElement = ""'/>
+                    <span>mm</span>
+                </label>
+                <label>
+                    <span>Asw:</span>
+                    <span>@($"{beugelWapening.Asw:F1}") mm²/m</span>
+                    <span></span>
+                </label>
+                <label>
+                    <span>Dekking:</span>
+                    <input type="number" @bind="beugelDekking" @bind:after="UpdateBeugelDekking" min="20" max="50" step="5"
+                           @onfocus='() => focusElement = "beugel-dekking"' 
+                           @onblur='() => focusElement = ""'/>
+                    <span>mm</span>
+                </label>
+                <label>
+                    <span>Buigstraal (hart):</span>
+                    <input type="number" @bind="beugelWapening.Buigstraal" min="10" max="50" step="5"
+                           @onfocus='() => focusElement = "beugel-buigstraal"' 
+                           @onblur='() => focusElement = ""'/>
+                    <span>mm</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" @bind="beugelWapening.Linksom"/>
+                    <span>Linksom (anders rechtsom)</span>
+                </label>
+                <label>
+                    <span>Haakhoek:</span>
+                    <select @bind="beugelWapening.HaakHoek">
+                        <option value="90">90°</option>
+                        <option value="135">135°</option>
+                    </select>
+                    <span></span>
+                </label>
+            </div>
+            }
+            
+            @if (activeTab == "langswapening")
+            {
+            <div class="control-section">
+                <h4>Bovenwapening</h4>
+                <label>
+                    <span>Aantal (n):</span>
+                    <input type="number" @bind="aantalBovenStaven" @bind:after="UpdateBovenWapening" min="2" max="10" step="1"
+                           @onfocus='() => focusElement = "wapening-boven-aantal"' 
+                           @onblur='() => focusElement = ""'/>
+                    <span></span>
+                </label>
+                <label>
+                    <span>Diameter (Ø):</span>
+                    <select @bind="diameterBovenStaven" @bind:after="UpdateBovenWapening"
+                            @onfocus='() => focusElement = "wapening-boven-diameter"' 
+                            @onblur='() => focusElement = ""'>
+                        <option value="6">Ø6</option>
+                        <option value="8">Ø8</option>
+                        <option value="10">Ø10</option>
+                        <option value="12">Ø12</option>
+                        <option value="16">Ø16</option>
+                        <option value="20">Ø20</option>
+                        <option value="25">Ø25</option>
+                        <option value="32">Ø32</option>
+                        <option value="40">Ø40</option>
+                    </select>
+                    <span></span>
+                </label>
+                <label>
+                    <span>Dekking:</span>
+                    <input type="number" @bind="wapeningBoven.DekkingToegepast" min="0" max="52" step="1" disabled="@autoUpdateDekking"
+                           @onfocus='() => focusElement = "wapening-boven-dekking"' 
+                           @onblur='() => focusElement = ""'/>
+                    <span>mm</span>
+                </label>
+            </div>
+            
+            <div class="control-section">
+                <h4>Onderwapening</h4>
+                <label>
+                    <span>Aantal (n):</span>
+                    <input type="number" @bind="aantalOnderStaven" @bind:after="UpdateOnderWapening" min="2" max="10" step="1"
+                           @onfocus='() => focusElement = "wapening-onder-aantal"' 
+                           @onblur='() => focusElement = ""'/>
+                    <span></span>
+                </label>
+                <label>
+                    <span>Diameter (Ø):</span>
+                    <select @bind="diameterOnderStaven" @bind:after="UpdateOnderWapening"
+                            @onfocus='() => focusElement = "wapening-onder-diameter"' 
+                            @onblur='() => focusElement = ""'>
+                        <option value="6">Ø6</option>
+                        <option value="8">Ø8</option>
+                        <option value="10">Ø10</option>
+                        <option value="12">Ø12</option>
+                        <option value="16">Ø16</option>
+                        <option value="20">Ø20</option>
+                        <option value="25">Ø25</option>
+                        <option value="32">Ø32</option>
+                        <option value="40">Ø40</option>
+                    </select>
+                    <span></span>
+                </label>
+                <label>
+                    <span>Dekking:</span>
+                    <input type="number" @bind="wapeningOnder.DekkingToegepast" min="0" max="52" step="1" disabled="@autoUpdateDekking"
+                           @onfocus='() => focusElement = "wapening-onder-dekking"' 
+                           @onblur='() => focusElement = ""'/>
+                    <span>mm</span>
+                </label>
+            </div>
+            
+            <div class="control-section">
+                <h4>Zijwapening</h4>
+                <label class="checkbox-label">
+                    <input type="checkbox" @bind="toonZijwapening" @bind:after="UpdateZijwapening"/>
+                    <span>Toon zijwapening</span>
+                </label>
+                @if (toonZijwapening)
+                {
+                    <label>
+                        <span>Aantal per zijde:</span>
+                        <input type="number" @bind="aantalZijwapening" @bind:after="UpdateZijwapening" min="0" max="4" step="1"
+                               @onfocus='() => focusElement = "wapening-zij-aantal"' 
+                               @onblur='() => focusElement = ""'/>
+                        <span></span>
+                    </label>
+                    <label>
+                        <span>Diameter:</span>
+                        <select @bind="diameterZijwapening" @bind:after="UpdateZijwapening"
+                                @onfocus='() => focusElement = "wapening-zij-diameter"' 
+                                @onblur='() => focusElement = ""'>
+                            <option value="8">Ø8</option>
+                            <option value="10">Ø10</option>
+                            <option value="12">Ø12</option>
+                        </select>
+                        <span></span>
+                    </label>
+                }
+            </div>
+            
+            <div class="control-section">
+                <h4>Opties</h4>
+                <label class="checkbox-label">
+                    <input type="checkbox" @bind="autoUpdateDekking"/>
+                    <span>Auto-update dekking langswapening</span>
+                </label>
+                <small class="help-text">Bij wijziging beugel automatisch dekking aanpassen</small>
+                
+                <button class="btn btn-secondary" @onclick="WijzigDekkingAutomatisch" style="margin-top: 0.5rem;">
+                    Wijzig dekking automatisch
+                </button>
+                <small class="help-text">Past dekking langswapening aan naar beugeldekking + beugeldiameter</small>
+            </div>
+            }
+            
+            @if (activeTab == "resultaten")
+            {
+            <div class="control-section">
+                <h4>Weergave opties</h4>
+                <label class="checkbox-label">
+                    <input type="checkbox" @bind="toonMaatvoering"/>
+                    <span>Toon maatvoering</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" @bind="toonLegenda"/>
+                    <span>Toon legenda</span>
+                </label>
+            </div>
+            
+            <div class="control-section">
+                <button class="btn btn-accent" @onclick="BerekenBuigweerstand">
+                    Bereken M<sub>y,Rd</sub>
+                </button>
+                @if (bendingResults != null)
+                {
+                    <div class="resultaten-box">
+                        <h5>Buigweerstand</h5>
+
+                        <div class="resultaat-rij">
+                            <span class="label"></span>
+                            <span class="waarde">BOVEN</span>
+                            <span class="waarde">ONDER</span>
+
+                        </div>
+
+                        <div class="resultaat-rij">
+                            <span class="label">M<sub>y,Rd</sub> :</span>
+                            <span class="waarde">@($"{bendingResults.MRd:F2}") kNm</span>
+                            <span class="waarde">@($"{-bendingResultsOnder?.MRd:F2}") kNm</span>
+
+                        </div>
+                        <div class="resultaat-rij">
+                            <span class="label">x<sub>u</sub> :</span>
+                            <span class="waarde">@($"{bendingResults.Xu:F1}") mm</span>
+                            <span class="waarde">@($"{bendingResultsOnder?.Xu:F1}") mm</span>
+
+                        </div>
+                        <div class="resultaat-rij">
+                            <span class="label">z :</span>
+                            <span class="waarde">@($"{bendingResults.Z:F1}") mm</span>
+                            <span class="waarde">@($"{bendingResultsOnder?.Z:F1}") mm</span>
+                        </div>
+
+                         <div class="resultaat-rij">
+                            <span class="label">d :</span>
+                            <span class="waarde">@($"{bendingResults.D:F1}") </span>
+                            <span class="waarde">@($"{bendingResultsOnder?.D:F1}") mm</span>
+                        </div>
+
+                         <div class="resultaat-rij">
+                            <span class="label">A<sub>s,prov</sub> :</span>
+                            <span class="waarde">@($"{bendingResults.AsApplied:F1}")</span>
+                            <span class="waarde">@($"{bendingResultsOnder?.AsApplied:F1}") mm²</span>
+                        </div>
+                    </div>
+                }
+            </div>
+            
+            <div class="control-section">
+                <button class="btn btn-accent" @onclick="BerekenDwarskrachtweerstand">
+                    Bereken V<sub>Rd</sub>
+                </button>
+                @if (shearResult != null)
+                {
+                    <div class="resultaten-box">
+                        <h5>Dwarskrachtweerstand</h5>
+
+
+
+
+
+                        <div class="resultaat-rij">
+                            <span class="label">V<sub>Rd,c</sub>:</span>
+                            <span class="waarde">@($"{shearResult.DwarskrachtWeerstandBeton:F2}") kN</span>
+                        </div>
+                        <div class="resultaat-rij">
+                            <span class="label">V<sub>Rd,s</sub>:</span>
+                            <span class="waarde">@($"{shearResult.DwarskrachtWeerstandStaal:F2}") kN</span>
+                        </div>
+                        <div class="resultaat-rij">
+                            <span class="label">V<sub>Rd,max</sub>:</span>
+                            <span class="waarde">@($"{shearResult.DwarskrachtWeerstandMax:F2}") kN</span>
+                        </div>
+                    </div>
+                }
+            </div>
+            }
+            
+            <div class="control-section">
+                <button class="btn btn-primary" @onclick="ResetToDefault">
+                    Herstel standaard waarden
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+private double breedte = 300;
+private double hoogte = 400;
+    
+// Centraal BetonContext voor alle berekeningen
+private BetonContext betonContext = new()
+{
+    Betonsterkteklasse = BetonsterkteklasseEnum.C30_37,
+};
+
+    private BeugelWapeningContext beugelWapening = new()
+    {
+        AantalSneden = 2,
+        Diameter = 8,
+        DekkingLinks = 30,
+        DekkingRechts = 30,
+        DekkingBoven = 30,
+        DekkingOnder = 30,
+        Buigstraal = 20, // 2.5 × 8
+        Linksom = true,
+        HaakHoek = 135,
+        HaakLengte = 40,
+        Hoh = 100 // Hart-op-hart 100mm
+    };
+
+    private double beugelDekking = 30;
+
+    private WapeningContext wapeningBoven = new()
+    {
+        Tekst = "3r10", 
+        ReferentieLengte = 300,
+        DekkingToegepast = 38,
+    };
+
+    private WapeningContext wapeningOnder = new()
+    {
+        Tekst = "3r12",
+        ReferentieLengte = 300,
+        DekkingToegepast = 38,
+    };
+
+    private WapeningContext? wapeningZijLinks = new()
+    {
+        Tekst = "1r8",
+        ReferentieLengte = 400,
+        DekkingToegepast = 38,
+    };
+
+    private WapeningContext? wapeningZijRechts = new()
+    {
+        Tekst = "1r8",
+        ReferentieLengte = 400,
+        DekkingToegepast = 38,
+    };
+
+    private bool toonZijwapening = true;
+    private int aantalZijwapening = 1;
+    private double diameterZijwapening = 8;
+
+    private bool toonMaatvoering = true;
+    private bool toonLegenda = true;
+    private bool autoUpdateDekking = true;  // Standaard aan
+
+    // Tab systeem (active tab in plaats van toggles)
+    private string activeTab = "geometrie";
+
+    // Focus tracking voor dynamische maatlijnen
+    private string focusElement = "";
+
+    // Hoofdwapening inputs
+    private int aantalBovenStaven = 3;
+    private double diameterBovenStaven = 10;
+    private int aantalOnderStaven = 3;
+    private double diameterOnderStaven = 12;
+
+    private BendingResults? bendingResults = null;
+    private BendingResults? bendingResultsOnder = null;
+    private ShearResults? shearResults = null;
+
+    private DwarskrachtWapContext? shearResult = null;
+
+
+    // Helper class voor dwarskracht resultaten (tijdelijk, vervang door echte implementatie)
+    private class ShearResults
+    {
+        public double VRdc { get; set; }
+        public double VRds { get; set; }
+        public double VRdmax { get; set; }
+    }
+
+    private void UpdateBeugelDekking()
+    {
+        beugelWapening.DekkingLinks = beugelDekking;
+        beugelWapening.DekkingRechts = beugelDekking;
+        beugelWapening.DekkingBoven = beugelDekking;
+        beugelWapening.DekkingOnder = beugelDekking;
+
+        // Auto-update dekking langswapening indien ingeschakeld
+        if (autoUpdateDekking)
+        {
+            WijzigDekkingAutomatisch();
+        }
+    }
+
+    private void UpdateBuigstraal()
+    {
+        // Automatisch buigstraal aanpassen naar 2.5 × diameter (hart)
+        beugelWapening.Buigstraal = beugelWapening.Diameter * 2.5;
+
+        // Auto-update dekking langswapening indien ingeschakeld
+        if (autoUpdateDekking)
+        {
+            WijzigDekkingAutomatisch();
+        }
+    }
+
+    private void WijzigDekkingAutomatisch()
+    {
+        // Bereken nieuwe dekking = beugelDekking + beugelDiameter
+        double nieuweDekking = beugelWapening.DekkingBoven + beugelWapening.Diameter;
+
+        // Pas toe op bovenwapening
+        wapeningBoven.DekkingToegepast = nieuweDekking;
+
+        // Pas toe op onderwapening
+        nieuweDekking = beugelWapening.DekkingOnder + beugelWapening.Diameter;
+        wapeningOnder.DekkingToegepast = nieuweDekking;
+
+        // Pas toe op zijwapening (gemiddelde van links/rechts)
+        if (wapeningZijLinks != null)
+        {
+            nieuweDekking = beugelWapening.DekkingLinks + beugelWapening.Diameter;
+            wapeningZijLinks.DekkingToegepast = nieuweDekking;
+        }
+
+        if (wapeningZijRechts != null)
+        {
+            nieuweDekking = beugelWapening.DekkingRechts + beugelWapening.Diameter;
+            wapeningZijRechts.DekkingToegepast = nieuweDekking;
+        }
+
+        StateHasChanged();
+    }
+
+    private void BerekenBuigweerstand()
+    {
+        try
+        {
+            // Gebruik centraal BetonContext
+            bendingResults = new();
+            bendingResults.Beton = betonContext;
+            bendingResults.Wapening = wapeningBoven;
+            bendingResults.Profiel = new Profielen.Beton.BetonProfiel
+            {
+                Breedte = breedte,
+                Hoogte = hoogte,
+            };
+
+            bendingResultsOnder = new();
+            bendingResultsOnder.Beton = betonContext;
+            bendingResultsOnder.Wapening = wapeningOnder;
+            bendingResultsOnder.Profiel = new Profielen.Beton.BetonProfiel(breedte, hoogte);
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            // Toon foutmelding (indien nodig kun je hier een toast/dialog toevoegen)
+            Console.WriteLine($"Fout bij berekening: {ex.Message}");
+            bendingResults = null;
+        }
+    }
+
+    private void BerekenDwarskrachtweerstand()
+    {
+        try
+        {
+            // Gebruik centraal BetonContext
+            shearResult = new()
+            {
+                Beton = betonContext,
+                Profiel = new Profielen.Beton.BetonProfiel(breedte, hoogte),
+                AsLangs = wapeningBoven.As + wapeningOnder.As,
+                NutHoogte = hoogte - wapeningBoven.ZRef,
+                AswToegepast = beugelWapening.Asw // Gebruik berekende Asw in mm²/m
+            };
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Fout bij dwarskracht berekening: {ex.Message}");
+            shearResults = null;
+        }
+    }
+    
+    private void UpdateBovenWapening()
+    {
+        wapeningBoven.Tekst = $"{aantalBovenStaven}r{diameterBovenStaven}";
+        StateHasChanged();
+    }
+    
+    private void UpdateOnderWapening()
+    {
+        wapeningOnder.Tekst = $"{aantalOnderStaven}r{diameterOnderStaven}";
+        StateHasChanged();
+    }
+
+    private void UpdateZijwapening()
+    {
+        if (toonZijwapening && aantalZijwapening > 0)
+        {
+            wapeningZijLinks ??= new();
+            wapeningZijLinks.Tekst = $"{aantalZijwapening}r{diameterZijwapening}";
+            wapeningZijLinks.ReferentieLengte = hoogte;
+            wapeningZijLinks.DekkingToegepast = beugelWapening.DekkingLinks + beugelWapening.Diameter;
+
+          
+            wapeningZijRechts ??= new();
+            wapeningZijRechts.Tekst = $"{aantalZijwapening}r{diameterZijwapening}";
+            wapeningZijRechts.ReferentieLengte = hoogte;
+            wapeningZijRechts.DekkingToegepast = beugelWapening.DekkingRechts + beugelWapening.Diameter;
+           
+        }
+        else
+        {
+            wapeningZijLinks = null;
+            wapeningZijRechts = null;
+        }
+    }
+    
+    private void ResetToDefault()
+    {
+        breedte = 300;
+        hoogte = 400;
+        
+        // Reset BetonContext
+        betonContext = new()
+        {
+            Betonsterkteklasse = BetonsterkteklasseEnum.C30_37,
+        };
+        
+        beugelWapening = new()
+        {
+            AantalSneden = 2,
+            Diameter = 8,
+            DekkingLinks = 30,
+            DekkingRechts = 30,
+            DekkingBoven = 30,
+            DekkingOnder = 30,
+            Buigstraal = 20,
+            Linksom = true,
+            HaakHoek = 135,
+            HaakLengte = 40,
+            Hoh = 100
+        };
+        
+        beugelDekking = 30;
+        
+        wapeningBoven = new()
+        {
+            Tekst = "3r10",
+            ReferentieLengte = 300,
+            DekkingToegepast = 38,  
+        };
+        
+        wapeningOnder = new()
+        {
+           Tekst = "3r12",
+            ReferentieLengte = 300,
+            DekkingToegepast = 38
+        };
+        
+        toonZijwapening = true;
+        aantalZijwapening = 1;
+        diameterZijwapening = 8;
+        autoUpdateDekking = true;
+        
+        UpdateZijwapening();
+    }
+}
+
+<style>
+    .page-container {
+        max-width: 1900px;
+        margin: 0 auto;
+        padding: 1rem;
+    }
+    
+    .lead {
+        font-size: 1.1rem;
+        color: var(--neutral-foreground-hint);
+        margin-bottom: 2rem;
+    }
+    
+    .demo-grid {
+        display: grid;
+        grid-template-columns: 1fr 80px 400px;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        height: calc(100vh - 200px);
+    }
+    
+    .visualisatie-panel,
+    .controls-panel {
+        background: var(--neutral-layer-2);
+        border-radius: 8px;
+        padding: 0.5rem;
+        border: 1px solid var(--neutral-stroke-rest);
+        overflow-y: auto;
+    }
+    
+    .tab-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        background: var(--neutral-layer-2);
+        border-radius: 8px;
+        padding: 0.5rem;
+        border: 1px solid var(--neutral-stroke-rest);
+    }
+    
+    .tab-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 0.25rem;
+        background: var(--neutral-fill-stealth-rest);
+        color: var(--neutral-foreground-rest);
+        border: 1px solid var(--neutral-stroke-rest);
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        min-height: 70px;
+    }
+    
+    .tab-btn:hover {
+        background: var(--neutral-fill-stealth-hover);
+        border-color: var(--accent-stroke-rest);
+        transform: translateX(-2px);
+    }
+    
+    .tab-btn.active {
+        background: var(--accent-fill-rest);
+        color: white;
+        border-color: var(--accent-fill-rest);
+        font-weight: 600;
+        transform: translateX(-4px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    .tab-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .tab-label {
+        font-size: 0.7rem;
+        text-align: center;
+        line-height: 1.1;
+    }
+    
+    .controls-panel {
+        overflow-y: auto;
+    }
+    
+    .control-section {
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--neutral-stroke-rest);
+    }
+    
+    .control-section:last-child {
+        border-bottom: none;
+    }
+    
+    .control-section h4 {
+        margin: 0 0 1rem 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--accent-foreground-rest);
+    }
+    
+    .control-section label {
+        display: grid;
+        grid-template-columns: 120px 1fr auto;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    .control-section label.checkbox-label {
+        grid-template-columns: auto 1fr;
+    }
+    
+    .control-section input[type="number"],
+    .control-section select {
+        margin-left: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        border: 1px solid var(--neutral-stroke-rest);
+        border-radius: 4px;
+        background: var(--neutral-layer-1);
+        color: var(--neutral-foreground-rest);
+    }
+    
+    .control-section input[type="checkbox"] {
+        margin-right: 0.5rem;
+    }
+    
+    .btn-primary {
+        width: 100%;
+        padding: 0.75rem;
+        background: var(--accent-fill-rest);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.2s;
+    }
+    
+    .btn-primary:hover {
+        background: var(--accent-fill-hover);
+    }
+    
+    .btn-secondary {
+        width: 100%;
+        padding: 0.75rem;
+        background: var(--neutral-fill-stealth-rest);
+        color: var(--neutral-foreground-rest);
+        border: 1px solid var(--neutral-stroke-rest);
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.2s;
+        margin-bottom: 0.5rem;
+    }
+    
+    .btn-secondary:hover {
+        background: var(--neutral-fill-stealth-hover);
+    }
+    
+    .btn-accent {
+        width: 100%;
+        padding: 0.75rem;
+        background: var(--accent-fill-rest);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.2s;
+        margin-bottom: 1rem;
+    }
+    
+    .btn-accent:hover {
+        background: var(--accent-fill-hover);
+    }
+    
+    .resultaten-box {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: var(--neutral-layer-1);
+        border: 1px solid var(--accent-stroke-rest);
+        border-radius: 4px;
+    }
+    
+    .resultaten-box h5 {
+        margin: 0 0 0.75rem 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--accent-foreground-rest);
+    }
+    
+    .resultaat-rij {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--neutral-stroke-subtle);
+        font-size: 0.85rem;
+    }
+    
+    .resultaat-rij:last-child {
+        border-bottom: none;
+    }
+    
+    .resultaat-rij .label {
+        color: var(--neutral-foreground-hint);
+    }
+    
+    .resultaat-rij .waarde {
+        font-weight: 600;
+        color: var(--neutral-foreground-rest);
+    }
+    
+    .help-text {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--neutral-foreground-hint);
+        margin-top: 0.25rem;
+    }
+    
+    
+</style>

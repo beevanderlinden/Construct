@@ -551,12 +551,12 @@ else
     public TableContent GetTableContentDekkingOpt(DekkingContext dekkingContext)
     {
         string w = "3cm";
-        
+
         TableContent table = new();
         dekkingContext.BerekenEnValideer();
         table.Headers.Add(new() { CellContent = new("pos", "3cm") });
         table.Headers.Add(new() { CellContent = new("milieuklasse(n)", "2cm") });
-        table.Headers.Add(new() { CellContent = new("constructiekl.", "3cm") });
+        table.Headers.Add(new() { CellContent = new("constructieklasse", "3cm") });
         table.Headers.Add(new() { CellContent = new("*c<sub>nom</sub>*", "3cm") });
         table.Headers.Add(new() { CellContent = new("*c<sub>prov</sub>*", "3cm") });
         table.Headers.Add(new() { CellContent = new("opmerking", "3cm") });
@@ -573,16 +573,19 @@ else
             }
 
             List<string> opm = [];
-            if (d.IsKwaliteitsBeheersing) opm.Add("kwaliteitsbeheersing");
-            if (d.IsPlaatGeometrie) opm.Add("plaatgeometrie");
+            if (d.IsKwaliteitsBeheersing) opm.Add("prefab");
+            if (d.IsPlaatGeometrie) opm.Add("plaat");
             if (d.GestortTegenBestaandBeton) opm.Add("tegen bestaand beton");
             opm.Add("korrel" + d.GrootsteKorrelDiameterUserFriendlyName);
+            if (d.OntwerpLevensduur != OntwerpLevensduurEnum.Vijftig) opm.Add(d.OntwerpLevensduur.GetDisplayName());
+            opm.Add(d.Beton.UserFriendlyName);
+            if (d.DekkingNom > d.DekkingToe) opm.Add("**{color:red}⚠️ onvoldoende dekking**");
 
             table.Rows.Add(
                     [
-                        new(pos, "20mm"),
-                        new(d.MilieuklassenUserFriendlyName, "20mm"),
-                        new(d.ConstructieklasseUserFriendlyNameComplete, w),
+                        new(pos, "15mm"),
+                        new(d.MilieuklassenUserFriendlyName, "25mm"),
+                        new(d.ConstructieklasseUserFriendlyName, w),
                         new(d.DekkingNom.ToString("0 mm"), "15mm"),
                         new(d.DekkingToe.ToString("0 mm"),"15mm"),
                         new(string.Join(", ", opm),"50mm")

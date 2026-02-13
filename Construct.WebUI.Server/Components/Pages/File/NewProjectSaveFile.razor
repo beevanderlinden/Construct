@@ -11,64 +11,33 @@
 
 
 
-<FluentCard AreaRestricted="false" Style="max-width:210mm; margin:5mm;">
+<FluentCard AreaRestricted="false" Style="max-width:210mm;">
     <h1>Projectinfo</h1>
     <ProjectInfo Model="@ViewModel" ModelChanged="BijwerkenProjectInfo"></ProjectInfo>
 
 </FluentCard>
 
 
-
-
-
-
-
 @if (toonSaveButton)
 {
     if(ProjectStateService != null && ProjectStateService.CurrentProject != null)
     {
-        
-            
-            <FluentCard AreaRestricted="false" Style="max-width:210mm; margin:5mm;">
+            <FluentCard AreaRestricted="false" Style="max-width:210mm;">
                 <h1>Grondslagen (EC0)</h1>
                 <Grondslagen Model="@ProjectStateService.CurrentProject.ProjectInfo.Grondslagen" />
+            <br />
+            <FluentButton Appearance="Appearance.Accent"
+                          OnClick="() => NavigateTo(urlAssemblages)">
+
+                Naar berekeningen
+            </FluentButton>
+            
             </FluentCard>
     }
-
- 
-    <br />
-    <FluentButton Appearance="Appearance.Accent"
-                  OnClick="() => NavigateTo(urlAssemblages)">
-
-        Naar berekeningen
-    </FluentButton>
-
-@*     <FluentTextField Label="File name"
-                     Value="@FileName"
-                     ValueChanged="@((string value) => FileName = value)"
-                     Placeholder="Enter file name"
-                     Required="true" />
-
-
-    <FluentButton Appearance="Appearance.Accent"
-                  OnClick="SaveProject">
-        Save project
-    </FluentButton> *@
-
-    @* <DriveTest 
-        @bind-MapNaam="@FolderName"
-        @bind-Bytes="@bytes"
-        @bind-BestandNaam="@FileName" /> *@
-
-
-
 }
 
 
-
-
 @code {
-
     private string urlGrondslagen = "/Project/grondslagen";
     private string urlAssemblages = "/Project/assemblages";
 
@@ -130,21 +99,7 @@
     {
         Navigation.NavigateTo(url);
     }
-
-    public void SaveProject()
-    {
-        // Implement the logic to save the project here
-        // For example, you can use FileService to save the project
-        // FileService.SaveProject(ProjectEntity, FileName);
-
-        // maak het 
-
-
-        //<SaveAs></SaveAs>
-
-
-
-    }
+   
 
     private async void BijwerkenProjectInfo()
     {
@@ -166,7 +121,6 @@
 
             
             ProjectStateService.SetProjectFileInfo(ProjectStateService.ProjectFileInfo); 
-
 
 
             // nu mag je opslaan

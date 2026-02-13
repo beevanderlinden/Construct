@@ -305,7 +305,7 @@ namespace Construct.Domain.Entities
                     PosLabel = fx.Pos.ToString("0.000", CultureInfo.InvariantCulture),
                     Profiel = this.Profiel,
                     AsLangs = this.WapOnder.As,
-                    NutHoogte = this.Profiel.Hoogte - this.WapOnder.ZRef,
+                    NutHoogte = this.Profiel.Hoogte - this.WapOnder.ReferentieAfstand,
                     //PosLabel = fx.Pos.ToString("0.000", CultureInfo.InvariantCulture),
 
                 };
