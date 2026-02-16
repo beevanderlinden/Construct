@@ -44,7 +44,6 @@
 
   <ItemGroup>
     <PackageReference Include="Kaskon.BeamClassLibrary" Version="1.0.0" />
-    <PackageReference Include="Kaskon.CommonLibrary" Version="2.2.39" />
     <PackageReference Include="Kaskon.Eurocode1.Belastingen" Version="1.29.1" />
     <PackageReference Include="Kaskon.EurocodeComponenten" Version="2.2.3" />
 	<PackageReference Include="Kaskon.Algemeen" Version="1.0.0" />
@@ -70,6 +69,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\CommonLibrary\CommonLibrary.csproj" />
     <ProjectReference Include="..\Construct.Infrastructure\Construct.Infrastructure.csproj" />
   </ItemGroup>
 

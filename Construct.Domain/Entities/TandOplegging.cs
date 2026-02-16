@@ -236,7 +236,7 @@ namespace Construct.Domain.Entities
         {
             get
             {
-                return (OplegReactie * ArmVoorTand * 0.001 + MomentVoorTandUitHorizontaleBelasting) * (IsBoventand? -1 : 1) ;
+                return (Math.Abs(OplegReactie) * ArmVoorTand * 0.001 + MomentVoorTandUitHorizontaleBelasting) * (IsBoventand? -1 : 1) ;
             }
         }
 
@@ -244,7 +244,7 @@ namespace Construct.Domain.Entities
         {
             get
             {
-                return OplegReactie * PercentageHorizontaleBelasting;
+                return Math.Abs(OplegReactie) * PercentageHorizontaleBelasting;
             }
         }
 
@@ -352,7 +352,7 @@ namespace Construct.Domain.Entities
         {
             get
             {
-                return FactorOphangKracht * OplegReactie;
+                return FactorOphangKracht * Math.Abs(OplegReactie);
             }
         }
         public double OphangWapeningHalsBenodigd

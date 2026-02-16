@@ -166,6 +166,8 @@ namespace Construct.Domain.Entities
              }
         }
 
+
+
         /// <summary>
         /// Herstelt assemblage-referenties na JSON-deserialisatie.
         /// Wordt aangeroepen vanuit BordesEntity.RestoreReferencesAfterDeserialization().

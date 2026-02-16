@@ -281,17 +281,17 @@
     private List<double> BerekenHoofdwapeningXPosities(WapeningContext wapening)
     {
         var posities = new List<double>();
-        
+
         var asPerGemiddeldeStaaf = Math.PI * Math.Pow(wapening.GemiddeldeDiameter / 2, 2);
-        int aantal = (int)(wapening.As / asPerGemiddeldeStaaf);
+        int aantal = (int)Math.Ceiling(wapening.As / asPerGemiddeldeStaaf);
         double diameter = wapening.GemiddeldeDiameter;
         double dekking = wapening.DekkingToegepast;
-        
+
         if (aantal == 0) return posities;
-        
+
         // Intelligente deltaX berekening op basis van buigdoorndiameter vs langswapening diameter
         double buigdoornDiameter = 4 * (BeugelWapening?.Diameter ?? 8);
-        
+
         double deltaX;
         if (buigdoornDiameter <= diameter)
         {
@@ -303,34 +303,34 @@
             double maxDeltaX = buigdoornDiameter / 2;
             deltaX = Math.Min(minDeltaX, maxDeltaX);
         }
-        
+
         double startX = dekking + diameter / 2 + deltaX;
         double eindX = Breedte - (dekking + diameter / 2) - deltaX;
         double spacing = aantal > 1 ? (eindX - startX) / (aantal - 1) : 0;
-        
+
         for (int i = 0; i < aantal; i++)
         {
             double x = aantal == 1 ? (startX + eindX) / 2 : startX + i * spacing;
             posities.Add(x);
         }
-        
+
         return posities;
     }
-    
+
     private List<BaseSvg> GenerateHoofdwapening(WapeningContext wapening, bool isTop)
     {
         List<BaseSvg> elements = [];
-        
+
         double diameter = wapening.GemiddeldeDiameter;
         double dekking = wapening.DekkingToegepast;
-        
+
         double y = isTop 
             ? dekking + diameter / 2
             : Hoogte - (dekking + diameter / 2);
-        
+
         // Gebruik helper om posities te berekenen
         var xPosities = BerekenHoofdwapeningXPosities(wapening);
-        
+
         foreach (var x in xPosities)
         {
             elements.Add(new SvgCircle
@@ -343,7 +343,7 @@
                 StrokeWidth = 0.5
             });
         }
-        
+
         return elements;
     }
 
@@ -352,7 +352,12 @@
         List<BaseSvg> elements = [];
 
         var asPerGemiddeldeStaaf = Math.PI * Math.Pow(wapening.GemiddeldeDiameter / 2, 2);
-        int aantal = (int)(wapening.As / asPerGemiddeldeStaaf);
+        
+        
+        
+        int aantal = (int)Math.Ceiling(wapening.As / asPerGemiddeldeStaaf);
+        
+        
         double diameter = wapening.GemiddeldeDiameter;
         double dekking = wapening.DekkingToegepast;
 
@@ -496,10 +501,10 @@
                 double dekking = WapeningBoven.DekkingToegepast;
                 double diameter = WapeningBoven.GemiddeldeDiameter;
                 double y = dekking + diameter / 2;
-                
+
                 // Bereken X-posities van alle staven
                 var xPosities = BerekenHoofdwapeningXPosities(WapeningBoven);
-                
+
                 // Bouw puntenlijst: links profiel → alle staven → rechts profiel
                 List<(double, double)> horizontalPoints = [(0, y)];
                 foreach (var x in xPosities)
@@ -507,41 +512,42 @@
                     horizontalPoints.Add((x, y));
                 }
                 horizontalPoints.Add((Breedte, y));
-                
+
                 // Horizontale maatlijngroep: profiel → staaf1 → staaf2 → ... → staafN → profiel
                 var horizontalGroup = new SvgDimLineGroup
                 {
                     Mode = DimLineMode.Horizontal,
                     Points = horizontalPoints,
-                    Offset = 10,
-                    OffsetLines = 0,
+                    Offset = y,
+                    OffsetLines = 1,
                     Scale = 1,
-                    Stroke = "#0000ff",
                     MarkerStart = "chevStart",
                     MarkerEnd = "chevEnd"
                 };
                 elements.Add(horizontalGroup);
-                
-                // Verticale maatlijn: bovenkant → hart eerste staaf
-                if (xPosities.Count > 0)
+
+                if (xPosities.Count > 1)
                 {
-                    var verticalGroup = new SvgDimLineGroup
+                    for (int i = 0; i < xPosities.Count -1; i++)
                     {
-                        Mode = DimLineMode.Vertical,
-                        Points = new List<(double, double)>
+                        var tussenruimte = new SvgDimLine()
                         {
-                            (xPosities[0], 0),      // Bovenkant profiel
-                            (xPosities[0], y)       // Hart eerste staaf
-                        },
-                        Offset = 0,
-                        OffsetLines = 0,
-                        Scale = 1,
-                        Stroke = "#0000ff",
-                        MarkerStart = "chevStart",
-                        MarkerEnd = "chevEnd"
-                    };
-                    elements.Add(verticalGroup);
+                            Mode = DimLineMode.Horizontal,
+                            X1 = xPosities[i] + diameter / 2.0,
+                            X2 = xPosities[i+1] - diameter / 2.0,
+                            Y1 = y,
+                            Y2 = y,
+                            OffsetLines = -1,
+                            MarkerStart = "chevStart",
+                            MarkerEnd = "chevEnd"
+                        };
+                        elements.Add(tussenruimte);
+                    }
+                   
+
                 }
+
+
             }
         }
         else if (FocusElement.StartsWith("wapening-onder-"))
@@ -552,10 +558,10 @@
                 double dekking = WapeningOnder.DekkingToegepast;
                 double diameter = WapeningOnder.GemiddeldeDiameter;
                 double y = Hoogte - (dekking + diameter / 2);
-                
+
                 // Bereken X-posities van alle staven
                 var xPosities = BerekenHoofdwapeningXPosities(WapeningOnder);
-                
+
                 // Bouw puntenlijst: links profiel → alle staven → rechts profiel
                 List<(double, double)> horizontalPoints = [(0, y)];
                 foreach (var x in xPosities)
@@ -563,41 +569,42 @@
                     horizontalPoints.Add((x, y));
                 }
                 horizontalPoints.Add((Breedte, y));
-                
+
                 // Horizontale maatlijngroep: profiel → staaf1 → staaf2 → ... → staafN → profiel
                 var horizontalGroup = new SvgDimLineGroup
                 {
                     Mode = DimLineMode.Horizontal,
                     Points = horizontalPoints,
-                    Offset = -10,
-                    OffsetLines = 0,
+                    Offset = -(dekking + diameter /2.0),
+                    OffsetLines = -1,
                     Scale = 1,
-                    Stroke = "#00ff00",
                     MarkerStart = "chevStart",
                     MarkerEnd = "chevEnd"
                 };
                 elements.Add(horizontalGroup);
-                
-                // Verticale maatlijn: onderkant → hart eerste staaf
-                if (xPosities.Count > 0)
+
+                if (xPosities.Count > 1)
                 {
-                    var verticalGroup = new SvgDimLineGroup
+                    for (int i = 0; i < xPosities.Count -1; i++)
                     {
-                        Mode = DimLineMode.Vertical,
-                        Points = new List<(double, double)>
+                        var tussenruimte = new SvgDimLine()
                         {
-                            (xPosities[0], y),          // Hart eerste staaf
-                            (xPosities[0], Hoogte)      // Onderkant profiel
-                        },
-                        Offset = 0,
-                        OffsetLines = 0,
-                        Scale = 1,
-                        Stroke = "#00ff00",
-                        MarkerStart = "chevStart",
-                        MarkerEnd = "chevEnd"
-                    };
-                    elements.Add(verticalGroup);
+                            Mode = DimLineMode.Horizontal,
+                            X1 = xPosities[i] + diameter / 2.0,
+                            X2 = xPosities[i+1] - diameter / 2.0,
+                            Y1 = y,
+                            Y2 = y,
+                            OffsetLines = 1,
+                            MarkerStart = "chevStart",
+                            MarkerEnd = "chevEnd"
+                        };
+                        elements.Add(tussenruimte);
+                    }
+                   
+
                 }
+                
+               
             }
         }
         else if (FocusElement.StartsWith("wapening-zij-"))

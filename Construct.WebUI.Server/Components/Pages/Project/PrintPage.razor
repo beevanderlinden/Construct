@@ -1033,7 +1033,7 @@ else
                     {
                         // dekking en duurzaamheid
                         section.AddParagraph("Dekking en duurzaamheid", "Kop 3");
-                        
+
                         // ✅ Cast naar BetonAssemblageEntity om PlaatDekking te kunnen gebruiken
                         if (a is BetonAssemblageEntity betonAssemblage)
                         {
@@ -1145,18 +1145,17 @@ else
                         string title = $"<span class='titel'>{a.Merk} (vervolg)</span> <span class='subtitel'>{strook.Naam}</span>";
                         section.AddHeading(title, "Kop 1");
                         section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
-
                         section.AddParagraph(strook.Naam.ToUpperInvariant(), "Kop 3");
 
 
 
-                        var wap = strook.WapOnder;
+                        //var wap = strook.WapOnder;
                         // section.AddParagraph($"A<sub>s,prov</sub> = {wap.As.ToString("0")}");
                         // section.AddParagraph($"A<sub>s,basis</sub> = {wap.AsBasis.ToString("0")}");
                         // section.AddParagraph($"A<sub>s,bijleg</sub> = {wap.AsBijleg.ToString("0")}");
 
 
-                        var pw = strook.PlaatWapening;
+                        //var pw = strook.PlaatWapening;
                         // section.AddParagraph($"Onder.Basis : {pw.Onder?.BasisWapening.Tekst} ({pw.Onder?.BasisWapening.As:0}), ref={pw.Onder?.BasisWapening.ZRef:0.#}");
                         // section.AddParagraph($"Onder.Bijleg : {pw.Onder?.BijlegWapening?.Tekst} ({pw.Onder?.BijlegWapening?.As:0}) ref={pw.Onder?.BijlegWapening?.ZRef:0.#}");
                         // section.AddParagraph($"Onder.Totaal : HOE DAN?");
@@ -1205,14 +1204,6 @@ else
                             }
 
 
-
-
-                            //strook.DwarskrachtCollectie.AddToSection(section, isDraaiTabel: false, title: null, style: "Kop 3");
-
-                            //strook.DwarskrachtCollectie.AddToSection(section, isDraaiTabel: !false, title: null, style: "Kop 3");
-
-
-                            
                         }
                         else
                         {
@@ -1230,113 +1221,91 @@ else
                             strook.ScheurwijdteCollectie.AddToSection(section, isDraaiTabel: false, title: null, style: "Kop 3");
                         }
 
-                        // TODO: Secties volgorde gaat iets mis... nadat je de plaatwap heb geimplementeerd 
-
-
-
-
-                //         foreach (var svgDoc in svgDocs)
-                //         {
-                //             //continue;
-                //             switch (svgDoc.Name.Trim().ToLower())
-                //             {
-                //                 case "figuur":
-                //                     section.Elements.Add(new ParagraphContent(svgDoc.Render()));
-
-                //                     if (svgDoc.Tag is Eurocode.Belastingen.BelastingGeval geval)
-                //                     {
-                //                         var loads = strook.Beam.Loads.Where(l => l.LoadCase == geval);
-
-                //                         TableContent tableContent = new()
-                //                         {
-                //                             HideHeaders = false,
-                //                             Title = geval.Naam
-                //                         };
-
-                //                         tableContent.Headers = [
-                //                             new(){CellContent = new("naam")},
-                //                             new(){CellContent = new("omschrijving")},
-                //                             new(){CellContent = new("pos1")},
-                //                             new(){CellContent = new("pos2")},
-                //                             new(){CellContent = new("waarde1")},
-                //                             new(){CellContent = new("waarde2")},
-                //                             new(){CellContent = new("eenh.")},
-                // ];
-
-
-                //                         foreach (var l in loads)
-                //                         {
-                //                             tableContent.Rows.Add(
-                //                             [
-                //                               new TableCellContent(l.Name, "20mm"),
-                //                               new TableCellContent(l.Description ?? "..." , "100mm"),
-                //                               new TableCellContent(l.UserFriendlyStartPos, "12mm"),
-                //                               new TableCellContent(l.UserFriendlyEndPos, "12mm"),
-                //                               new TableCellContent(l.UserFriendlyStartValue, "12mm"),
-                //                               new TableCellContent(l.UserFriendlyEndValue, "12mm"),
-                //                               new TableCellContent(l.Unit, "12mm")
-                //                             ]);
-
-                //                             // todo: bij deze tabellen worden de breedtes nog niet goed meegenomen in de MigraDoc en Html exporter
-                //                         }
-
-                //                         section.Elements.Add(tableContent);
-                //                     }
-                //                     break;
-
-                //                 case "vz":
-                //                     if (svgDoc.Tag == null) continue;
-
-                //                     if (svgDoc.Tag is Eurocode.Belastingen.BelastingCombinatieTypeEnum belastingCombinatieType)
-                //                     {
-                //                         if (
-                //                             belastingCombinatieType == Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A ||
-                //                             belastingCombinatieType == Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B ||
-                //                             belastingCombinatieType == (Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A | Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B)
-                //                         )
-                //                         {
-                //                             section.Elements.Add(new ParagraphContent("Dwarskrachtwapening", "Kop 3"));
-                //                             section.Elements.Add(new ParagraphContent(svgDoc.Render()));
-
-                //                             if (strook.BetonV.IsDwarskrachtWapeningBenodigd())
-                //                             {
-                //                                 par = new($"⚠️ Let op V~Ed~ ({strook.BetonV.Ved:0.#} kN) is groter dan V~Rd,c~ ({strook.BetonV.DwarskrachtWeerstandBeton:0.#} kN), dwarskrachtwapening benodigd: A~sw,req~ = {strook.BetonV.AswBerekend:0} mm²/m¹");
-
-                //                                 var benodigdeBreedte = strook.BetonV.Ved / strook.BetonV.DwarskrachtWeerstandBeton * strook.Profiel.BreedteDwarskracht * 1.1; // 110% voor
-                //                                 if (benodigdeBreedte <= 500)
-                //                                 {
-                //                                     par.Markdown += $"\r\n💡 Advies: Pas de strookbreedte aan ({benodigdeBreedte:0} mm)";
-                //                                     strook.BetonV.AddToSection(section);
-                //                                 }
-                //                             }
-                //                             else
-                //                             {
-                //                                 par = new($"V~Ed~ ({strook.BetonV.Ved:0.#} kN) is kleiner dan V~Rd,c~ ({strook.BetonV.DwarskrachtWeerstandBeton:0.#} kN), *geen dwarskrachtwapening nodig.*");
-                //                             }
-                //                             section.Elements.Add(par);
-                //                         }
-                //                     }
-
-                //                     break;
-
-                //                 case "my":
-                //                     section.Elements.Add(new ParagraphContent("Momentwapening", "Kop 3"));
-                //                     section.Elements.Add(new ParagraphContent(svgDoc.Render()));
-
-                //                     if (strook.BendingResults.Count > 0)
-                //                     {
-                //                         strook.BendingResults.AddToSection(section, isDraaiTabel: false, title: null, style: "Kop 3");
-                //                     }
-                //                     if (strook.ScheurwijdteCollectie.Count > 0)
-                //                     {
-                //                         strook.ScheurwijdteCollectie.AddToSection(section, isDraaiTabel: false, title: null, style: "Kop 3");
-                //                     }
-
-                //                     break;
-                //             }
-
-                //         }
                     }
+
+
+                    if (bordes.Tand != null)
+                    {
+
+                        var tand = bordes.Tand;
+                        tand.Bijwerken();
+                        tand.BuigingHals.BerekenEnValideer();
+                        tand.BuigingTand.BerekenEnValideer();
+
+
+                        string titleTand = $"<span class='titel'>{a.Merk} (vervolg)</span> <span class='subtitel'>trapoplegging</span>";
+                        section.AddHeading(titleTand, "Kop 1");
+                        section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
+                        section.AddHeading("Trapoplegging tand", "Kop 3");
+
+                        // Bereken maximale fundamentele waarde voor Trap1
+                        var t1 = bordes.Trap1;
+                        var t2 = bordes.Trap2;
+                        double maxTrap1 = bordes.BerekenMaximaleFundamenteleWaarde(t1.Reacties.G, t1.Reacties.Q, bordes.Belastingen.BelastingCombinaties);
+                        double maxTrap2 = bordes.BerekenMaximaleFundamenteleWaarde(t1.Reacties.G, t1.Reacties.Q, bordes.Belastingen.BelastingCombinaties);
+
+                        var maatgevend = maxTrap1 > maxTrap2 ? t1 : t2;
+                        section.AddParagraph("Berekening en wapening is **per strekkende meter**");
+                        section.AddParagraph($"Reactie uit trap : *R<sub>Gk</sub>* = {maatgevend.Reacties.G:0.#} kN en *R<sub>Qk</sub>* = {maatgevend.Reacties.Q:0.#} kN zodat *R<sub>Ed</sub>* = {Math.Max(maxTrap1, maxTrap2):0.#} kN");
+                        section.AddParagraph($"Ophangkracht : *F<sub>ophang,Ed</sub>* = {tand.OphangKracht:0.#} kN (factor voor ophangkracht = {tand.FactorOphangKracht:0.#}), *A~s,req,ophang~* = {tand.OphangWapeningHalsBenodigd:0} mm²");
+
+
+
+                        // Tand
+                        section.AddParagraph("Momentwapening tand", "Kop 4");
+                        section.AddParagraph($"- afmetingen : *b* = {tand.ProfielTand.B:0} mm | *h* = {tand.ProfielTand.H:0} mm | *L~tand~* = {tand.TandLengte:0} mm | *a~b~* = {tand.LengteOplegmateriaal:0} mm | *l* = {tand.ArmVoorTand:0} mm | *l~ov~* = {tand.OverspanningVoorTand:0} mm | *a* = {tand.BuigingTand.LengteMaatBijGedrongenLiggerInMM} mm | *z* = {tand.BuigingTand.Z:0.#} mm");
+                        section.AddParagraph($"- krachten :  *F~Ed~* = {tand.OplegReactie:0.0 kN} | *H~Ed~* = {tand.ReactieHorizontaal:0.0 kN} ({tand.PercentageHorizontaleBelasting:0%} van oplegreactie) | *M~Ed~* = { tand.MomentVoorTand:0.0 kNm}");
+                        section.AddParagraph($"- wapening : *A~s,req~* = {tand.BuigingTand.AsRequired:0} mm² | *A~s,prov~* = {tand.BuigingTand.AsApplied:0} mm²");
+
+                        tand.BuigingTand.AddToSection(section, false);
+
+
+                        // section.Elements.Add(tand.BuigingTand.ToMigraDocTable(false));
+                        // foreach (var melding in tand.BuigingTand.Meldingen)
+                        // {
+                        //     section.AddParagraph(melding.ToMarkupString().Value);
+                        // }
+
+
+                        // Dwarskracht
+                        // de V~Ed,red~ moet onder V~Rd,c~ blijven (uitgangspunt is geen beugels)
+                        // 
+                        section.AddParagraph($"Dwarskracht tand", "Kop 4");
+                        if (Math.Abs(tand.DwarskrachtTand.Ved) > tand.DwarskrachtTand.DwarskrachtWeerstandBeton)
+                        {
+                            section.Elements.Add(tand.DwarskrachtTand.ToMigraDocTable());
+
+                            section.AddParagraph("**Let op! dwarskrachtwapening nodig in tand, niet akkoord**");
+                            section.AddParagraph($"A~sw,ben~ = {tand.DwarskrachtTand.AswBenPerMeter:0} mm²/m¹");
+
+                            foreach (var melding in tand.DwarskrachtTand.Meldingen)
+                            {
+                               section.AddParagraph(melding.ToMarkupString().Value);
+                                section.AddParagraph(melding.ToString());
+                            }
+                        }
+                        else
+                        {
+                            section.AddParagraph($"Dwarskracht *V~Ed~* = {Math.Abs(tand.DwarskrachtTand.Ved):0.0 kN} is kleiner dan *V~Rd,c~* ({tand.DwarskrachtTand.DwarskrachtWeerstandBeton:0.0 kN}), geen dwarskrachtwapening nodig.");
+                            foreach (var melding in tand.DwarskrachtTand.Meldingen)
+                            {
+                                section.AddParagraph(melding.ToMarkupString().Value);
+                            }
+                        }
+
+
+                        // Oplegging
+                        tand.Oplegging.BerekenEnValideer();
+                        section.AddParagraph("Oplegging tand", "Kop 4");
+                        //section.Elements.Add(steekTrap.TandOpleggingBovenzijde.Oplegging.ToMigraDocTable(false));
+                        //section.AddParagraph(steekTrap.TandOpleggingBovenzijde.)
+                        section.AddParagraph(tand.ConclusieOplegging);
+
+                    }
+                        
+                    
+
+
 
                     content.Sections.Add(section);
                 }
@@ -1344,20 +1313,6 @@ else
 
                 if (a is SteekTrapEntity steekTrap)
                 {
-                    //section = new SectionContent();
-                    //section.Elements.Add(new HeadingContent(steekTrap.Merk ?? "TRAP", 1));
-
-                    // materialen
-                    //section.AddParagraph("Materialen", "Kop 3");
-                    //section.Elements.Add(GetTableContentBeton(steekTrap.Beton));
-
-                    // dekking en duurzaamheid
-                    //section.AddParagraph("Dekking en duurzaamheid", "Kop 3");
-                    //section.Elements.Add(GetTableContentDekking(steekTrap.DekkingBoven));
-
-                    // geometrie en belasting
-                    //section.AddParagraph("Geometrie", "Kop 3");
-                    //section.Elements.Add(GetTableGeometrie(steekTrap));
 
                     // afbeelding
                     double widthMM = 100; // breedte van de svg
@@ -1559,15 +1514,6 @@ else
                     }
 
 
-
-
-
-
-                    // section.AddParagraph("Slankheid", "Kop 4");
-                    // section.Elements.Add(steekTrap.Slankheid.ToMigraDocTable(!false));
-                    // var contextMeldingen = steekTrap.Slankheid.ToParagraphContent();
-                    // if (contextMeldingen != null)
-                    //     section.Elements.Add(contextMeldingen);
 
 
 

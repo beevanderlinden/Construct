@@ -149,13 +149,13 @@ namespace Construct.Domain.Entities
 
 
 
-            DekkingBoven = new(grondslagen: ProjectInfo.Grondslagen, beton: beton ?? new())
-            {
-                //IsPlaatGeometrie = DekkingBoven?.IsPlaatGeometrie ?? true,
-                //IsKwaliteitsBeheersing = DekkingBoven?.IsKwaliteitsBeheersing ?? true,
-                //SelectedMilieuklassen = DekkingBoven?.SelectedMilieuklassen ?? [Eurocode.BetonConstructies.MilieuklasseEnum.XC1],
-                //DekkingToe = DekkingBoven?.DekkingToe ?? 20,
-            };
+            //DekkingBoven = new(grondslagen: ProjectInfo.Grondslagen, beton: beton ?? new())
+            //{
+            //    //IsPlaatGeometrie = DekkingBoven?.IsPlaatGeometrie ?? true,
+            //    //IsKwaliteitsBeheersing = DekkingBoven?.IsKwaliteitsBeheersing ?? true,
+            //    //SelectedMilieuklassen = DekkingBoven?.SelectedMilieuklassen ?? [Eurocode.BetonConstructies.MilieuklasseEnum.XC1],
+            //    //DekkingToe = DekkingBoven?.DekkingToe ?? 20,
+            //};
 
 
             DemoUitkraging = new() { Beton = beton ?? new() };
@@ -243,7 +243,7 @@ namespace Construct.Domain.Entities
             //};
 
 
-            Scheurwijdte = new(SnedekrachtenBGT, beton ?? new(), DekkingBoven, ProfielSchil, WapeningSchil, ProjectInfo.Grondslagen.NationaleBijlage ?? Eurocode.Grondslagen.NationaleBijlageEnum.EU)
+            Scheurwijdte = new(SnedekrachtenBGT, beton ?? new(), PlaatDekking.Onder, ProfielSchil, WapeningSchil, ProjectInfo.Grondslagen.NationaleBijlage ?? Eurocode.Grondslagen.NationaleBijlageEnum.EU)
             {
                 Heading = "Scheurwijdte schil"
             };

@@ -44,6 +44,9 @@ namespace Construct.Domain.Entities
             Trap2 = new VerbindingAansluitendElement(this);
             Trap2.Gespiegeld = true;
 
+            TandOplegging = new() { };
+            Tand = new TandOplegging(this, this.TandOplegging) ;
+
 
             this.InitBasisStrook();
             if (_basisStrook != null)
@@ -100,6 +103,9 @@ namespace Construct.Domain.Entities
             }
 
             this.AddStrook(vs);
+
+
+
 
         }
 
@@ -249,6 +255,9 @@ namespace Construct.Domain.Entities
         public VerbindingAansluitendElement Trap1 { get; set; }
         public VerbindingAansluitendElement Trap2 { get; set; }
 
+        public OpleggingContext TandOplegging = new() { };
+        public TandOplegging Tand { get; set; }
+
         // stroken
         public double VlaklastG => EigenGewicht + AfwerkingVlaklast;
         public double EigenGewicht => Dikte * 0.001 * 25;
@@ -326,6 +335,90 @@ namespace Construct.Domain.Entities
 
             strook.BerekenStrook();
 
+        }
+
+
+        private void UpdateTand()
+        {
+            if (this.TandOplegging == null)
+            {
+                Console.WriteLine("Geen oplegging");
+                return;
+            }
+
+            if (this.Tand == null)
+            {
+                Console.WriteLine("Geen tand");
+                return;
+            }
+
+            // Haal reacties op van trap1 en trap2
+            var r1 = this.Trap1.Reacties;
+            var r2 = this.Trap2.Reacties;
+
+            var belastingCombinaties = this.Belastingen.BelastingCombinaties;
+
+            // Bereken maximale fundamentele waarde voor Trap1
+            double maxTrap1 = BerekenMaximaleFundamenteleWaarde(r1.G, r1.Q, belastingCombinaties);
+
+            // Bereken maximale fundamentele waarde voor Trap2
+            double maxTrap2 = BerekenMaximaleFundamenteleWaarde(r2.G, r2.Q, belastingCombinaties);
+
+            // Neem de grootste van beide
+            double maxOplegReactie = Math.Max(maxTrap1, maxTrap2);
+
+            // Zet in Tand.OplegReactie
+            this.Tand.OplegReactie = -maxOplegReactie;
+
+            // geometrie
+            this.Tand.TandLengte = this.Trap1.Breedte;
+            this.Tand.TandHoogte = this.Hoogte - this.Trap1.Hoogte;
+            this.Tand.IsOndertand = true;
+            
+
+
+        }
+
+        /// <summary>
+        /// Berekent de maximale fundamentele waarde (Gk × factorG + Qk × factorQ) 
+        /// voor alle fundamentele belastingcombinaties (Type A en B).
+        /// </summary>
+        public double BerekenMaximaleFundamenteleWaarde(double gk, double qk, List<BelastingCombinatie> combinaties)
+        {
+            double maxWaarde = 0;
+
+            // Filter alleen fundamentele combinaties (Type A en B)
+            var fundamenteleCombinaties = combinaties.Where(bc =>
+                bc.Type == BelastingCombinatieTypeEnum.Fundamenteel_A ||
+                bc.Type == BelastingCombinatieTypeEnum.Fundamenteel_B).ToList();
+
+            foreach (var combinatie in fundamenteleCombinaties)
+            {
+                // Voor elke combinatie: som van (Gk × factorG + Qk × factorQ)
+                double waarde = 0;
+
+                foreach (var item in combinatie.Items)
+                {
+                    if (item.Geval.Type == BelastingGeval.BelastingGevalTypeEnum.Permanent)
+                    {
+                        // Permanent belastinggeval: gebruik Gk × factorG
+                        waarde += gk * item.FactorG;
+                    }
+                    else if (item.Geval.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)
+                    {
+                        // Veranderlijk belastinggeval: gebruik Qk × factorNetto (bevat al MomentFactor)
+                        waarde += qk * item.FactorNetto;
+                    }
+                }
+
+                // Bewaar de maximale waarde
+                if (waarde > maxWaarde)
+                {
+                    maxWaarde = waarde;
+                }
+            }
+
+            return maxWaarde;
         }
 
         private void UpdateStrook2()
@@ -507,6 +600,7 @@ namespace Construct.Domain.Entities
         {
             UpdateStrook1();
             UpdateStrook2();
+            UpdateTand();
         }
 
 

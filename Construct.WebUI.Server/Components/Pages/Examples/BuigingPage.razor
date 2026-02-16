@@ -34,9 +34,7 @@
         </div>
     </FluentTab>
 
-    <FluentTab Label="Snedekrachten">
-        <EurocodeRazorClassLibrary.Shared.SnedekrachtenComponent @bind-Model="@snedekrachten" />
-    </FluentTab>
+    
 
 </FluentTabs>
 
@@ -57,7 +55,7 @@
     private Profielen.Beton.BetonProfiel betonProfiel = new(500, 600);
     //private ParametrischProfielContext profiel = new(500, 600);
     private WapeningContext wapening = new();
-    private Snedekrachten snedekrachten = new();
+    //private Snedekrachten snedekrachten = new();
     private SectionForces sectionForces { get; set; } = new();
 
     private BendingResults Model = new BendingResults();
@@ -72,8 +70,8 @@
         // dekking gaat in de wapening
         wapening.DekkingToegepast = dekking.DekkingToe;
 
-        snedekrachten.My.Ed = 80;
-        snedekrachten.Vz.Ed = 160;
+        //snedekrachten.My.Ed = 80;
+        //snedekrachten.Vz.Ed = 160;
 
 
         // beton, profiel, wapening en snedekrachten gaan de buiging

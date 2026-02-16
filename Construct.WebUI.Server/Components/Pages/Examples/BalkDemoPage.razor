@@ -1026,6 +1026,31 @@
         border-radius: 4px;
         background: var(--neutral-layer-1);
         color: var(--neutral-foreground-rest);
+        transition: all 0.2s;
+    }
+    
+    .control-section input[type="number"]:focus,
+    .control-section select:focus {
+        outline: none;
+        border-color: var(--accent-stroke-rest);
+        box-shadow: 0 0 0 2px rgba(var(--accent-fill-rest-rgb), 0.1);
+    }
+    
+    /* Readonly en disabled inputs */
+    .control-section input[type="number"]:disabled,
+    .control-section input[type="number"][readonly],
+    .control-section select:disabled {
+        background: var(--neutral-layer-3);
+        color: var(--neutral-foreground-hint);
+        border-color: var(--neutral-stroke-subtle);
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+    
+    .control-section input[type="number"]:disabled:hover,
+    .control-section input[type="number"][readonly]:hover,
+    .control-section select:disabled:hover {
+        border-color: var(--neutral-stroke-subtle);
     }
     
     .control-section input[type="checkbox"] {

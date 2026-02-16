@@ -135,7 +135,7 @@ nav.sitenav {
 .table-wrap {
     margin-left: -1mm;
     margin-right: -1mm;
-    margin-bottom: 4mm;
+    margin-bottom: 1mm;
     width: calc(100% + 2mm);
     border-radius: 0px;
     background: white;
@@ -1093,7 +1093,7 @@ table.borderless {
         font-size: 3.0mm;
         color: var(--neutral-foreground-rest);
         margin-bottom: 0px;
-        margin-top: 0mm; /* zelfde als migradoc */
+        margin-top: 2mm; /* zelfde als migradoc */
         line-height: var(--line-height);
     }
 
