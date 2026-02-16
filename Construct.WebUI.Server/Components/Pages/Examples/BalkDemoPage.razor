@@ -1,5 +1,7 @@
 ﻿@page "/examples/balk-demo"
 @using Eurocode.BetonConstructies
+@using Eurocode.Belastingen
+@using CommonLibrary.Models
 
 <PageTitle>Betonbalk Doorsnede Demo</PageTitle>
 
@@ -36,6 +38,10 @@
             <button class="tab-btn @(activeTab == "langswapening" ? "active" : "")" @onclick='() => activeTab = "langswapening"'>
                 <span class="tab-icon">🔩</span>
                 <span class="tab-label">Langs</span>
+            </button>
+            <button class="tab-btn @(activeTab == "krachten" ? "active" : "")" @onclick='() => activeTab = "krachten"'>
+                <span class="tab-icon">⚡</span>
+                <span class="tab-label">Krachten</span>
             </button>
             <button class="tab-btn @(activeTab == "resultaten" ? "active" : "")" @onclick='() => activeTab = "resultaten"'>
                 <span class="tab-icon">📊</span>
@@ -142,25 +148,9 @@
                            @onblur='() => focusElement = ""'/>
                     <span>mm</span>
                 </label>
-                <label>
-                    <span>Buigstraal (hart):</span>
-                    <input type="number" @bind="beugelWapening.Buigstraal" min="10" max="50" step="5"
-                           @onfocus='() => focusElement = "beugel-buigstraal"' 
-                           @onblur='() => focusElement = ""'/>
-                    <span>mm</span>
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" @bind="beugelWapening.Linksom"/>
-                    <span>Linksom (anders rechtsom)</span>
-                </label>
-                <label>
-                    <span>Haakhoek:</span>
-                    <select @bind="beugelWapening.HaakHoek">
-                        <option value="90">90°</option>
-                        <option value="135">135°</option>
-                    </select>
-                    <span></span>
-                </label>
+               
+               
+                
             </div>
             }
             
@@ -280,6 +270,95 @@
             </div>
             }
             
+            @if (activeTab == "krachten")
+            {
+            <div class="control-section">
+                <h4>🔵 Buiging in Z-vlak - Steunpunt</h4>
+                <p class="section-help">Belasting loodrecht op Z-as (verticale richting)</p>
+                
+                <label>
+                    <span>M<sub>y</sub> (moment):</span>
+                    <input type="number" @bind="KrachtenStartMy" step="0.1" />
+                    <span>kNm</span>
+                </label>
+                <label>
+                    <span>V<sub>z</sub> (dwarskracht):</span>
+                    <input type="number" @bind="KrachtenStartVz" step="0.1" />
+                    <span>kN</span>
+                </label>
+                
+                
+                
+                <div class="toets-buttons-inline">
+                    <button class="btn btn-toets-small" @onclick='() => ToetsM(krachtenStart, "Steunpunt")' title="Toets momentweerstand">
+                        <span class="toets-icon">M</span>
+                    </button>
+                    <button class="btn btn-toets-small" @onclick='() => ToetsV(krachtenStart, "Steunpunt")' title="Toets dwarskrachtweerstand">
+                        <span class="toets-icon">V</span>
+                    </button>
+                    <button class="btn btn-toets-small btn-toets-disabled" disabled title="Scheurwijdte toets (later)">
+                        <span class="toets-icon">Sw</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h4>🔵 Buiging in Z-vlak - Veld</h4>
+                
+                <label>
+                    <span>M<sub>y</sub> (moment):</span>
+                    <input type="number" @bind="KrachtenMiddenMy" step="0.1" />
+                    <span>kNm</span>
+                </label>
+                <label>
+                    <span>V<sub>z</sub> (dwarskracht):</span>
+                    <input type="number" @bind="KrachtenMiddenVz" step="0.1" />
+                    <span>kN</span>
+                </label>
+                
+                <div class="toets-buttons-inline">
+                    <button class="btn btn-toets-small" @onclick='() => ToetsM(krachtenMidden, "Veld")' title="Toets momentweerstand">
+                        <span class="toets-icon">M</span>
+                    </button>
+                    <button class="btn btn-toets-small" @onclick='() => ToetsV(krachtenMidden, "Veld")' title="Toets dwarskrachtweerstand">
+                        <span class="toets-icon">V</span>
+                    </button>
+                    <button class="btn btn-toets-small btn-toets-disabled" disabled title="Scheurwijdte toets (later)">
+                        <span class="toets-icon">Sw</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="control-section" style="opacity: 0.5; pointer-events: none;">
+                <h4>🔵 Buiging in Y-vlak <small>(later)</small></h4>
+                <p class="section-help">Belasting loodrecht op Y-as (horizontale richting)</p>
+                <label>
+                    <span>M<sub>z</sub>:</span>
+                    <input type="number" value="0" readonly />
+                    <span>kNm</span>
+                </label>
+                <label>
+                    <span>V<sub>y</sub>:</span>
+                    <input type="number" value="0" readonly />
+                    <span>kN</span>
+                </label>
+            </div>
+            
+            <div class="control-section" style="opacity: 0.5; pointer-events: none;">
+                <h4>⚫ Normaalkracht & Torsie <small>(later)</small></h4>
+                <label>
+                    <span>N (normaalkracht):</span>
+                    <input type="number" value="0" readonly />
+                    <span>kN</span>
+                </label>
+                <label>
+                    <span>T (torsie):</span>
+                    <input type="number" value="0" readonly />
+                    <span>kNm</span>
+                </label>
+            </div>
+            }
+            
             @if (activeTab == "resultaten")
             {
             <div class="control-section">
@@ -339,6 +418,15 @@
                             <span class="waarde">@($"{bendingResults.AsApplied:F1}")</span>
                             <span class="waarde">@($"{bendingResultsOnder?.AsApplied:F1}") mm²</span>
                         </div>
+                        
+                        <div class="detail-buttons">
+                            <button class="btn btn-secondary" @onclick="() => ShowBendingDetailsTop()">
+                                Details boven
+                            </button>
+                            <button class="btn btn-secondary" @onclick="() => ShowBendingDetailsBottom()">
+                                Details onder
+                            </button>
+                        </div>
                     </div>
                 }
             </div>
@@ -352,10 +440,6 @@
                     <div class="resultaten-box">
                         <h5>Dwarskrachtweerstand</h5>
 
-
-
-
-
                         <div class="resultaat-rij">
                             <span class="label">V<sub>Rd,c</sub>:</span>
                             <span class="waarde">@($"{shearResult.DwarskrachtWeerstandBeton:F2}") kN</span>
@@ -367,6 +451,12 @@
                         <div class="resultaat-rij">
                             <span class="label">V<sub>Rd,max</sub>:</span>
                             <span class="waarde">@($"{shearResult.DwarskrachtWeerstandMax:F2}") kN</span>
+                        </div>
+                        
+                        <div class="detail-buttons">
+                            <button class="btn btn-secondary" @onclick="() => ShowShearDetails()">
+                                Alle details
+                            </button>
                         </div>
                     </div>
                 }
@@ -382,12 +472,25 @@
     </div>
 </div>
 
+<!-- Results Detail Popups -->
+<ResultsDetailPopup T="BendingResults" 
+                    Model="@selectedBendingResult" 
+                    @bind-IsOpen="@showBendingDetails"
+                    Title="@bendingDetailsTitle"
+                    @key="@selectedBendingResult?.Id" />
+
+<ResultsDetailPopup T="DwarskrachtWapContext" 
+                    Model="@shearResult" 
+                    @bind-IsOpen="@showShearDetails"
+                    Title="Dwarskracht Details"
+                    @key="@shearResult?.Id" />
+
 @code {
-private double breedte = 300;
-private double hoogte = 400;
-    
-// Centraal BetonContext voor alle berekeningen
-private BetonContext betonContext = new()
+    private double breedte = 300;
+    private double hoogte = 400;
+
+    // Centraal BetonContext voor alle berekeningen
+    private BetonContext betonContext = new()
 {
     Betonsterkteklasse = BetonsterkteklasseEnum.C30_37,
 };
@@ -462,6 +565,32 @@ private BetonContext betonContext = new()
     private ShearResults? shearResults = null;
 
     private DwarskrachtWapContext? shearResult = null;
+
+    // Internal forces - immutable records
+    private InternalForces krachtenStart = new(N: 0, My: 30, Mz: 0, Vy: 0, Vz: 100, T: 0);
+    private InternalForces krachtenMidden = new(N: 0, My: -50, Mz: 0, Vy: 0, Vz: 0, T: 0);
+
+    // Wrapper properties voor binding (records zijn immutable) - Steunpunt
+    private double KrachtenStartN { get => krachtenStart.N; set => krachtenStart = krachtenStart with { N = value }; }
+    private double KrachtenStartMy { get => krachtenStart.My; set => krachtenStart = krachtenStart with { My = value }; }
+    private double KrachtenStartMz { get => krachtenStart.Mz; set => krachtenStart = krachtenStart with { Mz = value }; }
+    private double KrachtenStartVy { get => krachtenStart.Vy; set => krachtenStart = krachtenStart with { Vy = value }; }
+    private double KrachtenStartVz { get => krachtenStart.Vz; set => krachtenStart = krachtenStart with { Vz = value }; }
+    private double KrachtenStartT { get => krachtenStart.T; set => krachtenStart = krachtenStart with { T = value }; }
+
+    // Wrapper properties - Veld
+    private double KrachtenMiddenN { get => krachtenMidden.N; set => krachtenMidden = krachtenMidden with { N = value }; }
+    private double KrachtenMiddenMy { get => krachtenMidden.My; set => krachtenMidden = krachtenMidden with { My = value }; }
+    private double KrachtenMiddenMz { get => krachtenMidden.Mz; set => krachtenMidden = krachtenMidden with { Mz = value }; }
+    private double KrachtenMiddenVy { get => krachtenMidden.Vy; set => krachtenMidden = krachtenMidden with { Vy = value }; }
+    private double KrachtenMiddenVz { get => krachtenMidden.Vz; set => krachtenMidden = krachtenMidden with { Vz = value }; }
+    private double KrachtenMiddenT { get => krachtenMidden.T; set => krachtenMidden = krachtenMidden with { T = value }; }
+
+    // Detail popup state
+    private bool showBendingDetails = false;
+    private bool showShearDetails = false;
+    private BendingResults? selectedBendingResult = null;
+    private string bendingDetailsTitle = "";
 
 
     // Helper class voor dwarskracht resultaten (tijdelijk, vervang door echte implementatie)
@@ -577,17 +706,109 @@ private BetonContext betonContext = new()
             shearResults = null;
         }
     }
-    
+
     private void UpdateBovenWapening()
     {
         wapeningBoven.Tekst = $"{aantalBovenStaven}r{diameterBovenStaven}";
         StateHasChanged();
     }
-    
+
     private void UpdateOnderWapening()
     {
         wapeningOnder.Tekst = $"{aantalOnderStaven}r{diameterOnderStaven}";
         StateHasChanged();
+    }
+
+    private void ShowBendingDetailsTop()
+    {
+        selectedBendingResult = bendingResults;
+        bendingDetailsTitle = "Buigweerstand Details - Bovenwapening";
+        showBendingDetails = true;
+    }
+
+    private void ShowBendingDetailsBottom()
+    {
+        selectedBendingResult = bendingResultsOnder;
+        bendingDetailsTitle = "Buigweerstand Details - Onderwapening";
+        showBendingDetails = true;
+    }
+
+    private void ShowShearDetails()
+    {
+        showShearDetails = true;
+    }
+
+    private void ToetsM(InternalForces krachten, string positie)
+    {
+        // Update moment in berekening via Snedekrachten
+        bendingResults = new();
+        bendingResults.PosLabel = positie;
+        bendingResults.Beton = betonContext;
+        bendingResults.Wapening = wapeningBoven; // Aanname: negatief moment = bovenwapening
+        bendingResults.Profiel = new Profielen.Beton.BetonProfiel
+        {
+            Breedte = breedte,
+            Hoogte = hoogte,
+        };
+        bendingResults.Snedekrachten = new SectionForces();
+        bendingResults.Snedekrachten.My = (krachten.My);
+        
+        // Forceer herberekening en validatie
+        bendingResults.BerekenEnValideer();
+        
+        bendingResultsOnder = new();
+        bendingResultsOnder.PosLabel = positie;
+        bendingResultsOnder.Beton = betonContext;
+        bendingResultsOnder.Wapening = wapeningOnder; // Positief moment = onderwapening
+        bendingResultsOnder.Profiel = new Profielen.Beton.BetonProfiel(breedte, hoogte);
+        bendingResultsOnder.Snedekrachten = new SectionForces();
+        bendingResultsOnder.Snedekrachten.My = (krachten.My);
+        
+        // Forceer herberekening en validatie
+        bendingResultsOnder.BerekenEnValideer();
+        
+        // Bepaal welke wapening maatgevend is (boven of onder) op basis van teken moment
+        if (krachten.My > 0)
+        {
+            selectedBendingResult = bendingResults;
+            bendingDetailsTitle = $"Momentweerstand - {positie}";
+        }
+        else
+        {
+            selectedBendingResult = bendingResultsOnder;
+            bendingDetailsTitle = $"Momentweerstand - {positie}";
+        }
+        
+        showBendingDetails = true;
+    }
+    
+    private void ToetsV(InternalForces krachten, string positie)
+    {
+        // Update dwarskracht in berekening
+        shearResult = new()
+        {
+            Beton = betonContext,
+            Profiel = new Profielen.Beton.BetonProfiel(breedte, hoogte),
+            AsLangs = wapeningBoven.As + wapeningOnder.As,
+            NutHoogte = hoogte - wapeningBoven.ZRef,
+            AswToegepast = beugelWapening.Asw
+        };
+        
+        // Update snedekrachten met de specifieke dwarskracht
+        shearResult.Snedekrachten = new SectionForces();
+        shearResult.Snedekrachten.Vz = Math.Abs(krachten.Vz);
+        
+        // Forceer herberekening en validatie
+        shearResult.BerekenEnValideer();
+        
+        bendingDetailsTitle = $"Dwarskrachtweerstand - {positie}";
+        showShearDetails = true;
+    }
+    
+    private void ToetsSw()
+    {
+        // TODO: Implementatie scheurwijdte toets
+        // Placeholder voor latere implementatie
     }
 
     private void UpdateZijwapening()
@@ -668,7 +889,7 @@ private BetonContext betonContext = new()
     .page-container {
         max-width: 1900px;
         margin: 0 auto;
-        padding: 1rem;
+        padding: 0rem;
     }
     
     .lead {
@@ -681,8 +902,8 @@ private BetonContext betonContext = new()
         display: grid;
         grid-template-columns: 1fr 80px 400px;
         gap: 0.5rem;
-        margin-top: 1rem;
-        height: calc(100vh - 200px);
+        margin-top: 0rem;
+        height: calc(100vh - 100px);
     }
     
     .visualisatie-panel,
@@ -766,6 +987,22 @@ private BetonContext betonContext = new()
         font-size: 0.95rem;
         font-weight: 600;
         color: var(--accent-foreground-rest);
+    }
+    
+    .control-section h5 {
+        margin: 1rem 0 0.5rem 0;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--neutral-foreground-rest);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .section-help {
+        font-size: 0.8rem;
+        color: var(--neutral-foreground-hint);
+        margin: -0.5rem 0 1rem 0;
+        font-style: italic;
     }
     
     .control-section label {
@@ -887,6 +1124,134 @@ private BetonContext betonContext = new()
         color: var(--neutral-foreground-hint);
         margin-top: 0.25rem;
     }
+    
+    .detail-buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--neutral-stroke-subtle);
+    }
+    
+    .detail-buttons .btn {
+        flex: 1;
+        padding: 0.5rem;
+        font-size: 0.85rem;
+    }
+    
+    .toets-section {
+        background: var(--neutral-layer-1);
+        border: 2px solid var(--accent-stroke-rest);
+        border-radius: 6px;
+        padding: 1rem !important;
+    }
+    
+    .toets-buttons {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .btn-toets {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem 0.5rem;
+        background: var(--accent-fill-rest);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+        min-height: 80px;
+    }
+    
+    .btn-toets:hover:not(:disabled) {
+        background: var(--accent-fill-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    
+    .btn-toets:active:not(:disabled) {
+        transform: translateY(0);
+    }
+    
+    .btn-toets-disabled {
+        background: var(--neutral-fill-stealth-rest);
+        color: var(--neutral-foreground-hint);
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+    
+    .toets-icon {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+        font-style: italic;
+    }
+    
+    .toets-label {
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .toets-buttons-inline {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .btn-toets-small {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem;
+        background: var(--accent-fill-rest);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 700;
+        font-style: italic;
+        font-size: 1.1rem;
+        transition: all 0.2s;
+        min-height: 45px;
+    }
+    
+    .btn-toets-small:hover:not(:disabled) {
+        background: var(--accent-fill-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    .btn-toets-small:active:not(:disabled) {
+        transform: translateY(0);
+    }
+    
+    .btn-toets-small.btn-toets-disabled {
+        background: var(--neutral-fill-stealth-rest);
+        color: var(--neutral-foreground-hint);
+        cursor: not-allowed;
+        opacity: 0.5;
+        font-weight: 600;
+    }
+    
+    .btn-toets-small .toets-icon {
+        font-size: 1.2rem;
+    }
+    
+    
+
+    
+    
+
     
     
 </style>
