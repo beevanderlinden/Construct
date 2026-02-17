@@ -297,7 +297,7 @@ namespace Construct.Domain.Entities
 
 
 
-        public WapeningContext WapeningAlgemeen { get; set; } = new WapeningContext();
+        public WapeningContext WapeningAlgemeen { get; set; } = new WapeningContext() { Tekst = "6-75"};
         public SectionForces SnedekrachtenHals
         {
             get

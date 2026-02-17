@@ -257,6 +257,8 @@ namespace Construct.Domain.Entities
 
         public OpleggingContext TandOplegging = new() { };
         public TandOplegging Tand { get; set; }
+        public double? DetailWapeningDiameter => PlaatWapening?.Boven?.VerdeelWapening?.GrootsteDiameter;
+        public double? DetailWapeningHoh { get; set; } = 150;
 
         // stroken
         public double VlaklastG => EigenGewicht + AfwerkingVlaklast;
@@ -286,7 +288,7 @@ namespace Construct.Domain.Entities
             {
                 double werkendeBreedte = 1.0;
                 var perm = Belastingen.BelastingGevallen[0];
-                var dl1g = new DistributedLoad(perm, "L1~Gk~",0, LengteM-.2, -VlaklastG) { Description = $"{-VlaklastG:0.0} kN/m² × {werkendeBreedte:0.0}m" }; ;
+                var dl1g = new DistributedLoad(perm, "L1~Gk~",0, LengteM, -VlaklastG) { Description = $"{-VlaklastG:0.0} kN/m² × {werkendeBreedte:0.0}m" }; ;
                 dl1g.Description = $"e.g. ({EigenGewicht:0.0})";
                 if (AfwerkingVlaklast != 0) dl1g.Description += $" + afw. ({AfwerkingVlaklast:0.0})";
                 //dl1g.StartMagnitude = dl1g.EndMagnitude = 0; // tijdelijk nul zetten
@@ -374,8 +376,63 @@ namespace Construct.Domain.Entities
             this.Tand.TandLengte = this.Trap1.Breedte;
             this.Tand.TandHoogte = this.Hoogte - this.Trap1.Hoogte;
             this.Tand.IsOndertand = true;
-            
+            this.Tand.WapeningAlgemeen.Tekst = $"Ø{this.DetailWapeningDiameter:0.#}-{this.DetailWapeningHoh?? 150}";
+            this.Tand.DekkingAlgemeen = Math.Max(this.PlaatDekking.Boven.DekkingToe, this.PlaatDekking.Onder.DekkingToe);
+            this.Tand.WapeningAlgemeen.DekkingToegepast = this.Tand.DekkingAlgemeen;
 
+            if (this.Tand.BuigingTand != null)
+            {
+                this.Tand.BuigingTand.Wapening = this.Tand.WapeningAlgemeen;
+
+            }
+
+            // bereken
+            this.Tand.Bijwerken();
+
+            // controleer wapening
+            if (this.DetailWapeningHoh == null) this.DetailWapeningHoh = 150;
+            if (this.Tand.BuigingTand?.AsRequired > this.Tand.WapeningAlgemeen.As)
+            {
+                // pas de hoh-maat aan.
+                var previousHoh = this.DetailWapeningHoh ?? 150;
+                var hoh = Math.Floor(previousHoh * this.Tand.BuigingTand.AsApplied / this.Tand.BuigingTand.AsRequired);
+                this.DetailWapeningHoh = hoh;
+                this.Tand.WapeningAlgemeen.Tekst = $"Ø{this.DetailWapeningDiameter:0.#}-{hoh}";
+            }
+            else if (this.Tand.BuigingTand?.AsRequired < this.Tand.WapeningAlgemeen.As && this.DetailWapeningHoh < 150)
+            {
+                // situatie te veel wapening: verhoog de hohmaat
+                double currentHoh = this.DetailWapeningHoh ?? 100;
+                double maxHoh = 150;
+                double targetUtilization = 0.90; // 90% benutting
+                
+                while (currentHoh < maxHoh)
+                {
+                    // Verhoog hohmaat met 5mm stappen
+                    currentHoh += 5;
+                    if (currentHoh > maxHoh) 
+                        currentHoh = maxHoh;
+                    
+                    // Update wapening met nieuwe hohmaat
+                    this.DetailWapeningHoh = currentHoh;
+                    this.Tand.WapeningAlgemeen.Tekst = $"Ø{this.DetailWapeningDiameter:0.#}-{currentHoh}";
+                    
+                    // Herbereken
+                    this.Tand.Bijwerken();
+                    
+                    // Check of AsRequired >= 90% van AsApplied
+                    if (this.Tand.BuigingTand.AsRequired >= this.Tand.BuigingTand.AsApplied * targetUtilization)
+                    {
+                        break; // Voldoende benutting bereikt
+                    }
+                    
+                    // Stop als max bereikt
+                    if (currentHoh >= maxHoh)
+                    {
+                        break;
+                    }
+                }
+            }
 
         }
 
@@ -492,10 +549,16 @@ namespace Construct.Domain.Entities
 
             // aanvullen met bijlegwapening
             this.BijlegWapening = new() { 
-                Tekst = "0r8", 
+                Tekst = "2r8", 
                 ReferentieVlak = ReferentieVlakEnum.Onder, 
                 LaagNummer = 2 };
 
+            this.BijlegWapeningBoven = new()
+            {
+                Tekst = "2r8",
+                ReferentieVlak = ReferentieVlakEnum.Boven,
+                LaagNummer = 2
+            };
 
             strook.Beam.PlaatWapening = strook.PlaatWapening;
             strook.Beam.EI = 1e-9 * strook.Beam.Profiel?.Iy * strook.Beam.Materiaal?.E ?? 1;
@@ -763,6 +826,14 @@ namespace Construct.Domain.Entities
             get => _bijlegWapening;
             set => SetNestedProperty(ref _bijlegWapening, value);
         }
+
+        private WapeningContext? _bijlegWapeningBoven;
+        public WapeningContext? BijlegWapeningBoven
+        {
+            get => _bijlegWapeningBoven;
+            set => SetNestedProperty(ref _bijlegWapeningBoven, value);
+        }
+
 
         public BendingResults? BasisStrook
         {

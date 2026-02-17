@@ -2590,6 +2590,157 @@
 
     public static class TrapSvgGenerator
     {
+        /// <summary>
+        /// Genereert driehoeken voor wapeningslaag-indicatoren
+        /// </summary>
+        /// <param name="x">X-positie startpunt</param>
+        /// <param name="y">Y-positie basislijn</param>
+        /// <param name="aantalOnder">Aantal driehoeken voor onderwapening (naar boven wijzend ▲)</param>
+        /// <param name="aantalBoven">Aantal driehoeken voor bovenwapening (naar beneden wijzend ▼)</param>
+        /// <param name="grootte">Grootte van de driehoeken</param>
+        /// <param name="rotatie">Rotatie in graden (0=horizontaal, 90=verticaal rechtsom, -90=verticaal linksom)</param>
+        /// <param name="kleurOnder">Kleur voor onderwapening driehoeken</param>
+        /// <param name="kleurBoven">Kleur voor bovenwapening driehoeken</param>
+        /// <param name="spacing">Horizontale afstand tussen driehoeken (default = grootte)</param>
+        /// <returns>Lijst van SvgPolygon objecten</returns>
+        public static List<SvgPolygon> GenerateWapeningDriehoeken(
+            double x, 
+            double y, 
+            int aantalOnder,
+            int aantalBoven,
+            double grootte = 40,
+            double rotatie = 0,
+            string kleurOnder = "black",
+            string kleurBoven = "black",
+            double? spacing = null)
+        {
+            List<SvgPolygon> driehoeken = [];
+            double afstand = spacing ?? grootte;
+            
+            // Helper functie voor het maken van een driehoek
+            SvgPolygon MaakDriehoek(double xPos, double yPos, bool naarBoven, string kleur)
+            {
+                string points;
+                
+                if (rotatie == 0)
+                {
+                    // Horizontale wapening
+                    if (naarBoven)
+                    {
+                        // ▲ Driehoek wijst naar boven
+                        points = $"{xPos},{yPos - grootte} " +
+                                $"{xPos - grootte/2},{yPos} " +
+                                $"{xPos + grootte/2},{yPos}";
+                    }
+                    else
+                    {
+                        // ▼ Driehoek wijst naar beneden
+                        points = $"{xPos},{yPos + grootte} " +
+                                $"{xPos - grootte/2},{yPos} " +
+                                $"{xPos + grootte/2},{yPos}";
+                    }
+                }
+                else if (Math.Abs(rotatie - 90) < 0.1 || Math.Abs(rotatie + 270) < 0.1)
+                {
+                    // Verticale wapening (90° rechtsom) - driehoek wijst naar rechts
+                    if (naarBoven) // eigenlijk "naar rechts" in dit geval
+                    {
+                        // ► Driehoek wijst naar rechts
+                        points = $"{xPos + grootte},{yPos} " +
+                                $"{xPos},{yPos - grootte/2} " +
+                                $"{xPos},{yPos + grootte/2}";
+                    }
+                    else
+                    {
+                        // ◄ Driehoek wijst naar links
+                        points = $"{xPos - grootte},{yPos} " +
+                                $"{xPos},{yPos - grootte/2} " +
+                                $"{xPos},{yPos + grootte/2}";
+                    }
+                }
+                else if (Math.Abs(rotatie + 90) < 0.1 || Math.Abs(rotatie - 270) < 0.1)
+                {
+                    // Verticale wapening (-90° linksom) - driehoek wijst naar links
+                    if (naarBoven) // eigenlijk "naar links" in dit geval
+                    {
+                        // ◄ Driehoek wijst naar links
+                        points = $"{xPos - grootte},{yPos} " +
+                                $"{xPos},{yPos - grootte/2} " +
+                                $"{xPos},{yPos + grootte/2}";
+                    }
+                    else
+                    {
+                        // ► Driehoek wijst naar rechts
+                        points = $"{xPos + grootte},{yPos} " +
+                                $"{xPos},{yPos - grootte/2} " +
+                                $"{xPos},{yPos + grootte/2}";
+                    }
+                }
+                else
+                {
+                    // Fallback voor andere hoeken - gebruik horizontaal
+                    if (naarBoven)
+                    {
+                        points = $"{xPos},{yPos - grootte} " +
+                                $"{xPos - grootte/2},{yPos} " +
+                                $"{xPos + grootte/2},{yPos}";
+                    }
+                    else
+                    {
+                        points = $"{xPos},{yPos + grootte} " +
+                                $"{xPos - grootte/2},{yPos} " +
+                                $"{xPos + grootte/2},{yPos}";
+                    }
+                }
+                
+                return new SvgPolygon
+                {
+                    Points = points,
+                    Fill = kleur,
+                    Stroke = kleur,
+                    StrokeWidth = 1
+                };
+            }
+            
+            double currentX = x;
+            double currentY = y;
+            
+            // Genereer driehoeken voor onderwapening (laag 1 en 2)
+            for (int i = 0; i < aantalOnder; i++)
+            {
+                if (rotatie == 0)
+                {
+                    // Horizontaal: driehoeken naast elkaar
+                    driehoeken.Add(MaakDriehoek(currentX, y, true, kleurOnder));
+                    currentX += afstand;
+                }
+                else
+                {
+                    // Verticaal: driehoeken onder elkaar
+                    driehoeken.Add(MaakDriehoek(x, currentY, true, kleurOnder));
+                    currentY += afstand;
+                }
+            }
+            
+            // Genereer driehoeken voor bovenwapening
+            for (int i = 0; i < aantalBoven; i++)
+            {
+                if (rotatie == 0)
+                {
+                    // Horizontaal: verder naast de onderwapening
+                    driehoeken.Add(MaakDriehoek(currentX, y, false, kleurBoven));
+                    currentX += afstand;
+                }
+                else
+                {
+                    // Verticaal: verder onder de onderwapening
+                    driehoeken.Add(MaakDriehoek(x, currentY, false, kleurBoven));
+                    currentY += afstand;
+                }
+            }
+            
+            return driehoeken;
+        }
 
         public static SvgPath GenerateLijnlast(double x1, double y1, double x2, double y2, double h, string tekst)
         {
@@ -2822,8 +2973,8 @@
             double scale = 1.0; // teksten worden runtime verschaald, hier op 1 laten staan.
 
             // ✅ DEBUG: Log om te zien of deze methode wordt aangeroepen
-            Console.WriteLine($"[DEBUG] GenerateBordesWapeningMetVerdeelLijnen aangeroepen voor bordes {bordes.Merk}");
-            Console.WriteLine($"[DEBUG] PlaatWapening is null: {bordes.PlaatWapening == null}");
+            //Console.WriteLine($"[DEBUG] GenerateBordesWapeningMetVerdeelLijnen aangeroepen voor bordes {bordes.Merk}");
+            //Console.WriteLine($"[DEBUG] PlaatWapening is null: {bordes.PlaatWapening == null}");
             
             if (bordes.PlaatWapening == null)
             {
@@ -2831,103 +2982,355 @@
                 return (wapeningElements, verdeelLijnen);
             }
             
-            Console.WriteLine($"[DEBUG] PlaatWapening.Onder is null: {bordes.PlaatWapening.Onder == null}");
-            Console.WriteLine($"[DEBUG] PlaatWapening.Boven is null: {bordes.PlaatWapening.Boven == null}");
+            //Console.WriteLine($"[DEBUG] PlaatWapening.Onder is null: {bordes.PlaatWapening.Onder == null}");
+            //Console.WriteLine($"[DEBUG] PlaatWapening.Boven is null: {bordes.PlaatWapening.Boven == null}");
 
             // Bereken X-positie voor verticale verdeellijnen
             double xVerdeel = verdeelLijnXPositie;
+            string kleurBoven = "gray";
+            string kleurOnder = "black";
 
             // ===============================================
             // 1️⃣ BASISSTROOK WAPENING (ONDER)
             // ===============================================
             if (bordes.PlaatWapening?.Onder?.BasisWapening != null)
             {
+                toonVerdeelLijnen = false;
                 var wapOnder = bordes.PlaatWapening.Onder.BasisWapening;
-                double yBasis = -bordes.Breedte + 2 * bordes.PlaatDekking.Onder.DekkingToe +150; 
+                var wapOnderVerdeel = bordes.PlaatWapening.Onder.VerdeelWapening;
+
                 double dekking = wapOnder.ReferentieDekking;
 
+            
+
+                double staafLengte = 600;
+
+                double xCenter = bordes.Lengte / 2.0;
+                double yCenter = -bordes.Breedte / 2.0;
+                double x1 = xCenter - staafLengte / 2.0;
+                double x2 = xCenter + staafLengte / 2.0;
+                double yBasis = yCenter - 100;
+                double y1 = yBasis + staafLengte / 2.0;
+                double y2 = yBasis - staafLengte / 2.0;
+
+
                 // Parse wapening tekst (bijv. "r8-150" of "r8-150+r6-500")
-                string laagOnder = wapOnder.ToStringWithLaag() ?? "?";
-                string laagBoven = "";
-                string wapeningTekst = $"o:{wapOnder}";
+                int laagNummerOnder = wapOnder.LaagNummer ?? 1;
+                int laagNummerBoven = 0;
+                string wapeningTekstOnder = $"{wapOnder}";
+                string wapeningTekstBoven = $"{wapOnder}";
+                bool tweeVerschillendeLijnen = false;
+
+                string wapeningTekstVerdeel = $"0:{wapOnderVerdeel}";
+                string wapeningTekstVerdeelBoven = "";
+
+                // Bereken afstand tussen boven- en onderwapening lijnen
+                double dekkingOnder = bordes.PlaatDekking.Onder.DekkingToe;
+                double dekkingBoven = bordes.PlaatDekking.Boven.DekkingToe;
+                double afstandTussenLijnen = bordes.Dikte - (dekkingBoven + dekkingOnder);
 
                 
                 if (bordes.PlaatWapening?.Boven?.BasisWapening != null)
                 {
                     var wapBoven = bordes.PlaatWapening.Boven.BasisWapening;
-                    laagBoven = wapBoven.ToStringWithLaag() ?? "?";
+                    laagNummerBoven = wapBoven.LaagNummer ?? 1;
                     
                     if (wapBoven.ToString() != wapOnder.ToString())
                     {
-                        wapeningTekst += $" b:{wapBoven}";
+                        // Verschillende wapening → twee lijnen
+                        tweeVerschillendeLijnen = true;
+                        wapeningTekstBoven = $"{wapBoven}";
                     }
                     else
                     {
-                        wapeningTekst = $"{wapBoven}";
+                        // Zelfde wapening → één lijn
+                        //wapeningTekstOnder = $"{wapBoven}";
                     }
 
-
+                    var wapBovenVerdeel = bordes.PlaatWapening.Boven.VerdeelWapening;
+                    wapeningTekstVerdeelBoven = wapBovenVerdeel?.ToString() ?? "?";
+                   
                 }
 
-
-                // Hoofdwapening lijn (horizontaal)
-                var hoofdwapeningLijn = new SvgLine
+                // Hoofdwapening lijn(en) (horizontaal)
+                if (tweeVerschillendeLijnen)
                 {
-                    X1 = dekking,
-                    Y1 = yBasis,
-                    X2 = bordes.Lengte - dekking,
-                    Y2 = yBasis,
-                    Stroke = "black",
-                    StrokeWidth = 2,
-                };
-                wapeningElements.Add(hoofdwapeningLijn);
+                    // ✅ TWEE LIJNEN: boven- en onderwapening verschillend
 
-                // Wapeningsnotatie tekst
-                var wapTekst = new SvgText(
-                    wapeningTekst,
-                    x: bordes.Lengte / 2,
-                    y: yBasis,
-                    scale: scale
-                )
+                    // Onderwapening lijn (onderste)
+                    double yOnderLijn = yBasis + afstandTussenLijnen / 2.0;
+
+                    var onderLijn = new SvgLine
+                    {
+                        X1 = x1,
+                        Y1 = yOnderLijn,
+                        X2 = x2,
+                        Y2 = yOnderLijn,
+                        Stroke = kleurOnder,
+                        StrokeWidth = 2,
+                    };
+                    wapeningElements.Add(onderLijn);
+
+                    // Bovenwapening lijn (bovenste, parallel)
+                    double yBovenLijn = yBasis - afstandTussenLijnen /2.0;
+                    var bovenLijn = new SvgLine
+                    {
+                        X1 = x1,
+                        Y1 = yBovenLijn,
+                        X2 = x2,
+                        Y2 = yBovenLijn,
+                        Stroke = kleurBoven,
+                        StrokeWidth = 2,
+                    };
+                    wapeningElements.Add(bovenLijn);
+
+                    // Tekst onderwapening
+                    var wapTekstOnder = new SvgText(
+                        $"o:{wapeningTekstOnder}",
+                        x: x2,
+                        y: yOnderLijn,
+                        scale: scale
+                    )
+                    {
+                        Anchor = "left",
+                        DominantBaseLine = "middle",
+                        Fill = kleurOnder,
+                        DY = 0,
+                        DX = 20
+                    };
+                    wapeningElements.Add(wapTekstOnder);
+
+                    // Tekst bovenwapening
+                    var wapTekstBoven = new SvgText(
+                        $"b:{wapeningTekstBoven}",
+                        x: x2,
+                        y: yBovenLijn,
+                        scale: scale
+                    )
+                    {
+                        Anchor = "left",
+                        DominantBaseLine = "middle",
+                        Fill = kleurBoven,
+                        DY = 0,
+                        DX = 20
+                    };
+                    wapeningElements.Add(wapTekstBoven);
+
+                    // Driehoeken onderwapening
+                    double xDriehoekOnder = xCenter + 150;
+                    var onderDriehoeken = GenerateWapeningDriehoeken(
+                        x: xDriehoekOnder,
+                        y: yOnderLijn,
+                        aantalOnder: laagNummerOnder,
+                        aantalBoven: 0,
+                        rotatie: 0,
+                        kleurOnder: kleurOnder
+                    );
+                    wapeningElements.AddRange(onderDriehoeken);
+
+                    // Driehoeken bovenwapening
+                    var bovenDriehoeken = GenerateWapeningDriehoeken(
+                        x: xDriehoekOnder,
+                        y: yBovenLijn,
+                        aantalOnder: 0,
+                        aantalBoven: laagNummerBoven,
+                        rotatie: 0,
+                        kleurBoven: kleurBoven
+                    );
+                    wapeningElements.AddRange(bovenDriehoeken);
+                }
+                else
                 {
-                    Anchor = "middle",
-                    DominantBaseLine = "base",
-                    Fill = "red",
-                    DY = -10
-                };
-                wapeningElements.Add(wapTekst);
+                    // ✅ ÉÉN LIJN: boven- en onderwapening identiek
+                    var hoofdwapeningLijn = new SvgLine
+                    {
+                        X1 = x1,
+                        Y1 = yBasis,
+                        X2 = x2,
+                        Y2 = yBasis,
+                        Stroke = "black",
+                        StrokeWidth = 2,
+                    };
+                    wapeningElements.Add(hoofdwapeningLijn);
 
-                // Wapeningsnotatie tekst
-                var laagText = new SvgText(
-                    laagOnder,
-                    x: bordes.Lengte / 4,
-                    y: yBasis,
-                    scale: scale
-                )
+                    // Tekst
+                    var wapTekst = new SvgText(
+                        wapeningTekstOnder,
+                        x: x2,
+                        y: yBasis,
+                        scale: scale
+                    )
+                    {
+                        Anchor = "left",
+                        DominantBaseLine = "middle",
+                        Fill = "black",
+                        DY = 0,
+                        DX = 20
+                    };
+                    wapeningElements.Add(wapTekst);
+
+                    // Driehoeken
+                    double xDriehoekOnder = xCenter + 100;
+                    var hoofdwapeningDriehoeken = GenerateWapeningDriehoeken(
+                        x: xDriehoekOnder,
+                        y: yBasis,
+                        aantalOnder: laagNummerOnder,
+                        aantalBoven: laagNummerBoven,
+                        rotatie: 0
+                    );
+                    wapeningElements.AddRange(hoofdwapeningDriehoeken);
+                }
+
+                // Verdeelwapening lijn(en) (verticaal)
+                bool tweeVerschillendeVerdeelLijnen = tweeVerschillendeLijnen; // als onder twee verschillende dan hier ook!
+                string verdeelTekstOnder = $"{wapOnderVerdeel}";
+                string verdeelTekstBoven = wapeningTekstVerdeelBoven;
+                int verdeelLaagOnder = wapOnderVerdeel?.LaagNummer ?? 1;
+                int verdeelLaagBoven = 0;
+
+                if (bordes.PlaatWapening?.Boven?.VerdeelWapening != null)
                 {
-                    Anchor = "middle",
-                    DominantBaseLine = "base",
-                    Fill = "red",
-                    DY = 0,
-                };
-                wapeningElements.Add(laagText);
+                    var wapBovenVerdeel = bordes.PlaatWapening.Boven.VerdeelWapening;
+                    verdeelLaagBoven = wapBovenVerdeel?.LaagNummer ?? 0;
+                    
+                    if (wapBovenVerdeel?.ToString() != wapOnderVerdeel?.ToString())
+                    {
+                        // Verschillende verdeelwapening → twee lijnen
+                        tweeVerschillendeVerdeelLijnen = true;
+                        verdeelTekstBoven = $"{wapBovenVerdeel}";
+                    }
+                    else
+                    {
+                        // Zelfde verdeelwapening → één lijn
+                        verdeelTekstOnder = $"{wapBovenVerdeel}";
+                    }
+                }
 
-                // Wapeningsnotatie tekst
-                var laagBovenText = new SvgText(
-                    laagBoven,
-                    x: bordes.Lengte / 4,
-                    y: yBasis,
-                    scale: scale
-                )
+                if (tweeVerschillendeVerdeelLijnen)
                 {
-                    Anchor = "middle",
-                    DominantBaseLine = "hanging",
-                    Fill = "red",
-                    DY = -4,
-                    DX = 24
-                };
-                wapeningElements.Add(laagBovenText);
+                    // ✅ TWEE VERTICALE LIJNEN: onder- en bovenverdeelwapening verschillend
 
+                    // Onderverdeelwapening lijn (links)
+                    double xOnderVerdeelLijn = xCenter + afstandTussenLijnen / 2.0;
+                    var onderVerdeelLijn = new SvgLine
+                    {
+                        X1 = xOnderVerdeelLijn,
+                        Y1 = y1,
+                        X2 = xOnderVerdeelLijn,
+                        Y2 = y2,
+                        Stroke = kleurOnder,
+                        StrokeWidth = 2,
+                    };
+                    wapeningElements.Add(onderVerdeelLijn);
+
+                    // Bovenverdeelwapening lijn (rechts, parallel)
+                    double xBovenVerdeelLijn = xCenter - afstandTussenLijnen / 2.0;
+                    var bovenVerdeelLijn = new SvgLine
+                    {
+                        X1 = xBovenVerdeelLijn,
+                        Y1 = y1,
+                        X2 = xBovenVerdeelLijn,
+                        Y2 = y2,
+                        Stroke = kleurBoven,
+                        StrokeWidth = 2,
+                    };
+                    wapeningElements.Add(bovenVerdeelLijn);
+
+                    // Tekst onderverdeelwapening
+                    var verdeelTekstOnderSvg = new SvgText(
+                        $"o:{verdeelTekstOnder}",
+                        x: xOnderVerdeelLijn,
+                        y: y2,
+                        angle: -90,
+                        scale: scale
+                    )
+                    {
+                        Anchor = "left",
+                        DominantBaseLine = "middle",
+                        Fill = kleurOnder,
+                        DX = 20
+                    };
+                    wapeningElements.Add(verdeelTekstOnderSvg);
+
+                    // Tekst bovenverdeelwapening
+                    var verdeelTekstBovenSvg = new SvgText(
+                        $"b:{verdeelTekstBoven}",
+                        x: xBovenVerdeelLijn,
+                        y: y2,
+                        angle: -90,
+                        scale: scale
+                    )
+                    {
+                        Anchor = "left",
+                        DominantBaseLine = "middle",
+                        Fill = kleurBoven,
+                        DX = 20
+                    };
+                    wapeningElements.Add(verdeelTekstBovenSvg);
+
+                    // Driehoeken onderverdeelwapening (verticaal, links)
+                    double yDriehoekVerdeel = yBasis - 200;
+                    var onderVerdeelDriehoeken = GenerateWapeningDriehoeken(
+                        x: xOnderVerdeelLijn,
+                        y: yDriehoekVerdeel,
+                        aantalOnder: verdeelLaagOnder,
+                        aantalBoven: 0,
+                        rotatie: -90,
+                        kleurOnder: kleurOnder
+                    );
+                    wapeningElements.AddRange(onderVerdeelDriehoeken);
+
+                    // Driehoeken bovenverdeelwapening (verticaal, rechts)
+                    var bovenVerdeelDriehoeken = GenerateWapeningDriehoeken(
+                        x: xBovenVerdeelLijn,
+                        y: yDriehoekVerdeel,
+                        aantalOnder: 0,
+                        aantalBoven: verdeelLaagBoven,
+                        rotatie: -90,
+                        kleurBoven: kleurBoven
+                    );
+                    wapeningElements.AddRange(bovenVerdeelDriehoeken);
+                }
+                else
+                {
+                    // ✅ ÉÉN VERTICALE LIJN: onder- en bovenverdeelwapening identiek
+                    var verdeeelwapening = new SvgLine
+                    {
+                        X1 = xCenter,
+                        Y1 = y1,
+                        X2 = xCenter,
+                        Y2 = y2,
+                        Stroke = "black",
+                        StrokeWidth = 2,
+                    };
+                    wapeningElements.Add(verdeeelwapening);
+
+                    // Tekst
+                    var verdeelTekst = new SvgText(
+                        verdeelTekstOnder,
+                        x: xCenter,
+                        y: y2,
+                        angle: -90
+                    )
+                    {
+                        Anchor = "left",
+                        DominantBaseLine = "middle",
+                        Fill = "black",
+                        DX = 20
+                    };
+                    wapeningElements.Add(verdeelTekst);
+
+                    // Driehoeken
+                    double yDriehoekVerdeel = yBasis - 100;
+                    var verdeelwapeningDriehoeken = GenerateWapeningDriehoeken(
+                        x: xCenter,
+                        y: yDriehoekVerdeel,
+                        aantalOnder: verdeelLaagOnder,
+                        aantalBoven: verdeelLaagBoven,
+                        rotatie: 90
+                    );
+                    wapeningElements.AddRange(verdeelwapeningDriehoeken);
+                }
 
 
 
@@ -2954,59 +3357,179 @@
             }
 
             // ===============================================
-            // 2️⃣ VERSTERKTE STROOK WAPENING (BOVEN)
+            // 2️⃣ VERSTERKTE STROOK WAPENING 
             // ===============================================
             if (bordes.Trap1.AansluitendElement != null || 
                 bordes.Trap2.AansluitendElement != null)
             {
-                var wapening = bordes.BijlegWapening;
+                var wapeningOnder = bordes.BijlegWapening;
+                var wapeningBoven = bordes.BijlegWapeningBoven;
+                
                 double yVSstart = -bordes.Trap1.Breedte;
+                yVSstart = 500;
                 double yVSend = yVSstart - bordes.BreedteVersterkteStrook;
-                double yVS = yVSstart - 2 * bordes.PlaatDekking.Onder.DekkingToe;
+                double yVS = yVSstart - bordes.BreedteVersterkteStrook / 2.0;
                 double dekking = bordes.PlaatDekking.Onder.DekkingToe;
 
-                string wapeningTekst = wapening?.ToString() ?? "NULL";
-                string laagTekst = wapening?.ToStringWithLaag() ?? "";
+                string wapeningTekstOnder = wapeningOnder?.ToString() ?? "NULL";
+                string wapeningTekstBoven = "";
+                int laagNummerOnder = wapeningOnder?.LaagNummer ?? 2;
+                int laagNummerBoven = 0;
+                bool tweeVerschillendeBijlegLijnen = false;
 
-                // Hoofdwapening lijn versterkte strook
-                var vsWapeningLijn = new SvgLine
-                {
-                    X1 = dekking,
-                    Y1 = yVS,
-                    X2 = bordes.Lengte - dekking,
-                    Y2 = yVS,
-                    Stroke = "darkred",
-                    StrokeWidth = 2,
-                };
-                wapeningElements.Add(vsWapeningLijn);
+                // Bereken afstand tussen boven- en onderwapening
+                double dekkingOnder = bordes.PlaatDekking.Onder.DekkingToe;
+                double dekkingBoven = bordes.PlaatDekking.Boven.DekkingToe;
+                double afstandTussenLijnen = bordes.Dikte - (dekkingBoven + dekkingOnder);
 
-                // Wapeningsnotatie tekst
-                var wapTekst = new SvgText(
-                    wapeningTekst,
-                    x: bordes.Lengte / 2,
-                    y: yVS,
-                    scale: scale
-                )
+                // Check of bovenwapening bestaat en verschillend is
+                if (wapeningBoven != null)
                 {
-                    Anchor = "middle",
-                    DominantBaseLine = "base",
-                    Fill = "darkred",
-                    DY = -10,
-                };
-                wapeningElements.Add(wapTekst);
+                    laagNummerBoven = wapeningBoven.LaagNummer ?? 1;
+                    
+                    if (wapeningBoven.ToString() != wapeningOnder?.ToString())
+                    {
+                        // Verschillende wapening → twee lijnen
+                        tweeVerschillendeBijlegLijnen = true;
+                        wapeningTekstBoven = wapeningBoven.ToString();
+                    }
+                    else
+                    {
+                        // Zelfde wapening → één lijn met beide driehoeken
+                        wapeningTekstOnder = wapeningBoven.ToString();
+                        laagNummerBoven = wapeningBoven.LaagNummer ?? 1;
+                    }
+                }
 
-                var bijlegLaag = new SvgText(
-                    laagTekst,
-                    x: bordes.Lengte / 4,
-                    y: yVS,
-                    scale: scale
-                )
+                if (tweeVerschillendeBijlegLijnen)
                 {
-                    Anchor = "middle",
-                    DominantBaseLine = "base",
-                    Fill = "darkred",
-                };
-                wapeningElements.Add(bijlegLaag);
+                    // ✅ TWEE LIJNEN: boven- en onderbijlegwapening verschillend
+                    
+                    // Onderbijlegwapening lijn (onderste)
+                    double yOnderLijn = yVS + afstandTussenLijnen / 2.0;
+                    var onderLijn = new SvgLine
+                    {
+                        X1 = dekking,
+                        Y1 = yOnderLijn,
+                        X2 = bordes.Lengte - dekking,
+                        Y2 = yOnderLijn,
+                        Stroke = kleurOnder,
+                        StrokeWidth = 2,
+                    };
+                    wapeningElements.Add(onderLijn);
+
+                    // Bovenbijlegwapening polyline (bovenste, parallel met trap-vormige uiteinden)
+                    double yBovenLijn = yVS - afstandTussenLijnen / 2.0;
+                    double yTrapVorm = yOnderLijn - 30; // 30mm boven de onderlijn
+                    double xTrapInsprong = 500; // 500mm horizontaal insprong
+                    
+                    List<Punt> bovenWapeningPunten = 
+                    [
+                        // Start links
+                        new(dekking + xTrapInsprong, yTrapVorm),
+                        new(dekking, yTrapVorm),
+                        new(dekking, yBovenLijn),
+                        new(bordes.Lengte - dekking, yBovenLijn),
+                        new(bordes.Lengte - dekking, yTrapVorm),
+                        new(bordes.Lengte - dekking -500, yTrapVorm)
+                    ];
+                    
+                    var bovenPath = SvgGenerator.MakePath(bovenWapeningPunten, scaleY: 1, close: false);
+                    bovenPath.Fill = "none";
+                    bovenPath.Stroke = kleurBoven;
+                    bovenPath.StrokeWidth = 2;
+                    wapeningElements.Add(bovenPath);
+
+                    // Tekst onderbijlegwapening
+                    var wapTekstOnder = new SvgText(
+                        $"o:{wapeningTekstOnder}",
+                        x: bordes.Lengte / 2,
+                        y: yOnderLijn,
+                        scale: scale
+                    )
+                    {
+                        Anchor = "middle",
+                        DominantBaseLine = "base",
+                        Fill = kleurOnder,
+                        DY = -10,
+                    };
+                    wapeningElements.Add(wapTekstOnder);
+
+                    // Tekst bovenbijlegwapening
+                    var wapTekstBoven = new SvgText(
+                        $"b:{wapeningTekstBoven}",
+                        x: bordes.Lengte / 2,
+                        y: yBovenLijn,
+                        scale: scale
+                    )
+                    {
+                        Anchor = "middle",
+                        DominantBaseLine = "base",
+                        Fill = kleurBoven,
+                        DY = -10,
+                    };
+                    wapeningElements.Add(wapTekstBoven);
+
+                    // Driehoeken onderbijlegwapening
+                    double xDriehoekBijleg = bordes.Lengte / 3;
+                    var onderBijlegDriehoeken = GenerateWapeningDriehoeken(
+                        x: xDriehoekBijleg,
+                        y: yOnderLijn,
+                        aantalOnder: laagNummerOnder,
+                        aantalBoven: 0,
+                        kleurOnder: kleurOnder
+                    );
+                    wapeningElements.AddRange(onderBijlegDriehoeken);
+
+                    // Driehoeken bovenbijlegwapening
+                    var bovenBijlegDriehoeken = GenerateWapeningDriehoeken(
+                        x: xDriehoekBijleg,
+                        y: yBovenLijn,
+                        aantalOnder: 0,
+                        aantalBoven: laagNummerBoven,
+                        kleurBoven: kleurBoven
+                    );
+                    wapeningElements.AddRange(bovenBijlegDriehoeken);
+                }
+                else
+                {
+                    // ✅ ÉÉN LIJN: zelfde wapening of alleen onderwapening
+                    var vsWapeningLijn = new SvgLine
+                    {
+                        X1 = dekking,
+                        Y1 = yVS,
+                        X2 = bordes.Lengte - dekking,
+                        Y2 = yVS,
+                        Stroke = "black",
+                        StrokeWidth = 2,
+                    };
+                    wapeningElements.Add(vsWapeningLijn);
+
+                    // Tekst
+                    var wapTekst = new SvgText(
+                        wapeningTekstOnder,
+                        x: bordes.Lengte / 2,
+                        y: yVS,
+                        scale: scale
+                    )
+                    {
+                        Anchor = "middle",
+                        DominantBaseLine = "base",
+                        Fill = "darkred",
+                        DY = -10,
+                    };
+                    wapeningElements.Add(wapTekst);
+
+                    // Driehoeken (met beide lagen als ze bestaan)
+                    double xDriehoekBijleg = bordes.Lengte / 3;
+                    var bijlegDriehoeken = GenerateWapeningDriehoeken(
+                        x: xDriehoekBijleg,
+                        y: yVS,
+                        aantalOnder: laagNummerOnder,
+                        aantalBoven: laagNummerBoven
+                    );
+                    wapeningElements.AddRange(bijlegDriehoeken);
+                }
 
 
 
@@ -3032,60 +3555,63 @@
             }
 
             // ===============================================
-            // 3️⃣ BIJLEGSTAVEN ONDER TRAPPEN (indien van toepassing)
+            // 3️⃣ BIJLEGSTAVEN (HAARSPELDEN)
             // ===============================================
             if (bordes.Trap1?.AansluitendElement != null && bordes.PlaatWapening?.Onder?.BasisWapening != null)
             {
                 var c = bordes.Trap1;
-                var wap = bordes.PlaatWapening.Onder.BasisWapening;
-                
-                int aantalBijlegStaven = (int)wap.AantalBijlegStaven;
-                double bijlegDiameter = wap.DiameterBijlegStaven;
-                
-                if (aantalBijlegStaven > 0)
-                {
-                    double bijlegSpacing = c.Lengte / (aantalBijlegStaven + 1);
-                    
-                    for (int i = 1; i <= aantalBijlegStaven; i++)
-                    {
-                        double xBijleg = c.Randafstand + i * bijlegSpacing;
-                        double yStart = -c.Breedte / 2.0;
-                        double yEnd = -(c.Breedte + bordes.BreedteVersterkteStrook / 2.0);
-                        
-                        // Verticale lijn van basisstrook naar versterkte strook
-                        var bijlegLijn = new SvgLine
-                        {
-                            X1 = xBijleg,
-                            Y1 = yStart,
-                            X2 = xBijleg,
-                            Y2 = yEnd,
-                            Stroke = "orange",
-                            StrokeWidth = bijlegDiameter / 2.0,
-                            StrokeDashArray = "5,3"
-                        };
-                        wapeningElements.Add(bijlegLijn);
+                var wap = bordes.Tand.WapeningAlgemeen;
 
-                        // ✅ NIEUW: Horizontale verdeellijn voor bijlegstaven (alleen voor eerste staaf)
-                        if (toonVerdeelLijnen && i == 1)
-                        {
-                            double yVerdeelBijleg = (yStart + yEnd) / 2.0;
-                            
-                            var bijlegVerdeelLijn = new SvgDimLine
-                            {
-                                Mode = DimLineMode.Horizontal,
-                                X1 = c.Randafstand,
-                                Y1 = yVerdeelBijleg,
-                                X2 = c.Randafstand + c.Lengte,
-                                Y2 = yVerdeelBijleg,
-                                Offset = 0,
-                                OffsetLines = 1,
-                                Text = $"{aantalBijlegStaven}Ø{bijlegDiameter:0.#}",
-                                StrokeWidth = 0.5,
-                                StrokeColor = "orange"
-                            };
-                            verdeelLijnen.Add(bijlegVerdeelLijn);
-                        }
-                    }
+                if (wap != null)
+                {
+                    // ✅ NIEUW: Verticale wapeningslijn in midden van aansluiting met driehoeken
+                    double xMiddenAansluiting = c.Randafstand + (c.Lengte / 2.0);
+                    double yWapeningStart = -30;
+                    double yWapeningEnd = -530;
+                    
+                    // Verticale wapeningslijn
+                    var wapeningLijn = new SvgLine
+                    {
+                        X1 = xMiddenAansluiting,
+                        Y1 = yWapeningStart,
+                        X2 = xMiddenAansluiting,
+                        Y2 = yWapeningEnd,
+                        Stroke = "black",
+                        StrokeWidth = 2
+                    };
+                    wapeningElements.Add(wapeningLijn);
+                    
+                    // Driehoeken voor de verticale wapening (1 boven, 1 onder)
+                    double yMiddenWapening = (yWapeningStart + yWapeningEnd) / 2.0;
+                    var wapeningDriehoeken = GenerateWapeningDriehoeken(
+                        x: xMiddenAansluiting,
+                        y: yMiddenWapening,
+                        aantalOnder: 1,  // 1 driehoek onder (▲)
+                        aantalBoven: 1,  // 1 driehoek boven (▼)
+                        grootte: 40,
+                        rotatie: -90,     // verticaal
+                        kleurOnder: "black",
+                        kleurBoven: "black"
+                    );
+                    wapeningElements.AddRange(wapeningDriehoeken);
+
+                    // Wapeningsnotatie tekst (rechts uitgelijnd, links van de verticale lijn)
+                    var tandWapeningTekst = new SvgText(
+                        wap.ToString(),
+                        x: xMiddenAansluiting,
+                        y: yWapeningStart,
+                        angle: -90,
+                        scale: scale
+                    )
+                    {
+                        Anchor = "end",
+                        DominantBaseLine = "middle",
+                        Fill = "black",
+                        DX = -20
+                    };
+                    wapeningElements.Add(tandWapeningTekst);
+
+
                 }
             }
 
@@ -3093,13 +3619,60 @@
             if (bordes.Trap2?.AansluitendElement != null && bordes.PlaatWapening?.Onder?.BasisWapening != null)
             {
                 var c = bordes.Trap2;
-                var wap = bordes.PlaatWapening.Onder.BasisWapening;
+                var wap = bordes.Tand.WapeningAlgemeen;
                 
                 int aantalBijlegStaven = (int)wap.AantalBijlegStaven;
                 double bijlegDiameter = wap.DiameterBijlegStaven;
                 
-                if (aantalBijlegStaven > 0)
+                if (wap != null)
                 {
+                    // ✅ NIEUW: Verticale wapeningslijn in midden van aansluiting met driehoeken
+                    double xMiddenAansluiting = bordes.Lengte - c.Randafstand - (c.Lengte / 2.0);
+                    double yWapeningStart = -30;
+                    double yWapeningEnd = -530;
+                    
+                    // Verticale wapeningslijn
+                    var wapeningLijn = new SvgLine
+                    {
+                        X1 = xMiddenAansluiting,
+                        Y1 = yWapeningStart,
+                        X2 = xMiddenAansluiting,
+                        Y2 = yWapeningEnd,
+                        Stroke = "black",
+                        StrokeWidth = 2
+                    };
+                    wapeningElements.Add(wapeningLijn);
+                    
+                    // Driehoeken voor de verticale wapening (1 boven, 1 onder)
+                    double yMiddenWapening = (yWapeningStart + yWapeningEnd) / 2.0;
+                    var wapeningDriehoeken = GenerateWapeningDriehoeken(
+                        x: xMiddenAansluiting,
+                        y: yMiddenWapening,
+                        aantalOnder: 1,  // 1 driehoek onder (▲)
+                        aantalBoven: 1,  // 1 driehoek boven (▼)
+                        grootte: 40,
+                        rotatie: -90,     // verticaal
+                        kleurOnder: "black",
+                        kleurBoven: "black"
+                    );
+                    wapeningElements.AddRange(wapeningDriehoeken);
+
+                    // Wapeningsnotatie tekst (links uitgelijnd, rechts van de verticale lijn)
+                    var tandWapeningTekst = new SvgText(
+                        wap.ToString(),
+                        x: xMiddenAansluiting,
+                        y: yWapeningStart,
+                        angle: -90,
+                        scale: scale
+                    )
+                    {
+                        Anchor = "end",
+                        DominantBaseLine = "middle",
+                        Fill = "black",
+                        DX = -20
+                    };
+                    wapeningElements.Add(tandWapeningTekst);
+
                     double bijlegSpacing = c.Lengte / (aantalBijlegStaven + 1);
                     
                     for (int i = 1; i <= aantalBijlegStaven; i++)

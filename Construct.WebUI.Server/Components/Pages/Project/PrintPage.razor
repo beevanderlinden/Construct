@@ -1148,23 +1148,6 @@ else
                         section.AddParagraph(strook.Naam.ToUpperInvariant(), "Kop 3");
 
 
-
-                        //var wap = strook.WapOnder;
-                        // section.AddParagraph($"A<sub>s,prov</sub> = {wap.As.ToString("0")}");
-                        // section.AddParagraph($"A<sub>s,basis</sub> = {wap.AsBasis.ToString("0")}");
-                        // section.AddParagraph($"A<sub>s,bijleg</sub> = {wap.AsBijleg.ToString("0")}");
-
-
-                        //var pw = strook.PlaatWapening;
-                        // section.AddParagraph($"Onder.Basis : {pw.Onder?.BasisWapening.Tekst} ({pw.Onder?.BasisWapening.As:0}), ref={pw.Onder?.BasisWapening.ZRef:0.#}");
-                        // section.AddParagraph($"Onder.Bijleg : {pw.Onder?.BijlegWapening?.Tekst} ({pw.Onder?.BijlegWapening?.As:0}) ref={pw.Onder?.BijlegWapening?.ZRef:0.#}");
-                        // section.AddParagraph($"Onder.Totaal : HOE DAN?");
-
-
-
-
-
-                        //var svgDocs = strook.ToSvgDocuments(svgStyle, widthPx: svgWidthPixels);
                         var svgDocs = strook.Beam.ToSvgDocumentsOpt((int)svgWidthPixels, 9999, svgStyle, a.Belastingen.BelastingGevallen, [(Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A | Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B)], []);
 
                         foreach (var svgDoc in svgDocs)
@@ -1228,12 +1211,17 @@ else
                     {
 
                         var tand = bordes.Tand;
+
+                        // de diameter is gelijk aan de verdeelwapening, we berekenen de hohmaat (maximaal 150mm)
+                        bordes.Tand.WapeningAlgemeen.Tekst = $"Ø{bordes.DetailWapeningDiameter:0.#}-{bordes.DetailWapeningHoh}";
+
+
                         tand.Bijwerken();
                         tand.BuigingHals.BerekenEnValideer();
                         tand.BuigingTand.BerekenEnValideer();
 
 
-                        string titleTand = $"<span class='titel'>{a.Merk} (vervolg)</span> <span class='subtitel'>trapoplegging</span>";
+                        string titleTand = $"<span class='titel'>{a.Merk} (vervolg)</span>";
                         section.AddHeading(titleTand, "Kop 1");
                         section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
                         section.AddHeading("Trapoplegging tand", "Kop 3");
@@ -1259,14 +1247,6 @@ else
 
                         tand.BuigingTand.AddToSection(section, false);
 
-
-                        // section.Elements.Add(tand.BuigingTand.ToMigraDocTable(false));
-                        // foreach (var melding in tand.BuigingTand.Meldingen)
-                        // {
-                        //     section.AddParagraph(melding.ToMarkupString().Value);
-                        // }
-
-
                         // Dwarskracht
                         // de V~Ed,red~ moet onder V~Rd,c~ blijven (uitgangspunt is geen beugels)
                         // 
@@ -1280,7 +1260,7 @@ else
 
                             foreach (var melding in tand.DwarskrachtTand.Meldingen)
                             {
-                               section.AddParagraph(melding.ToMarkupString().Value);
+                                section.AddParagraph(melding.ToMarkupString().Value);
                                 section.AddParagraph(melding.ToString());
                             }
                         }
@@ -1297,18 +1277,52 @@ else
                         // Oplegging
                         tand.Oplegging.BerekenEnValideer();
                         section.AddParagraph("Oplegging tand", "Kop 4");
-                        //section.Elements.Add(steekTrap.TandOpleggingBovenzijde.Oplegging.ToMigraDocTable(false));
-                        //section.AddParagraph(steekTrap.TandOpleggingBovenzijde.)
                         section.AddParagraph(tand.ConclusieOplegging);
 
-                    }
+
+                        // Controle verdeelwapening
+                        var arm2 = bordes.BreedteVersterkteStrook * 0.001 / 2.0; // in meters
+                        var momentTotHartVersterkteStroook = tand.MomentVoorTand + Math.Abs(tand.OplegReactie) * arm2;
+                        BendingResults controleVerdeelWapening = new()
+                            {
+                                Beton = bordes.Beton!,
+                                Profiel = bordes.BasisStrook?.Profiel,
+                                Wapening = bordes.PlaatWapening?.Boven?.VerdeelWapening!,
+                                Snedekrachten = new(){My = momentTotHartVersterkteStroook},
+                            };
+
+                        section.AddParagraph("Bovenwapening tot hart versterkte strook", "Kop 3");
+                        section.AddParagraph($"Het moment is {tand.MomentVoorTand:0.#} kNm + {Math.Abs(tand.OplegReactie):0.#} kN x {arm2:0.##} m = {momentTotHartVersterkteStroook:0.#} kNm");
+                        section.AddParagraph($"Verdeelwapening boven benodigd *A~s,req~* = {controleVerdeelWapening.AsRequired:0} mm²");
+                        section.AddParagraph($"Verdeelwapening boven toegepast *A~s,prov~* = {controleVerdeelWapening.AsApplied:0} mm² ({bordes.PlaatWapening?.Boven?.VerdeelWapening?.SanitizedTekst()})");
+
+
+                        if (!controleVerdeelWapening.IsValidated)
+                        {
+                            controleVerdeelWapening.AddToSection(section, false);
+
+                            section.AddParagraph("⚠️ Let op!");
+                            foreach (var melding in controleVerdeelWapening.Meldingen)
+                            {
+                                section.AddParagraph(melding.ToMarkupString().Value);
+                            }
+                        }
+
+                        section.AddParagraph("Wapening overzicht", "Kop 3");
+
+                        svgWidth = 180.0;
+                        svgWidthPixels = svgWidth * 96.0 / 25.4;
+                        maxHeightPx = 100.0 * 96.0 / 25.4;
+                        svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; width: {svgWidthPixels:0}; height: auto; max-height: {maxHeightPx:0}";
+
+                        var xmlWap = SvgGenerator.GenerateBordesSvgXml(bordes, boundingBox, svgWidthPixels, 9999, svgStyle, false, true);
+                        section.AddParagraph(xmlWap);
+
+                    } // einde tand
                         
-                    
-
-
 
                     content.Sections.Add(section);
-                }
+                } // einde bordes
 
 
                 if (a is SteekTrapEntity steekTrap)
