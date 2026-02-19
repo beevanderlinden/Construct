@@ -26,6 +26,55 @@ namespace Construct.Domain.Entities
             set => Materiaal = value;
         }
 
+        /// <summary>
+        /// ? Initialiseer PlaatDekking met correcte referenties naar Grondslagen en Beton.
+        /// Roep deze methode aan na het instellen van Materiaal en ProjectInfo.
+        /// </summary>
+        protected void InitializePlaatDekking()
+        {
+            if (ProjectInfo?.Grondslagen == null || Beton == null)
+            {
+                Console.WriteLine($"?? [{GetType().Name}] Kan PlaatDekking niet initialiseren: ProjectInfo.Grondslagen of Beton is null");
+                return;
+            }
+
+            // ? Initialiseer Boven als deze null is
+            if (PlaatDekking.Boven == null)
+            {
+                PlaatDekking.Boven = new BetonDekkingContext(ProjectInfo.Grondslagen, Beton)
+                {
+                    IsKwaliteitsBeheersing = true,
+                    IsPlaatGeometrie = true,
+                    SelectedMilieuklassen = new List<MilieuklasseEnum> { MilieuklasseEnum.XC1 },
+                    DekkingToe = 20
+                };
+            }
+            else
+            {
+                // Update alleen de referenties
+                PlaatDekking.Boven.Grondslagen = ProjectInfo.Grondslagen;
+                PlaatDekking.Boven.Beton = Beton;
+            }
+
+            // ? Initialiseer Onder als deze null is
+            if (PlaatDekking.Onder == null)
+            {
+                PlaatDekking.Onder = new BetonDekkingContext(ProjectInfo.Grondslagen, Beton)
+                {
+                    IsKwaliteitsBeheersing = true,
+                    IsPlaatGeometrie = true,
+                    SelectedMilieuklassen = new List<MilieuklasseEnum> { MilieuklasseEnum.XC1 },
+                    DekkingToe = 20
+                };
+            }
+            else
+            {
+                // Update alleen de referenties
+                PlaatDekking.Onder.Grondslagen = ProjectInfo.Grondslagen;
+                PlaatDekking.Onder.Beton = Beton;
+            }
+        }
+
         public override void RestoreReferencesAfterDeserialization(ProjectEntity project)
         {
             base.RestoreReferencesAfterDeserialization(project);

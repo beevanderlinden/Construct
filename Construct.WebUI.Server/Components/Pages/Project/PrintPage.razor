@@ -1,6 +1,7 @@
 ﻿@page "/Project/print"
 @using System.Diagnostics
 @using System.IO
+@using System.Text
 @using CommonLibrary
 @using CommonLibrary.Models
 @using Construct.Application.Interfaces
@@ -47,8 +48,9 @@ else
                    OnPrintClick="@PrintPreviewAsync"
                    OnDownloadRtfClick="@DownloadRtfAsync"
                    OnRefreshClick="@GenerateDocuments"
-                   OnToggleInfoClick="@ToggleInfo"
-                   OnTestMarkdownClick="@TestMarkdownDocumentAsync" />
+                OnToggleInfoClick="@ToggleInfo"
+                OnTestMarkdownClick="@TestMarkdownDocumentAsync"
+                OnTestPrintClick="@TestStaticPrintAsync" />
 
     @if (ShowInfo)
     {
@@ -216,7 +218,11 @@ else
         // maak documenten
         isLoading = true;
         SvgImageCache cache = new();
-        this.content = await GenerateDocumentContent();
+
+        // ✅ NIEUW: Valideer document inhoud
+        var validationResult = await ValidateDocumentContent();
+
+        this.content = await GenerateDocumentContent(validationResult);
 
         Log.WriteLine("Genereer Migradoc.document");
         this.document = GetDocument(content, cache);
@@ -229,6 +235,9 @@ else
 
         await Task.Delay(20);
         Log.StopBusy("Document gereed");
+
+        // ✅ NIEUW: Toon validatie resultaten als toast
+        ShowValidationResults(validationResult);
     }
 
     private async Task OpenDialogHtmlAsync()
@@ -408,6 +417,72 @@ else
         catch (Exception ex)
         {
             ToastService.ShowError($"Fout bij laden MD: {ex.Message}");
+            Log.WriteLine($"Error: {ex}");
+        }
+    }
+
+    private async Task TestStaticPrintAsync()
+    {
+        try
+        {
+            ToastService.ShowInfo("Genereer test document met 4 pagina's...");
+
+            // Genereer statische HTML met 4 pagina's
+            var htmlBuilder = new StringBuilder();
+
+            htmlBuilder.AppendLine("<html>");
+            htmlBuilder.AppendLine("<head>");
+            htmlBuilder.AppendLine("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />");
+            htmlBuilder.AppendLine("</head>");
+            htmlBuilder.AppendLine("<body>");
+            htmlBuilder.AppendLine("<div class='preview-container'>");
+
+            // Pagina 1 - Voorblad
+            var guid1 = Guid.NewGuid();
+            htmlBuilder.AppendLine($"<button class='ec-accordion' id='{guid1}' onclick='toggleAccordion(\"{guid1}\")'>Voorblad</button>");
+            htmlBuilder.AppendLine($"<div class='ec-panel' id='pnl{guid1}'>");
+            htmlBuilder.AppendLine("<h1 class='document-title'>Test Document</h1>");
+            htmlBuilder.AppendLine("<h2 class='document-subtitle'>Statische HTML Print Test</h2>");
+            htmlBuilder.AppendLine("<p class='ec-par'>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>");
+            htmlBuilder.AppendLine("</div>");
+
+            // Pagina 2 - Uitgangspunten
+            var guid2 = Guid.NewGuid();
+            htmlBuilder.AppendLine($"<button class='ec-accordion' id='{guid2}' onclick='toggleAccordion(\"{guid2}\")'>Uitgangspunten</button>");
+            htmlBuilder.AppendLine($"<div class='ec-panel' id='pnl{guid2}'>");
+            htmlBuilder.AppendLine("<h1 class='kop1'>Uitgangspunten</h1>");
+            htmlBuilder.AppendLine("<p class='ec-par'>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>");
+            htmlBuilder.AppendLine("</div>");
+
+            // Pagina 3 - Test Element
+            var guid3 = Guid.NewGuid();
+            htmlBuilder.AppendLine($"<button class='ec-accordion' id='{guid3}' onclick='toggleAccordion(\"{guid3}\")'>Test Element</button>");
+            htmlBuilder.AppendLine($"<div class='ec-panel' id='pnl{guid3}'>");
+            htmlBuilder.AppendLine("<h1 id='test-element-1' class='kop1'><span class='titel'>T-1</span> <span class='subtitel'>test element</span></h1>");
+            htmlBuilder.AppendLine("<p class='ec-par'>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.</p>");
+            htmlBuilder.AppendLine("</div>");
+
+            // Pagina 4 - Vervolg
+            var guid4 = Guid.NewGuid();
+            htmlBuilder.AppendLine($"<button class='ec-accordion' id='{guid4}' onclick='toggleAccordion(\"{guid4}\")'>T-1 (vervolg)</button>");
+            htmlBuilder.AppendLine($"<div class='ec-panel' id='pnl{guid4}'>");
+            htmlBuilder.AppendLine("<h1 class='kop1'>T-1 (vervolg)</h1>");
+            htmlBuilder.AppendLine("<p class='ec-par'>Totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit.</p>");
+            htmlBuilder.AppendLine("</div>");
+
+            htmlBuilder.AppendLine("</div>"); // Close preview-container
+            htmlBuilder.AppendLine("</body>");
+            htmlBuilder.AppendLine("</html>");
+
+            this.Html = htmlBuilder.ToString();
+
+            ToastService.ShowSuccess("Test document gegenereerd! Klik op 'Afdrukken' om de print preview te testen.");
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Fout bij genereren test document: {ex.Message}");
             Log.WriteLine($"Error: {ex}");
         }
         finally
@@ -936,6 +1011,56 @@ else
 
     }
 
+    /// <summary>
+    /// Voeg een validatie sectie toe met alle verzamelde berichten
+    /// </summary>
+    private void AddValidationSection(DocumentContent content, DocumentValidationResult validationResult)
+    {
+        var section = new SectionContent();
+
+        section.AddParagraph("Document validatie", "Kop 1");
+        section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
+        section.AddParagraph("Er zijn meldingen in het rapport gevonden. Hieronder een samenvatting van de onderdelen die extra aandacht verdienen.\r\n\r\n");
+
+        // Samenvatting
+        if (validationResult.HasErrors)
+        {
+            section.AddParagraph($"**{Melding.emojiError} Document bevat {validationResult.TotalErrors} error(s)**");
+        }
+        if (validationResult.HasWarnings)
+        {
+            section.AddParagraph($"**{Melding.emojiWaarschuwing} Document bevat {validationResult.TotalWarnings} waarschuwing(en)**");
+        }
+
+        // Per assemblage details
+        foreach (var validation in validationResult.AssemblageValidations.Where(v => v.HasErrors || v.HasWarnings))
+        {
+            section.AddParagraph($"Merk: {validation.Merk} - {validation.Naam}", "Kop 3");
+
+            // Errors
+            if (validation.Errors.Any())
+            {
+                //section.AddParagraph("**Errors:**");
+                foreach (var error in validation.Errors)
+                {
+                    section.AddParagraph($"- {Melding.emojiError} {error.Bericht}");
+                }
+            }
+
+            // Warnings
+            if (validation.Warnings.Any())
+            {
+                //section.AddParagraph("**Waarschuwingen:**");
+                foreach (var warning in validation.Warnings)
+                {
+                    section.AddParagraph($"- {Melding.emojiWaarschuwing} {warning.Bericht}");
+                }
+            }
+        }
+
+        content.Sections.Add(section);
+    }
+
     public bool ValidateProject(DocumentContent content)
     {
         if (content == null)
@@ -972,6 +1097,200 @@ else
 
     private async Task<DocumentContent> GenerateDocumentContent(bool createToc = !true)
     {
+        return await GenerateDocumentContent(null, createToc);
+    }
+
+    /// <summary>
+    /// Valideer alle assemblages in het document en verzamel berichten
+    /// </summary>
+    private async Task<DocumentValidationResult> ValidateDocumentContent()
+    {
+        var result = new DocumentValidationResult();
+
+        if (ProjectState?.CurrentProject?.Assemblages == null)
+            return result;
+
+        foreach (var assemblage in ProjectState.CurrentProject.Assemblages)
+        {
+            var validation = result.AddAssemblage(assemblage.Merk ?? "Merk(?)", assemblage?.Naam ?? "Naam(?)");
+
+            try
+            {
+                // Bereken/update assemblage om meldingen te verzamelen
+                assemblage?.Bijwerken();
+
+                // AssemblageEntity heeft geen Meldingen property, deze worden verzameld uit child objecten
+
+                // Check specifieke condities per type
+                if (assemblage is BordesEntity bordes)
+                {
+                    ValidateBordes(bordes, validation);
+                }
+                else if (assemblage is SteekTrapEntity trap)
+                {
+                    ValidateSteekTrap(trap, validation);
+                }
+                else if (assemblage is LiggerEntity ligger)
+                {
+                    ValidateLigger(ligger, validation);
+                }
+            }
+            catch (Exception ex)
+            {
+                validation.AddError($"Fout bij validatie: {ex.Message}");
+            }
+        }
+
+        await Task.CompletedTask;
+        return result;
+    }
+
+    /// <summary>
+    /// Valideer specifiek een bordes element
+    /// </summary>
+    private void ValidateBordes(BordesEntity bordes, AssemblageValidation validation)
+    {
+        // Check stroken voor dwarskrachtwapening
+        foreach (var strook in bordes.Stroken)
+        {
+            if (strook.DwarskrachtCollectie.Any(v => v.IsDwarskrachtWapeningBenodigd()))
+            {
+                var vMax = strook.DwarskrachtCollectie.OrderByDescending(v => v.Ved).FirstOrDefault();
+                validation.AddWarning(
+                    $"Strook '{strook.Naam}': dwarskrachtwapening benodigd",
+                    $"VEd = {vMax?.Ved:0.#} kN > VRd,c = {vMax?.DwarskrachtWeerstand:0.#} kN"
+                );
+            }
+
+            // ✅ Check buigwapening via Meldingen van BendingResults
+            foreach (var bendingResult in strook.BendingResults)
+            {
+                if (bendingResult.Meldingen.Any())
+                {
+                    foreach (var melding in bendingResult.Meldingen)
+                    {
+                        if (melding.Type == MeldingType.Error)
+                        {
+                            validation.AddError($"Strook '{strook.Naam}': {melding.Bericht}");
+                        }
+                        else if (melding.Type == MeldingType.Waarschuwing)
+                        {
+                            validation.AddWarning($"Strook '{strook.Naam}': {melding.Bericht}");
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check tand
+        if (bordes.Tand != null)
+        {
+            if (bordes.Tand.DwarskrachtTand != null && 
+                Math.Abs(bordes.Tand.DwarskrachtTand.Ved) > bordes.Tand.DwarskrachtTand.DwarskrachtWeerstandBeton)
+            {
+                validation.AddError("Tand: dwarskrachtwapening nodig (niet toegestaan)");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Valideer specifiek een steektrap element
+    /// </summary>
+    private void ValidateSteekTrap(SteekTrapEntity trap, AssemblageValidation validation)
+    {
+        foreach (var melding in trap.Meldingen.Where(m => m!= null))
+        {
+            switch (melding.Type)
+            {
+                case MeldingType.Error:
+                case MeldingType.Error | MeldingType.Waarschuwing:
+                case MeldingType.Waarschuwing:
+                
+                validation.AddWarning($"trap '{trap.Merk}': {melding.Bericht}");
+                    break;
+            }
+
+
+           
+        }
+
+
+
+        // Check dwarskracht
+        if (trap.Dwarskracht != null && trap.Dwarskracht.Ved > trap.Dwarskracht.DwarskrachtWeerstandBeton)
+        {
+            validation.AddWarning(
+                "Dwarskrachtwapening benodigd",
+                $"VEd = {trap.Dwarskracht.Ved:0.#} kN > VRd,c = {trap.Dwarskracht.DwarskrachtWeerstandBeton:0.#} kN"
+            );
+        }
+        
+        // Check scheurwijdte
+        if (trap.Scheurwijdte != null && !trap.Scheurwijdte.IsValidated)
+        {
+            validation.AddWarning("Scheurwijdte mogelijk niet voldaan");
+        }
+        
+        // Check tand
+        if (trap.TandOpleggingBovenzijde != null)
+        {
+            var tand = trap.TandOpleggingBovenzijde;
+            if (tand.DwarskrachtTand != null && 
+                tand.DwarskrachtTand.Ved > tand.DwarskrachtTand.DwarskrachtWeerstandBeton)
+            {
+                validation.AddError("Tand: dwarskrachtwapening nodig (niet toegestaan)");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Valideer specifiek een ligger element
+    /// </summary>
+    private void ValidateLigger(LiggerEntity ligger, AssemblageValidation validation)
+    {
+        // SBLigger heeft geen BendingResults property
+        // Validatie zou via andere mechanismen moeten gaan
+    }
+
+    /// <summary>
+    /// Toon validatie resultaten als toast notifications
+    /// </summary>
+    private void ShowValidationResults(DocumentValidationResult validationResult)
+    {
+        if (validationResult.IsValid && !validationResult.HasWarnings)
+        {
+            ToastService.ShowSuccess(validationResult.GetSummary());
+            return;
+        }
+        
+        // Toon samenvatting
+        if (validationResult.HasErrors)
+        {
+            ToastService.ShowError($"{validationResult.TotalErrors} error(s) gevonden in document");
+        }
+        
+        if (validationResult.HasWarnings)
+        {
+            ToastService.ShowWarning($"{validationResult.TotalWarnings} waarschuwing(en) gevonden in document");
+        }
+        
+        // Toon per assemblage (max 5)
+        var topIssues = validationResult.AssemblageValidations
+            .Where(a => a.HasErrors || a.HasWarnings)
+            .Take(5);
+        
+        foreach (var validation in topIssues)
+        {
+            var message = validation.GetSummary();
+            if (validation.HasErrors)
+                ToastService.ShowError(message);
+            else if (validation.HasWarnings)
+                ToastService.ShowWarning(message);
+        }
+    }
+
+    private async Task<DocumentContent> GenerateDocumentContent(DocumentValidationResult? validationResult, bool createToc = !true)
+    {
         PageNr = 0;
         if (ProjectState?.CurrentProject != null)
         {
@@ -1006,6 +1325,12 @@ else
 
 
             SetUitgangspunten(content, proj.ProjectInfo.Grondslagen, proj.Assemblages);
+
+            // ✅ NIEUW: Voeg validatie sectie toe indien er berichten zijn
+            if (validationResult != null && (validationResult.HasWarnings || validationResult.HasErrors))
+            {
+                AddValidationSection(content, validationResult);
+            }
 
             foreach (AssemblageEntity a in proj.Assemblages.OrderBy(a=>a.Merk))
             {
@@ -1291,8 +1616,8 @@ else
                                 Snedekrachten = new(){My = momentTotHartVersterkteStroook},
                             };
 
-                        section.AddParagraph("Bovenwapening tot hart versterkte strook", "Kop 3");
-                        section.AddParagraph($"Het moment is {tand.MomentVoorTand:0.#} kNm + {Math.Abs(tand.OplegReactie):0.#} kN x {arm2:0.##} m = {momentTotHartVersterkteStroook:0.#} kNm");
+                        section.AddParagraph("Bovenwapening plaat", "Kop 3");
+                        section.AddParagraph($"Het inklemmingsmoment uit de tand tot aan hart strook = {tand.MomentVoorTand:0.#} kNm + {Math.Abs(tand.OplegReactie):0.#} kN x {arm2:0.##} m = {momentTotHartVersterkteStroook:0.#} kNm");
                         section.AddParagraph($"Verdeelwapening boven benodigd *A~s,req~* = {controleVerdeelWapening.AsRequired:0} mm²");
                         section.AddParagraph($"Verdeelwapening boven toegepast *A~s,prov~* = {controleVerdeelWapening.AsApplied:0} mm² ({bordes.PlaatWapening?.Boven?.VerdeelWapening?.SanitizedTekst()})");
 
@@ -1300,15 +1625,11 @@ else
                         if (!controleVerdeelWapening.IsValidated)
                         {
                             controleVerdeelWapening.AddToSection(section, false);
-
-                            section.AddParagraph("⚠️ Let op!");
-                            foreach (var melding in controleVerdeelWapening.Meldingen)
-                            {
-                                section.AddParagraph(melding.ToMarkupString().Value);
-                            }
                         }
 
-                        section.AddParagraph("Wapening overzicht", "Kop 3");
+                        section.AddParagraph("Wapening overzicht / opgave", "Kop 3");
+                        section.AddParagraph("Bij alle randen de hoofdwapening ombuigen of haarspelden toepassen. Bij elke omgebogen wapening een staaf Ø8 in de hoek toepassen.");
+
 
                         svgWidth = 180.0;
                         svgWidthPixels = svgWidth * 96.0 / 25.4;

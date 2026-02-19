@@ -30,11 +30,11 @@
         @bind-Open="@open" @onmenuchange=OnMenuChange Width="400px" >
         <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Steektrap</FluentMenuItem>
         <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Bordes</FluentMenuItem>
-        <FluentMenuItem Disabled="false">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Kolom</FluentMenuItem>
+        <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Kolom</FluentMenuItem>
         <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Console</FluentMenuItem>
-        <FluentMenuItem Disabled="false">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Ligger (beton)</FluentMenuItem>
-        <FluentMenuItem Disabled="false">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Ligger (staal)</FluentMenuItem>
-        <FluentMenuItem Disabled="false">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Ligger (hout)</FluentMenuItem>
+        <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Ligger (beton)</FluentMenuItem>
+        <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Ligger (staal)</FluentMenuItem>
+        <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Ligger (hout)</FluentMenuItem>
 
     </FluentMenu>
 
@@ -312,8 +312,12 @@
                         Lengte = 2550,
                         Materiaal = betonMaterialContextBordes,  // ✅ Voeg materiaal toe
                         MateriaalId = betonMaterialContextBordes.Id,  // ✅ En ID
-                        
+
                     };
+                    
+                    // ✅ NIEUW: Roep Init() aan om PlaatDekking correct te koppelen
+                    bordes.Init(ProjectEntity.ProjectInfo);
+                    
                     bordes.Trap1!.Randafstand = 0;
                     bordes.Trap2!.Randafstand = 0;
                     bordes.PlaatDekking.Onder.SelectedMilieuklassen = new List<MilieuklasseEnum>() { MilieuklasseEnum.XC1 };
@@ -333,6 +337,7 @@
                         steektrapVoorOpBordes.OptredeAantal1 = 8;
                         steektrapVoorOpBordes.OptredeMaat = 1500.0 / 8.0;
                         steektrapVoorOpBordes.Breedte = 1275.0;
+                        steektrapVoorOpBordes.ProfielSchil.Hoogte = 100;
                         //steektrapVoorOpBordes.ProfielSchil.Hoogte = 100.0;
 
                         steektrapVoorOpBordes.Bijwerken();

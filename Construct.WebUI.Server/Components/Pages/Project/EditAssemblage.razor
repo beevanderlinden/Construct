@@ -22,7 +22,7 @@
                                 Orientation="Orientation.Horizontal">
 
                         <FluentTab Id="tab-Info" Label="info">
-                            <Header><FluentIcon Value="@(new Icons.Regular.Size32.BarcodeScanner())" />info</Header>
+                            <Header><FluentIcon Value="@(new Icons.Regular.Size32.InfoSparkle())" />info</Header>
                             <Content>
                                 <AssemblageInfoComponent1 @bind-Model="Model" />
                             </Content>
@@ -34,7 +34,7 @@
 
                         <FluentTab Label="geometrie">
                             <Header>
-                                <FluentIcon Value="@(new Icons.Regular.Size32.Ruler())" />geometrie
+                                <FluentIcon Value="@(new Icons.Regular.Size32.BinderTriangle())" />geometrie
                             </Header>
                             <Content>
                                 @if (Model is BordesEntity bordes)
@@ -63,30 +63,162 @@
                         @if (Model is BordesEntity bordes)
                         {
                             <FluentTab Label="plaatwapening">
-                                <Header><FluentIcon Value="@(new Icons.Regular.Size32.Clipboard())" />wapening</Header>
+                                <Header><FluentIcon Value="@(new Icons.Regular.Size32.CircleSparkle())" />wapening</Header>
                                 <Content>
+                                    
+
+                                    <h2>Wapening Constraints</h2>
+                                    
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                        <p style="color: var(--neutral-foreground-hint); font-size: 0.9em; margin: 0;">
+                                            Instelling voor minimale diameters Ø<sub>k</sub> en aantal staven (of maximale hoh-afstand). De berekening houdt hier rekening mee.
+                                        </p>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <FluentButton id="btnPreset" 
+                                                          Appearance="Appearance.Outline"
+                                                          IconEnd="@(new Icons.Regular.Size16.ChevronDown())"
+                                                          OnClick="@HandlePresetMenuOpen"
+                                                          Style="font-size: 0.875rem;">
+                                                Preset laden
+                                            </FluentButton>
+                                            <FluentMenu @bind-Open="@_presetMenuOpen" Width="250px">
+                                                <FluentMenuItem OnClick="@(() => ApplyPreset(WapeningPreset.Diameter6_150_250))">
+                                                    Ø6-150/250 (standaard)
+                                                </FluentMenuItem>
+                                                <FluentMenuItem OnClick="@(() => ApplyPreset(WapeningPreset.Diameter6_150))">
+                                                    #Ø6-150 (fijn)
+                                                </FluentMenuItem>
+                                                <FluentMenuItem OnClick="@(() => ApplyPreset(WapeningPreset.Diameter8_150))">
+                                                    #Ø8-150 (zwaar)
+                                                </FluentMenuItem>
+                                            </FluentMenu>
+                                        </div>
+                                    </div>
+
+                                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 0.5rem;">
+                                        <thead>
+                                            <tr style="background-color: var(--neutral-layer-2); border-bottom: 2px solid var(--neutral-stroke-divider);">
+                                                <th style="padding: 0.5rem; text-align: left;">Type</th>
+                                                <th style="padding: 0.5rem; text-align: center;">Øk (≥) [mm]</th>
+                                                <th style="padding: 0.5rem; text-align: center;">n (≥)</th>
+                                                <th style="padding: 0.5rem; text-align: center;">hoh (≤) [mm]</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+
+                                            <h3>BIJLEG:</h3>
+                                            <WapeningConstraintEditor 
+                                                Constraint="@bordes.BijlegBovenConstraint"
+                                                Label="BOVEN bijleg"
+                                                DiameterOpties="@_diametersBijleg"
+                                                ToonDiameter="true"
+                                                ToonAantal="true" />
+
+                                            <WapeningConstraintEditor 
+                                                Constraint="@bordes.BijlegOnderConstraint"
+                                                Label="ONDER bijleg"
+                                                DiameterOpties="@_diametersBijleg"
+                                                ToonDiameter="true"
+                                                ToonAantal="true" />
+
+                                            <WapeningConstraintEditor 
+                                                Constraint="@bordes.DetailWapeningConstraint"
+                                                Label="TAND Detailwapening"
+                                                DiameterOpties="@_diametersDetail"
+                                                ToonDiameter="true"
+                                                ToonHoh="true" />
+
+                                           
+
+                                            <h3>PLAATWAPENING: </h3>
+                                            <WapeningConstraintEditor 
+                                                Constraint="@bordes.BovenHoofdConstraint"
+                                                Label="BOVEN Hoofd"
+                                                DiameterOpties="@_diametersHoofdVerdeel"
+                                                ToonDiameter="true"
+                                                ToonHoh="true" />
+
+                                            <WapeningConstraintEditor 
+                                                Constraint="@bordes.BovenVerdeelConstraint"
+                                                Label="BOVEN Verdeel"
+                                                DiameterOpties="@_diametersHoofdVerdeel"
+                                                ToonDiameter="true"
+                                                ToonHoh="true" />
+
+                                            <h3>ONDER: </h3>
+                                            <WapeningConstraintEditor Constraint="@bordes.OnderHoofdConstraint"
+                                                                      Label="ONDER Hoofd"
+                                                                      DiameterOpties="@_diametersHoofdVerdeel"
+                                                                      ToonDiameter="true"
+                                                                      ToonHoh="true" />
+
+                                            <WapeningConstraintEditor Constraint="@bordes.OnderVerdeelConstraint"
+                                                                      Label="ONDER Verdeel"
+                                                                      DiameterOpties="@_diametersHoofdVerdeel"
+                                                                      ToonDiameter="true"
+                                                                      ToonHoh="true" />
+
+
+                                        </tbody>
+                                    </table>
+
+                                    <FluentButton Appearance="Appearance.Accent" 
+                                                  OnClick="BerekenWapening"
+                                                  IconStart="@(new Icons.Regular.Size20.Calculator())"
+                                                  Style="width: 100%; margin-bottom: 1rem;">
+                                        Bereken wapening
+                                    </FluentButton>
+
+                                    <!-- Resultaten sectie -->
+                                    @if (bordes.BijlegWapeningOnder != null || bordes.BijlegWapeningBoven != null || bordes.Tand?.WapeningAlgemeen != null)
+                                    {
+                                        
+
+
+                                        <div style="margin-top: 0.1rem; padding: 1rem; background: var(--neutral-layer-2); border-radius: 4px;">
+                                            <h3 style="margin-top: 0; margin-bottom: 1rem; color: var(--accent-fill-rest);">Toegepaste wapening</h3>
+                                            
+                                            <h3>Basis</h3>
+                                            <KaskonInputContainer Label="boven: basis/verdeel">
+                                                @bordes.PlaatWapening?.Boven?.BasisWapening.SanitizedTekst() / 
+                                                @bordes.PlaatWapening?.Boven?.VerdeelWapening?.SanitizedTekst()
+                                            </KaskonInputContainer>
+
+                                            <KaskonInputContainer Label="onder: basis/verdeel">
+                                                @bordes.PlaatWapening?.Onder?.BasisWapening.SanitizedTekst() /
+                                                @bordes.PlaatWapening?.Onder?.VerdeelWapening?.SanitizedTekst()
+                                            </KaskonInputContainer>
+
+
+                                           
+                                            <h3>Versterkte strook</h3>
+                                            <KaskonInputContainer Label="boven: bijleg">
+                                                +@bordes.BijlegWapeningBoven?.SanitizedTekst()
+                                            </KaskonInputContainer>
+                                            
+                                           
+                                            <KaskonInputContainer Label="onder: bijleg">
+                                                +@bordes.BijlegWapeningOnder?.SanitizedTekst()
+                                            </KaskonInputContainer>
+
+                                            <h3>Details</h3>
+                                            <KaskonInputContainer Label="haarspelden: ">
+                                                @bordes.Tand?.WapeningAlgemeen.SanitizedTekst() 
+                                            </KaskonInputContainer>
+
+                                        </div>
+                                    }
+
                                     <h3>Plaatwapening</h3>
                                     <PlaatWapeningTabelPosComponent @bind-Model="@bordes.PlaatWapening" />
 
-                                    
+
 
                                     <PlaatProfielVisualisatie Wapening="@bordes.PlaatWapening"
                                                               Breedte="500"
                                                               Hoogte="@bordes.Hoogte"
                                                               MaxDisplayHeight="300" />
-
-
-                                    <h2>Bijlegwapening</h2>
-                                    @if (bordes.BijlegWapening != null)
-                                    {
-                                        <KaskonInputContainer Label="bijleg onder">
-                                            <FluentTextField @bind-Value="@bordes.BijlegWapening.Tekst"></FluentTextField>
-                                        </KaskonInputContainer>
-                                        <KaskonInputContainer Label="laag">
-                                            @bordes.BijlegWapening.LaagNummer
-                                        </KaskonInputContainer>
-
-                                    }
+                                  
                                   
                                 </Content>
                             </FluentTab>
@@ -99,10 +231,10 @@
                         @if (Model.Stroken.Any())
                         {
                             <FluentTab Label="stroken">
-                                <Header> <FluentIcon Value="@(new Icons.Regular.Size32.MoreHorizontal())" />stroken</Header>
+                                <Header> <FluentIcon Value="@(new Icons.Regular.Size32.LineHorizontal3())" />stroken</Header>
                                 <Content>
 
-                                    <FluentButton OnClick="Model.Bijwerken">Assemblage (@Model.GetType()).Bijwerken</FluentButton>
+                                    <FluentButton Style="margin-bottom: 2mm;" Appearance="Appearance.Accent" OnClick="Model.Bijwerken">Bijwerken</FluentButton>
 
                                     <FluentAccordion ActiveId="@activeId" OnAccordionItemChange="HandleOnAccordionItemChange">
 
@@ -149,13 +281,153 @@
 
 
 @code {
-    [Parameter, EditorRequired] public AssemblageEntity? Model { get; set; }
-    [Parameter] public bool Visible { get; set; } 
-    [Parameter] public EventCallback<AssemblageEntity> ModelChanged { get; set; }
-    [Parameter] public EventCallback<bool> EditorClosed{ get; set; }
-    [Parameter] public string ActiveTabId { get; set; } = "tab-1";
+[Parameter, EditorRequired] public AssemblageEntity? Model { get; set; }
+[Parameter] public bool Visible { get; set; } 
+[Parameter] public EventCallback<AssemblageEntity> ModelChanged { get; set; }
+[Parameter] public EventCallback<bool> EditorClosed{ get; set; }
+[Parameter] public string ActiveTabId { get; set; } = "tab-1";
 
-    private StrookEntity? _selectedStrook;
+// ✅ Wapening constraint diameter opties
+private readonly List<double> _diametersBijleg = new() { 8, 10, 12, 16, 20, 25 };
+private readonly List<double> _diametersDetail = new() { 6, 8, 10 };
+private readonly List<double> _diametersHoofdVerdeel = new() { 6, 8, 10 };
+
+private string _berekeningMelding = string.Empty;
+private int _renderKey = 0; // Force re-render counter
+
+// ✅ Preset menu open/close state
+private bool _presetMenuOpen = false;
+
+private async Task HandlePresetMenuOpen()
+{
+    _presetMenuOpen = !_presetMenuOpen;
+}
+
+// ✅ Wapening preset enum
+private enum WapeningPreset
+{
+    Diameter6_150_250,  // Ø6 hoofdwapening hoh-150, verdeelwapening hoh-250
+    Diameter6_150,      // Ø6 alle wapening hoh-150
+    Diameter8_150       // Ø8 alle wapening hoh-150
+}
+
+private void ApplyPreset(WapeningPreset preset)
+{
+    if (Model is not BordesEntity bordes) return;
+
+    switch (preset)
+    {
+        case WapeningPreset.Diameter6_150_250:
+            // Standaard preset: Ø6 met hoh 150 voor hoofdwapening, 250 voor verdeelwapening
+            bordes.OnderHoofdConstraint = new(6, null, 150);
+            bordes.OnderVerdeelConstraint = new(6, null, 250);
+            bordes.BovenHoofdConstraint = new(6, null, 150);
+            bordes.BovenVerdeelConstraint = new(6, null, 250);
+            bordes.DetailWapeningConstraint = new(6, null, 125);
+            bordes.BijlegBovenConstraint = new(8, 2, null);
+            bordes.BijlegOnderConstraint = new(8, 2, null);
+            
+            // Update plaatwapening
+            if (bordes.PlaatWapening != null)
+            {
+                if (bordes.PlaatWapening.Onder?.BasisWapening != null)
+                    bordes.PlaatWapening.Onder.BasisWapening.Tekst = "r6-150";
+                if (bordes.PlaatWapening.Onder?.VerdeelWapening != null)
+                    bordes.PlaatWapening.Onder.VerdeelWapening.Tekst = "r6-250";
+                if (bordes.PlaatWapening.Boven?.BasisWapening != null)
+                    bordes.PlaatWapening.Boven.BasisWapening.Tekst = "r6-150";
+                if (bordes.PlaatWapening.Boven?.VerdeelWapening != null)
+                    bordes.PlaatWapening.Boven.VerdeelWapening.Tekst = "r6-250";
+            }
+            
+            Console.WriteLine("[PRESET] Ø6-150/250 toegepast");
+            break;
+
+        case WapeningPreset.Diameter6_150:
+            // Fijn preset: Ø6 overal met hoh 150
+            bordes.OnderHoofdConstraint = new(6, null, 150);
+            bordes.OnderVerdeelConstraint = new(6, null, 150);
+            bordes.BovenHoofdConstraint = new(6, null, 150);
+            bordes.BovenVerdeelConstraint = new(6, null, 150);
+            bordes.DetailWapeningConstraint = new(6, null, 125);
+            bordes.BijlegBovenConstraint = new(8, 2, null);
+            bordes.BijlegOnderConstraint = new(8, 2, null);
+            
+            // Update plaatwapening
+            if (bordes.PlaatWapening != null)
+            {
+                if (bordes.PlaatWapening.Onder?.BasisWapening != null)
+                    bordes.PlaatWapening.Onder.BasisWapening.Tekst = "r6-150";
+                if (bordes.PlaatWapening.Onder?.VerdeelWapening != null)
+                    bordes.PlaatWapening.Onder.VerdeelWapening.Tekst = "r6-150";
+                if (bordes.PlaatWapening.Boven?.BasisWapening != null)
+                    bordes.PlaatWapening.Boven.BasisWapening.Tekst = "r6-150";
+                if (bordes.PlaatWapening.Boven?.VerdeelWapening != null)
+                    bordes.PlaatWapening.Boven.VerdeelWapening.Tekst = "r6-150";
+            }
+            
+            Console.WriteLine("[PRESET] #Ø6-150 toegepast");
+            break;
+
+        case WapeningPreset.Diameter8_150:
+            // Zwaar preset: Ø8 overal met hoh 150
+            bordes.OnderHoofdConstraint = new(8, null, 150);
+            bordes.OnderVerdeelConstraint = new(8, null, 150);
+            bordes.BovenHoofdConstraint = new(8, null, 150);
+            bordes.BovenVerdeelConstraint = new(8, null, 150);
+            bordes.DetailWapeningConstraint = new(8, null, 125);
+            bordes.BijlegBovenConstraint = new(10, 2, null);
+            bordes.BijlegOnderConstraint = new(10, 2, null);
+            
+            // Update plaatwapening
+            if (bordes.PlaatWapening != null)
+            {
+                if (bordes.PlaatWapening.Onder?.BasisWapening != null)
+                    bordes.PlaatWapening.Onder.BasisWapening.Tekst = "r8-150";
+                if (bordes.PlaatWapening.Onder?.VerdeelWapening != null)
+                    bordes.PlaatWapening.Onder.VerdeelWapening.Tekst = "r8-150";
+                if (bordes.PlaatWapening.Boven?.BasisWapening != null)
+                    bordes.PlaatWapening.Boven.BasisWapening.Tekst = "r8-150";
+                if (bordes.PlaatWapening.Boven?.VerdeelWapening != null)
+                    bordes.PlaatWapening.Boven.VerdeelWapening.Tekst = "r8-150";
+            }
+            
+            Console.WriteLine("[PRESET] #Ø8-150 toegepast");
+            break;
+    }
+    
+    // Reset bijlegwapening
+    bordes.BijlegWapeningOnder = null;
+    bordes.BijlegWapeningBoven = null;
+    
+    // Sluit het menu
+    _presetMenuOpen = false;
+    
+    StateHasChanged();
+}
+
+private void BerekenWapening()
+{
+    if (Model is not BordesEntity bordes) return;
+    
+    Console.WriteLine("[BEREKEN] Start berekening wapening...");
+    Console.WriteLine($"   VOOR: BijlegWapeningOnder = {bordes.BijlegWapeningOnder?.Tekst ?? "NULL"}");
+    
+    // Bereken
+    bordes.Bijwerken();
+    
+    Console.WriteLine($"   NA: BijlegWapeningOnder = {bordes.BijlegWapeningOnder?.Tekst ?? "NULL"}");
+    Console.WriteLine($"   NA: BijlegWapeningBoven = {bordes.BijlegWapeningBoven?.Tekst ?? "NULL"}");
+    Console.WriteLine($"   NA: Tand.WapeningAlgemeen = {bordes.Tand?.WapeningAlgemeen?.Tekst ?? "NULL"}");
+    
+    // Force re-render
+    _renderKey++;
+    InvokeAsync(StateHasChanged);
+    
+    Console.WriteLine($"[BEREKEN] Berekening voltooid! RenderKey={_renderKey}");
+}
+
+private StrookEntity? _selectedStrook;
     public StrookEntity? SelectedStrook
     {
         get => _selectedStrook;
@@ -236,11 +508,5 @@
     //private BordesEntity? _bordes;
     //private Construct.Application.Interfaces.Beam.SimpleBeam? _simpleBeam;
 
-    protected override void OnParametersSet()
-    {
-        
-    }   
-
-
-
 }
+

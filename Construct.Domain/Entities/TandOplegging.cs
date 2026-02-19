@@ -71,7 +71,9 @@ namespace Construct.Domain.Entities
 
         }
 
+        [JsonIgnore]
         public AssemblageEntity Father { get; set; }
+        
         public double TandHoogte { get; set; } = 100;
 
         public double VoegBreedte { get; set; } = 10;

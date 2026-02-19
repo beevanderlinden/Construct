@@ -8,10 +8,10 @@
 <h3>Projectmaterialen</h3>
 
 <FluentCard AreaRestricted="false">
-
+    <h1>Materialen</h1>
     <div class="table-wrap">
-
-        <table class="table">
+        
+        <table class="ec-table row-head col-head">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -20,7 +20,7 @@
                     <th>E-modulus</th>
                     <th>s.g.</th>
                     <th>aantal</th>
-                    <th></th>
+                    <th>acties</th>
                 </tr>
             </thead>
             <tbody>
@@ -88,9 +88,9 @@
                         </td>
 
                         <td>
-                            <button class="btn btn-danger"
+                            <button class="btn"
                                     @onclick="() => VerwijderMateriaal(materiaal.Id)">
-                                Verwijder
+                                ✖️
                             </button>
                         </td>
                     </tr>

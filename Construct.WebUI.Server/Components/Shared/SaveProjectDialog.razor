@@ -2,7 +2,7 @@
 @implements IDialogContentComponent
 
 <FluentDialogBody>
-    <FluentStack Vertical="true" VerticalGap="16">
+    <FluentStack VerticalGap="16">
         <p style="margin: 0; font-size: 16px; font-weight: 500;">
             Wilt u het huidige project opslaan?
         </p>
@@ -16,11 +16,11 @@
     <FluentButton Appearance="Appearance.Stealth" @onclick="OnCancel">
         Annuleer
     </FluentButton>
-    <FluentButton Appearance="Appearance.Accent" @onclick="OnNo">
-        Nee, doorgaan zonder opslaan
+    <FluentButton Appearance="Appearance.Neutral" @onclick="OnNo">
+        Nee
     </FluentButton>
     <FluentButton Appearance="Appearance.Accent" @onclick="OnYes">
-        Ja, opslaan
+        Ja
     </FluentButton>
 </FluentDialogFooter>
 

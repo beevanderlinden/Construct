@@ -29,7 +29,7 @@
                 <FluentNavGroup Title="File" Icon="@(new Icons.Regular.Size28.Folder())">
 
                     @* <FluentNavLink Href="/File/new" Icon="@(new Icons.Regular.Size20.New())">New</FluentNavLink> *@
-                    <FluentNavLink Href="/File/newProjectSaveFile" Icon="@(new Icons.Regular.Size20.New())">Nieuw</FluentNavLink>
+                    @* <FluentNavLink Href="/File/newProjectSaveFile" Icon="@(new Icons.Regular.Size20.New())">Nieuw</FluentNavLink> *@
                     <FluentNavLink OnClick="OnNewProjectClicked" Icon="@(new Icons.Regular.Size20.New())">Nieuw</FluentNavLink>
                     <FluentNavLink Href="/File/open" Icon="@(new Icons.Regular.Size20.Open())">Open</FluentNavLink>
                 
@@ -160,7 +160,7 @@
                 new DialogParameters()
                 {
                     Title = "Project opslaan?",
-                    Width = "400px"
+                    Width = "600px"
                 });
 
             var result = await dialog.Result;

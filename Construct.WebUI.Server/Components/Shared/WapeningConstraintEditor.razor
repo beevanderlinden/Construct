@@ -1,0 +1,100 @@
+﻿@using Construct.Domain.Entities
+
+<tr style="border-bottom: 1px solid var(--neutral-stroke-divider);">
+    <td style="padding: 0.5rem; font-weight: 500;">@Label</td>
+    
+    <!-- Diameter -->
+    <td style="padding: 0.25rem; text-align: center;">
+        @if (ToonDiameter)
+        {
+            <FluentSelect @bind-Value="@DiameterString"
+                          Items="@DiameterOpties"
+                          OptionText="@(d => $"≥Ø{d}")"
+                          OptionValue="@(d => d.ToString())"
+                          Width="100px"
+                          Placeholder="-">
+            </FluentSelect>
+        }
+        else
+        {
+            <span style="color: var(--neutral-foreground-hint);">-</span>
+        }
+    </td>
+    
+    <!-- Aantal -->
+    <td style="padding: 0.25rem; text-align: center;">
+        @if (ToonAantal)
+        {
+            <div style="display: flex; align-items: center; justify-content: center; gap: 0.25rem;">
+                <span style="color: var(--neutral-foreground-rest); font-size: 0.875rem;">≥</span>
+                <input type="number" 
+                       @bind="Constraint.AantalMin" 
+                       min="1" 
+                       max="10" 
+                       step="1"
+                       class="form-control"
+                       style="width: 50px; text-align: center; padding: 0.25rem;"
+                       placeholder="-" />
+            </div>
+        }
+        else
+        {
+            <span style="color: var(--neutral-foreground-hint);">-</span>
+        }
+    </td>
+    
+    <!-- Hoh -->
+    <td style="padding: 0.25rem; text-align: center;">
+        @if (ToonHoh)
+        {
+            <div style="display: flex; align-items: center; justify-content: center; gap: 0.25rem;">
+                <span style="color: var(--neutral-foreground-rest); font-size: 0.875rem;">≤</span>
+                <input type="number" 
+                       @bind="Constraint.HohMax" 
+                       min="50" 
+                       max="300" 
+                       step="5"
+                       class="form-control"
+                       style="width: 70px; text-align: center; padding: 0.25rem;"
+                       placeholder="-" />
+            </div>
+        }
+        else
+        {
+            <span style="color: var(--neutral-foreground-hint);">-</span>
+        }
+    </td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired]
+    public WapeningConstraint Constraint { get; set; } = new();
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+
+    [Parameter]
+    public List<double> DiameterOpties { get; set; } = new() { 6, 8, 10, 12, 16, 20, 25 };
+
+    [Parameter]
+    public bool ToonDiameter { get; set; } = true;
+
+    [Parameter]
+    public bool ToonAantal { get; set; } = false;
+
+    [Parameter]
+    public bool ToonHoh { get; set; } = false;
+
+    // ✅ Simpele two-way binding voor diameter
+    private string? DiameterString
+    {
+        get => Constraint.DiameterMin?.ToString();
+        set
+        {
+            if (double.TryParse(value, out double d))
+                Constraint.DiameterMin = d;
+            else
+                Constraint.DiameterMin = null;
+        }
+    }
+}

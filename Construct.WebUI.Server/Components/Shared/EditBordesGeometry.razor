@@ -4,55 +4,83 @@
 @if (Model != null)
 {
     <KaskonInputContainer Label="plaatdikte [mm]">
-        <FluentNumberField TValue="double"
+        @* <FluentNumberField TValue="double"
                            @bind-Value="Model.Dikte"
-                           Step="10" Min="180" Max="400"></FluentNumberField>
+                           Step="10" Min="180" Max="400"></FluentNumberField> *@
+        <input type="number" class="form-control" 
+               @bind="Model.Dikte" 
+               @bind:after="OnModelChanged"
+               step="10" min="180" max="400" />
     </KaskonInputContainer>
 
 
     <KaskonInputContainer Label="breedte [mm]">
-        <FluentNumberField TValue="double" 
+        @* <FluentNumberField TValue="double" 
             @bind-Value="Model.Breedte" 
             @bind-Value:after="OnModelChanged"
-            Step="100" Min="1000" Max="3000"></FluentNumberField>
+            Step="100" Min="1000" Max="3000"></FluentNumberField> *@
+        <input type="number" class="form-control" 
+               @bind="Model.Breedte" 
+               @bind:after="OnModelChanged"
+               step="100" min="1000" max="3000" />
     </KaskonInputContainer>
 
     <KaskonInputContainer Label="lengte [mm]">
-        <FluentNumberField TValue="double" 
+        @* <FluentNumberField TValue="double" 
             @bind-Value="Model.Lengte" 
             @bind-Value:after="OnModelChanged"
-            Step="100" Min="2000" Max="5000"></FluentNumberField>
+            Step="100" Min="2000" Max="5000"></FluentNumberField> *@
+        <input type="number" class="form-control" 
+               @bind="Model.Lengte" 
+               @bind:after="OnModelChanged"
+               step="100" min="2000" max="5000" />
     </KaskonInputContainer>
 
    
 
     <KaskonInputContainer Label="versterkte strookbreedte [mm]">
-        <FluentNumberField TValue="double" 
+        @* <FluentNumberField TValue="double" 
                            @bind-Value="Model.BreedteVersterkteStrook"
                            @bind-Value:after="OnModelChanged"
-                           Step="50" Min="200" Max="500"></FluentNumberField>
+                           Step="50" Min="200" Max="500"></FluentNumberField> *@
+        <input type="number" class="form-control" 
+               @bind="Model.BreedteVersterkteStrook" 
+               @bind:after="OnModelChanged"
+               step="50" min="200" max="500" />
     </KaskonInputContainer>
 
     <KaskonInputContainer Label="afwerking [kN/m²]" >
-        <FluentNumberField TValue="double"
+        @* <FluentNumberField TValue="double"
                            @bind-Value="Model.AfwerkingVlaklast"
                            @bind-Value:after="OnModelChanged"
-                           Step="0.1" Min="0" Max="5"></FluentNumberField>
+                           Step="0.1" Min="0" Max="5"></FluentNumberField> *@
+        <input type="number" class="form-control" 
+               @bind="Model.AfwerkingVlaklast" 
+               @bind:after="OnModelChanged"
+               step="0.1" min="0" max="5" />
     </KaskonInputContainer>
 
 
     <KaskonInputContainer Label="dekking c<sub>prov,boven</sub> [mm]">
-        <FluentNumberField TValue="double"
+        @* <FluentNumberField TValue="double"
                            @bind-Value="Model.PlaatDekking.Boven.DekkingToe"
                            @bind-Value:after="OnModelChanged"
-                           Step="1" Min="15" Max="70"></FluentNumberField>
+                           Step="1" Min="15" Max="70"></FluentNumberField> *@
+        <input type="number" class="form-control" 
+               @bind="Model.PlaatDekking.Boven.DekkingToe" 
+               @bind:after="OnModelChanged"
+               step="1" min="15" max="70" />
     </KaskonInputContainer>
 
     <KaskonInputContainer Label="dekking c<sub>prov,onder</sub> [mm]">
-        <FluentNumberField TValue="double"
+        @* <FluentNumberField TValue="double"
                            @bind-Value="Model.PlaatDekking.Onder.DekkingToe"
                            @bind-Value:after="OnModelChanged"
-                           Step="1" Min="15" Max="70"></FluentNumberField>
+                           Step="1" Min="15" Max="70"></FluentNumberField> *@
+        <input type="number" class="form-control" 
+               @bind="Model.PlaatDekking.Onder.DekkingToe" 
+               @bind:after="OnModelChanged"
+               step="1" min="15" max="70" />
     </KaskonInputContainer>
 
 
@@ -77,17 +105,25 @@
     if(Model.Trap1?.AansluitendElement != null)
     {
         <KaskonInputContainer Label="afstand links [mm]">
-            <FluentNumberField TValue="double" 
+            @* <FluentNumberField TValue="double" 
                 @bind-Value="Model.Trap1.Randafstand" 
                 @bind-Value:after="OnModelChanged"
-                Step="10" Min="0" Max="500"></FluentNumberField>
+                Step="10" Min="0" Max="500"></FluentNumberField> *@
+            <input type="number" class="form-control" 
+                   @bind="Model.Trap1.Randafstand" 
+                   @bind:after="OnModelChanged"
+                   step="10" min="0" max="500" />
         </KaskonInputContainer>
 
         <KaskonInputContainer Label="trap.breedte">
-            <FluentNumberField TValue="double" 
+            @* <FluentNumberField TValue="double" 
                 @bind-Value="Model.Trap1.AansluitendElement.Breedte" 
                 @bind-Value:after="OnModelChanged"
-                Step="100" Min="800" Max="3000"></FluentNumberField>
+                Step="100" Min="800" Max="3000"></FluentNumberField> *@
+            <input type="number" class="form-control" 
+                   @bind="Model.Trap1.AansluitendElement.Breedte" 
+                   @bind:after="OnModelChanged"
+                   step="100" min="800" max="3000" />
         </KaskonInputContainer>
 
         <KaskonInputContainer Label="reactie">
@@ -112,17 +148,25 @@
     if (Model.Trap2?.AansluitendElement != null)
     {
         <KaskonInputContainer Label="afstand rechts [mm]">
-            <FluentNumberField TValue="double" 
+            @* <FluentNumberField TValue="double" 
                                @bind-Value="Model.Trap2.Randafstand"
                                @bind-Value:after="OnModelChanged"
-                               Step="10" Min="0" Max="500"></FluentNumberField>
+                               Step="10" Min="0" Max="500"></FluentNumberField> *@
+            <input type="number" class="form-control" 
+                   @bind="Model.Trap2.Randafstand" 
+                   @bind:after="OnModelChanged"
+                   step="10" min="0" max="500" />
         </KaskonInputContainer>
 
         <KaskonInputContainer Label="trap.breedte">
-            <FluentNumberField TValue="double"
+            @* <FluentNumberField TValue="double"
                                @bind-Value="Model.Trap2.AansluitendElement.Breedte"
                                @bind-Value:after="OnModelChanged"
-                               Step="100" Min="800" Max="3000"></FluentNumberField>
+                               Step="100" Min="800" Max="3000"></FluentNumberField> *@
+            <input type="number" class="form-control" 
+                   @bind="Model.Trap2.AansluitendElement.Breedte" 
+                   @bind:after="OnModelChanged"
+                   step="100" min="800" max="3000" />
         </KaskonInputContainer>
 
         <KaskonInputContainer Label="reactie">

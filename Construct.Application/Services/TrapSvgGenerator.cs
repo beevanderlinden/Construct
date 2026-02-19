@@ -2591,6 +2591,130 @@
     public static class TrapSvgGenerator
     {
         /// <summary>
+        /// Genereert een buigvorm (polyline) voor wapeningsdetails met optionele beenlengte-annotaties.
+        /// </summary>
+        /// <param name="punten">Lijst van (x,y) coördinaten die de buigvorm definiëren</param>
+        /// <param name="x">X-positie voor plaatsing van de buigvorm</param>
+        /// <param name="y">Y-positie voor plaatsing van de buigvorm</param>
+        /// <param name="schaal">Schaalfactor (default: null = automatisch schalen naar boundingBox)</param>
+        /// <param name="boundingBox">Rechthoek waarbinnen de buigvorm moet passen (width, height)</param>
+        /// <param name="rotatie">Rotatie in graden (0=horizontaal, 90=rechtsom, -90=linksom, 180=gespiegeld)</param>
+        /// <param name="toonBeenLengtes">Toon lengtes van elk been van de buigvorm</param>
+        /// <param name="kleur">Kleur van de lijn</param>
+        /// <param name="strokeWidth">Lijndikte</param>
+        /// <returns>Lijst van BaseSvg objecten (polyline + optioneel teksten)</returns>
+        public static List<BaseSvg> GenerateBuigvorm(
+            List<(double x, double y)> punten,
+            double x = 0,
+            double y = 0,
+            double? schaal = null,
+            (double width, double height)? boundingBox = null,
+            double rotatie = 0,
+            bool toonBeenLengtes = false,
+            string kleur = "black",
+            double strokeWidth = 2)
+        {
+            List<BaseSvg> result = [];
+            
+            if (punten == null || punten.Count < 2)
+                return result;
+
+            // Bereken lokale bounding box van de vorm
+            double minX = punten.Min(p => p.x);
+            double maxX = punten.Max(p => p.x);
+            double minY = punten.Min(p => p.y);
+            double maxY = punten.Max(p => p.y);
+            
+            double vormWidth = maxX - minX;
+            double vormHeight = maxY - minY;
+            
+            // Bepaal schaal
+            double effectieveSchaal = schaal ?? 1.0;
+            
+            if (!schaal.HasValue && boundingBox.HasValue)
+            {
+                // Automatisch schalen naar bounding box
+                double schaalX = boundingBox.Value.width / vormWidth;
+                double schaalY = boundingBox.Value.height / vormHeight;
+                effectieveSchaal = Math.Min(schaalX, schaalY);
+            }
+            
+            // Normaliseer punten (startpunt op 0,0)
+            var genormaliseerdePunten = punten
+                .Select(p => (x: (p.x - minX) * effectieveSchaal, y: (p.y - minY) * effectieveSchaal))
+                .ToList();
+            
+            // Rotatie toepassen (in radialen)
+            double theta = rotatie * Math.PI / 180.0;
+            double cosTheta = Math.Cos(theta);
+            double sinTheta = Math.Sin(theta);
+            
+            var geroteerdePunten = genormaliseerdePunten
+                .Select(p => (
+                    x: p.x * cosTheta - p.y * sinTheta,
+                    y: p.x * sinTheta + p.y * cosTheta
+                ))
+                .ToList();
+            
+            // Translatie naar eindpositie
+            var finalePunten = geroteerdePunten
+                .Select(p => new Punt(x + p.x, y + p.y))
+                .ToList();
+            
+            // Maak polyline path
+            var buigvormPath = SvgGenerator.MakePath(finalePunten, scaleY: 1, close: false);
+            buigvormPath.Stroke = kleur;
+            buigvormPath.StrokeWidth = strokeWidth;
+            buigvormPath.Fill = "none";
+            result.Add(buigvormPath);
+            
+            // Optioneel: beenlengte labels
+            if (toonBeenLengtes)
+            {
+                for (int i = 0; i < finalePunten.Count - 1; i++)
+                {
+                    var p1 = finalePunten[i];
+                    var p2 = finalePunten[i + 1];
+                    
+                    // Bereken lengte van dit been
+                    double dx = p2.X - p1.X;
+                    double dy = p2.Y - p1.Y;
+                    double lengte = Math.Sqrt(dx * dx + dy * dy) / effectieveSchaal; // Terug naar originele schaal
+                    
+                    // Middenpunt van been
+                    double midX = (p1.X + p2.X) / 2.0;
+                    double midY = (p1.Y + p2.Y) / 2.0;
+                    
+                    // Hoek van been (voor tekstrotatie)
+                    double beenHoek = Math.Atan2(dy, dx) * 180.0 / Math.PI;
+                    
+                    // Normaliseer hoek voor leesbaarheid (voorkom ondersteboven tekst)
+                    if (beenHoek > 90) beenHoek -= 180;
+                    if (beenHoek < -90) beenHoek += 180;
+                    
+                    var lengteTekst = new SvgText(
+                        $"{lengte:0}",
+                        x: midX,
+                        y: midY,
+                        angle: beenHoek,
+                        scale: 1.0
+                    )
+                    {
+                        Pts = 6, // Kleine tekst
+                        Anchor = "middle",
+                        DominantBaseLine = "middle",
+                        Fill = kleur,
+                        DY = -3 // Iets boven de lijn
+                    };
+                    
+                    result.Add(lengteTekst);
+                }
+            }
+            
+            return result;
+        }
+
+        /// <summary>
         /// Genereert driehoeken voor wapeningslaag-indicatoren
         /// </summary>
         /// <param name="x">X-positie startpunt</param>
@@ -3362,11 +3486,11 @@
             if (bordes.Trap1.AansluitendElement != null || 
                 bordes.Trap2.AansluitendElement != null)
             {
-                var wapeningOnder = bordes.BijlegWapening;
+                var wapeningOnder = bordes.BijlegWapeningOnder;
                 var wapeningBoven = bordes.BijlegWapeningBoven;
                 
                 double yVSstart = -bordes.Trap1.Breedte;
-                yVSstart = 500;
+                //yVSstart = 500;
                 double yVSend = yVSstart - bordes.BreedteVersterkteStrook;
                 double yVS = yVSstart - bordes.BreedteVersterkteStrook / 2.0;
                 double dekking = bordes.PlaatDekking.Onder.DekkingToe;
@@ -3610,6 +3734,21 @@
                         DX = -20
                     };
                     wapeningElements.Add(tandWapeningTekst);
+
+
+
+                    var beugel = GenerateBuigvorm(
+                        punten: [(500, 0), (0, 0), (0, 160), (-100, 160), (-100, 90), (500, 90)],
+                        x: 300,
+                        y: -400,
+                        schaal: 1.0,
+                        rotatie: 0,
+                        kleur: "darkred",
+                        toonBeenLengtes: true,
+                        strokeWidth: 1
+                    );
+                    //wapeningElements.AddRange(beugel);
+
 
 
                 }

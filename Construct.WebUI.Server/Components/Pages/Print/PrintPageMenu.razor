@@ -41,7 +41,9 @@
                 @InfoButtonText
             </FluentNavLink>
 
-           
+
+            
+
 
         </FluentNavMenu>
     </nav>
@@ -57,7 +59,7 @@
         border-left: 1px solid var(--neutral-stroke-divider);
         border-radius: var(--control-corner-radius);
         box-shadow: var(--elevation-shadow-card-rest);
-        z-index: 1000;
+        z-index: 100;
         transition: transform 0.3s ease, opacity 0.3s ease, width 0.3s ease;
         height: auto; /* Automatische hoogte */
         max-height: calc(100vh - 80px); /* Max hoogte met wat marge */
@@ -176,6 +178,7 @@
     [Parameter] public EventCallback OnRefreshClick { get; set; }
     [Parameter] public EventCallback OnToggleInfoClick { get; set; }
     [Parameter] public EventCallback OnTestMarkdownClick { get; set; }
+    [Parameter] public EventCallback OnTestPrintClick { get; set; }
 
     private bool expanded = !true;
 
@@ -212,6 +215,13 @@
     {
         var wasExpanded = expanded;
         await OnTestMarkdownClick.InvokeAsync();
+        expanded = wasExpanded;
+    }
+
+    private async Task HandleTestPrintClick()
+    {
+        var wasExpanded = expanded;
+        await OnTestPrintClick.InvokeAsync();
         expanded = wasExpanded;
     }
 }

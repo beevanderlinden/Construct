@@ -133,30 +133,10 @@ namespace Construct.Domain.Entities
                 Materiaal = new BetonContext();  // Fallback only if truly not set
             }
 
+            // ✅ Gebruik centrale methode om PlaatDekking te initialiseren
+            InitializePlaatDekking();
+
             var beton = Materiaal as BetonContext;
-
-            // Dekking is een afgeleide (van Grondslagen en Beton),
-            // maak dus een nieuw object aan om de referenties te herstellen.
-            // de top-level properties kunnen worden uitgelezen van het opgeslagen object (indien aanwezig)
-
-            PlaatDekking.Boven = new(grondslagen: ProjectInfo.Grondslagen, beton: beton ?? new())
-            {
-                IsPlaatGeometrie = PlaatDekking.Boven?.IsPlaatGeometrie ?? true,
-                IsKwaliteitsBeheersing = PlaatDekking.Boven?.IsKwaliteitsBeheersing ?? true,
-                SelectedMilieuklassen = PlaatDekking.Boven?.SelectedMilieuklassen ?? [Eurocode.BetonConstructies.MilieuklasseEnum.XC1],
-                DekkingToe = PlaatDekking.Boven?.DekkingToe ?? 20,
-            };
-
-
-
-            //DekkingBoven = new(grondslagen: ProjectInfo.Grondslagen, beton: beton ?? new())
-            //{
-            //    //IsPlaatGeometrie = DekkingBoven?.IsPlaatGeometrie ?? true,
-            //    //IsKwaliteitsBeheersing = DekkingBoven?.IsKwaliteitsBeheersing ?? true,
-            //    //SelectedMilieuklassen = DekkingBoven?.SelectedMilieuklassen ?? [Eurocode.BetonConstructies.MilieuklasseEnum.XC1],
-            //    //DekkingToe = DekkingBoven?.DekkingToe ?? 20,
-            //};
-
 
             DemoUitkraging = new() { Beton = beton ?? new() };
 
@@ -331,17 +311,17 @@ namespace Construct.Domain.Entities
         {
             Meldingen.Clear();
 
-            if (HoogteTotaal > 4000)
+            if (HoogteTotaal > 4040)
             {
-                Meldingen.Add(new(MeldingType.Opmerking, "trap te hoog"));
+                Meldingen.Add(new(MeldingType.Waarschuwing, "overschrijding maximale hoogte (trap is meer dan 4 meter hoog)"));
             }
             if (AantredeMaat + WelMaat < 210)
             {
-                Meldingen.Add(new(MeldingType.Opmerking, "aantrede te klein"));
+                Meldingen.Add(new(MeldingType.Opmerking, "aantrede te klein voor bouwbesluit"));
             }
             if (OptredeMaat > 190)
             {
-                Meldingen.Add(new(MeldingType.Opmerking, "optrede te groot"));
+                Meldingen.Add(new(MeldingType.Opmerking, "optrede te groot voor bouwbesluit"));
             }
 
             this.GetKrachten(); // altijd bijwerken, mogelijk veranderd
@@ -537,6 +517,8 @@ namespace Construct.Domain.Entities
             DoorbuigingBijwerken();
             Scheurwijdte.BerekenEnValideer();
 
+            IsAkkoord();
+
         }
 
         public void SetProfiel(BetonProfiel profiel)
@@ -620,7 +602,7 @@ namespace Construct.Domain.Entities
 
         public List<BaseEurocodeContext> GetToetsen()
         {
-            return [MomentSchil, DekkingBoven, Dwarskracht, Scheurwijdte, DoorbuigingValidatie];
+            return [MomentSchil, PlaatDekking.Boven, Dwarskracht, Scheurwijdte, DoorbuigingValidatie];
         }
         
 
