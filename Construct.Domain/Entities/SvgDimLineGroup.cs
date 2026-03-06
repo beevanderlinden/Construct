@@ -12,7 +12,7 @@ namespace Construct.Domain.Entities
         /// Lijst van punten waartussen de maatlijnen worden getekend.
         /// Minimaal 2 punten nodig, elk paar opeenvolgende punten wordt een maatlijn.
         /// </summary>
-        public List<(double X, double Y)> Points { get; set; } = new();
+        public List<(double X, double Y)> Points { get; set; } = [];
         
         public double Scale { get; set; } = 1.0;
         public string? MarkerStart { get; set; } = "chevStart";

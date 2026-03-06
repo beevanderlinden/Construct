@@ -79,7 +79,8 @@ namespace Construct.Domain.Entities
         /// Permanente afwerking in kN/m² voor bijvoorbeeld vloerafwerking, hekwerk etcetera.
         /// </summary>
         public double AfwerkingVlaklast { get; set; }
-
+        public virtual double EigenGewichtPerM2 { get; set; }
+        public double PermanenteBelastingPerM2 => EigenGewichtPerM2 + AfwerkingVlaklast;
 
         protected virtual void OnGrondslagenPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
@@ -117,6 +118,8 @@ namespace Construct.Domain.Entities
             get => _materiaalRef.Entity;
             set => _materiaalRef.Attach(value);
         }
+
+       
 
 
         [JsonIgnore]
@@ -183,6 +186,12 @@ namespace Construct.Domain.Entities
         public string EngineeringCategorie { get; set; } = "Berekening conform kiwa criteria 73 - categorie 3";
 
         /// <summary>
+        /// Validatie resultaten van dit assemblage
+        /// </summary>
+        [JsonIgnore]
+        public AssemblageValidation? Validation { get; protected set; }
+
+        /// <summary>
         /// Of dit assemblage een prefab element is
         /// dus een prefab beton element, stalen element of houten element
         /// 
@@ -210,7 +219,21 @@ namespace Construct.Domain.Entities
         public GebruiksklasseEnum? Gebruiksklasse 
         {
             get => _gebruiksklasse;
-            set => SetProperty(ref _gebruiksklasse, value);
+            set
+            {
+                if (SetProperty(ref _gebruiksklasse, value))
+                {
+                    foreach (var bg in Belastingen.BelastingGevallen.Where(bg=>bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk))
+                    {
+                        bg.Gebruiksklasse = value;
+                    }
+
+                    // als de gebruiksklasse wijzigt de combinaties bijwerken
+                    Belastingen.GenereerBelastingCombinaties(this.Belastingen, this.Belastingen.BelastingGevallen, this.Belastingen.CombinatiesTypes);
+
+                    
+                }
+            }
         }
 
         public string GebruiksklasseUserFriendlyName
@@ -266,7 +289,23 @@ namespace Construct.Domain.Entities
             // iedere afgeleide mag zijn eigen interpretatie invullen
             // in de basis gebeurt er niets
 
+            // ✅ Maak validatie aan
+            Validation = new AssemblageValidation(this.Merk ?? "?", this.Naam ?? "?", this);
+            
+            // ✅ Laat concrete implementatie de validatie vullen
+            ValidateAssemblage();
         }
+
+        /// <summary>
+        /// Valideer dit assemblage en vul de Validation property.
+        /// Override in concrete implementaties (SteekTrapEntity, BordesEntity, etc.)
+        /// </summary>
+        protected virtual void ValidateAssemblage()
+        {
+            // Default implementatie doet niets
+            // Concrete types zoals SteekTrapEntity kunnen dit overriden
+        }
+
         public DateTime? Bijgewerkt { get; set; } = DateTime.Now;
 
     }

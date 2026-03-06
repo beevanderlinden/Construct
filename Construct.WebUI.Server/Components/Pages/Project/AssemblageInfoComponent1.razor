@@ -13,11 +13,10 @@
 else
 {
     <div>
-        @* <div style="margin-left:3.5px; font-style:italic;">element/assemblage</div> *@
-
-        <KaskonInputContainer Label="merk">
+        <KaskonInputContainer Label="merk" Required="true">
             <FluentTextField @bind-Value="@Model.Merk" style="width: 100%" /> 
         </KaskonInputContainer>
+
 
         @if (PS.CurrentProject != null && PS.CurrentProject.Assemblages.FirstOrDefault(asbly =>
             asbly.Id != Model.Id &&
@@ -39,10 +38,6 @@ else
             </FluentSelectEnum>
         </KaskonInputContainer>
 
-        <KaskonInputContainer Label="materiaal">
-            <FluentTextField Disabled="true" Value="@Model.Materiaal.Type.ToString()"></FluentTextField>
-        </KaskonInputContainer>
-
 
         @if(Model.Materiaal is BetonContext beton)
         {
@@ -57,7 +52,6 @@ else
                 </FluentSelect>
             </KaskonInputContainer>
         }
-
 
         @if(Model.Materiaal is StaalContext staal)
         {
@@ -87,41 +81,29 @@ else
             </KaskonInputContainer>
         }
 
+    
 
-       @*  <KaskonInputContainer Label="materiaal">
-            <FluentSelectEnum LabelPosition="LabelPosition.Top"
-                              TEnum="Eurocode.StaalConstructies.BetonsterkteklasseEnum"
-                              @bind-EnumSelectedValue="Model.Materiaal.Betonsterkteklasse"></FluentSelectEnum>
-        </KaskonInputContainer> *@
-
-
-
-        <KaskonInputContainer Label="gebruiksklasse">
-            <FluentSelectEnum LabelPosition="LabelPosition.Top"
-                TEnum="Eurocode.Belastingen.GebruiksklasseEnum"
-                              @bind-EnumSelectedValue="Model.Gebruiksklasse"></FluentSelectEnum>
-        </KaskonInputContainer>
-
-        <KaskonInputContainer Label="categorie">
-            <FluentTextField Value="@Model.EngineeringCategorie" Disabled=true Style="width:100%;"/> 
-        </KaskonInputContainer>
-
-        
-
-
+       @* <EditAssemblageBelastingen @bind-Model="Model" /> *@
         
 
 
 
     </div>
    
+
+
+
+
 }
 
-
+<!-- CSS is now in shared-components.css -->
 
 @code {
 [Parameter, EditorRequired] public AssemblageEntity Model{ get; set; }
 [Parameter] public EventCallback<AssemblageEntity> ModelChanged { get; set; }
+
+// Dialog state
+private bool _belastingenDialogHidden = true;
 
 // Geselecteerde materialen
 private BetonContext? SelectedBeton { get; set; }
@@ -190,6 +172,26 @@ private void OnHoutChanged()
         ModelChanged.InvokeAsync(Model);
         StateHasChanged();
     }
+}
+
+// Event handler voor gebruiksklasse wijziging
+private void OnGebruiksklasseChanged()
+{
+    if (Model?.Belastingen?.BelastingGevallen == null) return;
+
+    // Update gebruiksklasse in alle belastinggevallen
+    foreach (var belastinggeval in Model.Belastingen.BelastingGevallen)
+    {
+        if (belastinggeval != null)
+        {
+            belastinggeval.Gebruiksklasse = Model.Gebruiksklasse;
+        }
+    }
+
+    Console.WriteLine($"[INFO] Gebruiksklasse gewijzigd naar {Model.Gebruiksklasse} voor {Model.Belastingen.BelastingGevallen.Count} belastinggeval(len)");
+    
+    ModelChanged.InvokeAsync(Model);
+    StateHasChanged();
 }
 
 // verwijderen na test

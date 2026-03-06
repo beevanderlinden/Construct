@@ -1,5 +1,7 @@
 ﻿using CommonLibrary;
 using CommonLibrary.Helpers;
+using Construct.Domain.Entities.Parts;
+using Construct.Domain.Helpers;
 using Eurocode.Belastingen;
 using Eurocode.BetonConstructies;
 using Eurocode.Grondslagen;
@@ -133,12 +135,68 @@ namespace Construct.Domain.Entities
                 Materiaal = new BetonContext();  // Fallback only if truly not set
             }
 
-            // ✅ Gebruik centrale methode om PlaatDekking te initialiseren
+            // ✅ Gebruik centrale methode om PlaatDekking te initialiseren (synct ook MainPart)
             InitializePlaatDekking();
+
+            // ✅ NIEUW: Koppel MainPart expliciet aan assemblage eigenschappen
+            if (MainSlab != null)
+            {
+                MainSlab.Material = this.Materiaal; // Shared!
+                MainSlab.PlaatDekking = this.PlaatDekking; // Shared!
+                MainSlab.Dikte = this.SchilDikte; // Sync dikte
+                
+                // ✅ NIEUW: Initialiseer PlaatWapening voor trap (hoofdwapening in laag 1)
+                if (MainSlab.PlaatWapening == null)
+                {
+                    MainSlab.PlaatWapening = new PlaatWapening()
+                    {
+                        Onder = new PlaatWapeningGroep()
+                        {
+                            Heading = "schilwapening onder",
+                            DekkingBuitensteLaag = this.PlaatDekking.Onder,
+                            BasisWapening = this.WapeningSchil ?? new WapeningContext()
+                            {
+                                Tekst = "r8-150",
+                                ReferentieVlak = ReferentieVlakEnum.Onder,
+                                ReferentieLengte = 1000,
+                            },
+                            VerdeelWapening = new WapeningContext()
+                            {
+                                Tekst = "r6-250",
+                                ReferentieVlak = ReferentieVlakEnum.Onder,
+                                ReferentieLengte = 1000,
+                            },
+                            LaagHoofdwapening = 1, // ✅ TRAP: Laag 1 (niet 2 zoals bordes)
+                            DiameterVerdeel = 8,
+                        },
+                        Boven = new PlaatWapeningGroep()
+                        {
+                            Heading = "schilwapening boven",
+                            DekkingBuitensteLaag = this.PlaatDekking.Boven,
+                            BasisWapening = new WapeningContext()
+                            {
+                                Tekst = "r6-150",
+                                ReferentieVlak = ReferentieVlakEnum.Boven,
+                                ReferentieLengte = 1000,
+                            },
+                            VerdeelWapening = new WapeningContext()
+                            {
+                                Tekst = "r6-250",
+                                ReferentieVlak = ReferentieVlakEnum.Boven,
+                                ReferentieLengte = 1000,
+                            },
+                            LaagHoofdwapening = 1, // ✅ TRAP: Laag 1 (niet 2 zoals bordes)
+                            DiameterVerdeel = 8,
+                        },
+                    };
+                }
+                
+                Console.WriteLine($"✅ [SteekTrapEntity] MainPart gekoppeld aan assemblage eigenschappen (Dikte={MainSlab.Dikte}mm, PlaatWapening={MainSlab.PlaatWapening != null})");
+            }
 
             var beton = Materiaal as BetonContext;
 
-            DemoUitkraging = new() { Beton = beton ?? new() };
+            //DemoUitkraging = new() { Beton = beton ?? new() };
 
             ProfielSchil = new()
             {
@@ -234,7 +292,7 @@ namespace Construct.Domain.Entities
 
             TandOpleggingBovenzijde = new(this, this.TandOpleggingBovenzijde?.Oplegging ?? new())
             {
-
+                HalsDikte = AantredeMaat - TandOpleggingBovenzijde?.TandLengte ?? 100
             };
 
             PlaatDekking.Boven.PropertyChanged += OnDekkingContextChanged;
@@ -346,7 +404,13 @@ namespace Construct.Domain.Entities
                 }
             }
 
+            // de tand
+            if(TandOpleggingBovenzijde != null)
+            {
+                TandOpleggingBovenzijde.HalsDikte = AantredeMaat - TandOpleggingBovenzijde.TandLengte;
+            }
 
+            
 
             Akkoord = returnVal;
 
@@ -408,6 +472,8 @@ namespace Construct.Domain.Entities
             Materiaal = new BetonContext("C45/55");
             var beton = Materiaal as BetonContext;
 
+            // ✅ NIEUW: Creëer MainPart vroeg in constructor
+            MainPart = CreateMainPart();
 
             PlaatDekking.Onder = new(grondslagen: ProjectInfo.Grondslagen, beton: beton ?? new())
             {
@@ -422,7 +488,7 @@ namespace Construct.Domain.Entities
                 SelectedMilieuklassen = [Eurocode.BetonConstructies.MilieuklasseEnum.XC1],
             };
 
-            DemoUitkraging = new() { Beton = beton ?? new() };
+            //DemoUitkraging = new() { Beton = beton ?? new() };
             //DemoBuiging = new() { Beton = Beton };
 
             // Profiel voor de schil, bepaalt de schildikte
@@ -463,6 +529,13 @@ namespace Construct.Domain.Entities
         {
             // ✅ EERST: Herstel alle basisreferenties (materiaal, belastingen, etc.)
             base.RestoreReferencesAfterDeserialization(project);
+
+            // ✅ NIEUW: Migreer oude data naar MainPart indien MainPart null is
+            if (MainPart == null)
+            {
+                Console.WriteLine($"✅ [SteekTrapEntity] Migreer oude data naar MainPart");
+                MainPart = CreateMainPart();
+            }
 
             // 🔍 BROKEN LINK DETECTION: MateriaalId is gezet, maar materiaal niet gevonden in dictionary
             // Dit gebeurt als de JSON een MateriaalId bevat die niet (meer) bestaat in project.Materialen
@@ -514,10 +587,144 @@ namespace Construct.Domain.Entities
 
         public override void Bijwerken()
         {
+            // ✅ NIEUW: Optimaliseer schilwapening op basis van benodigde As
+            OptimaliseerSchilWapening();
+            
             DoorbuigingBijwerken();
             Scheurwijdte.BerekenEnValideer();
 
             IsAkkoord();
+
+            // ✅ Roep base aan zodat validatie wordt gemaakt
+            base.Bijwerken();
+        }
+        
+        /// <summary>
+        /// ✅ NIEUW: Optimaliseer schilwapening op basis van MomentSchil.AsRequired.
+        /// Gebruikt WapeningOptimizer voor DRY logica.
+        /// </summary>
+        private void OptimaliseerSchilWapening()
+        {
+            // Bereken momentwapening schil eerst
+            if (MomentSchil == null || Snedekrachten == null)
+            {
+                Console.WriteLine("⚠️ [SteekTrapEntity] MomentSchil of Snedekrachten is null, skip wapening optimalisatie");
+                return;
+            }
+            
+            // Bereken met huidige wapening
+            MomentSchil.BerekenEnValideer();
+            
+            var asRequired = MomentSchil.AsRequired;
+            var asApplied = MomentSchil.AsApplied;
+            
+            if (asRequired <= 0)
+            {
+                Console.WriteLine("✅ [SteekTrapEntity] Geen wapening benodigd (AsRequired = 0)");
+                return;
+            }
+            
+            // Gebruik WapeningOptimizer voor automatische bepaling
+            var resultaat = WapeningOptimizer.BepaalPlaatWapening(
+                asRequired,
+                beschikbareBreedte: 1000, // Referentie breedte voor platen
+                constraint: OnderHoofdConstraint,
+                startDiameter: 6,
+                startHoh: 150
+            );
+            
+            // Update WapeningSchil
+            if (WapeningSchil != null)
+            {
+                WapeningSchil.Tekst = resultaat.tekst;
+                Console.WriteLine($"✅ [SteekTrapEntity] Schilwapening geoptimaliseerd: {resultaat.tekst} (As={resultaat.asProvided:0}mm², benodigd={asRequired:0}mm²)");
+                
+                // ✅ Update MainPlate.PlaatWapening indien aanwezig
+                if (PlaatWapening?.Onder?.BasisWapening != null)
+                {
+                    PlaatWapening.Onder.BasisWapening.Tekst = resultaat.tekst;
+                }
+                
+                // Herbereken met nieuwe wapening
+                MomentSchil.Wapening = WapeningSchil;
+                MomentSchil.BerekenEnValideer();
+            }
+        }
+
+        protected override void ValidateAssemblage()
+        {
+            if (Validation == null) return;
+
+            // Valideer meldingen van de trap zelf
+            foreach (var melding in Meldingen.Where(m => m != null))
+            {
+                switch (melding.Type)
+                {
+                    case MeldingType.Error:
+                        Validation.AddError($"{melding.Bericht}");
+                        break;
+                    case MeldingType.Waarschuwing:
+                        Validation.AddWarning($"{melding.Bericht}");
+                        break;
+                    case MeldingType.Waarschuwing | MeldingType.Error:
+                        Validation.AddError(melding.Bericht);
+                        Validation.AddWarning(melding.Bericht);
+                        break;
+
+                }
+            }
+
+            // Check dwarskracht
+            if (Dwarskracht != null && Dwarskracht.Ved > Dwarskracht.DwarskrachtWeerstandBeton)
+            {
+                Validation.AddWarning(
+                    "Dwarskrachtwapening benodigd",
+                    $"VEd = {Dwarskracht.Ved:0.#} kN > VRd,c = {Dwarskracht.DwarskrachtWeerstandBeton:0.#} kN"
+                );
+            }
+
+            // Check scheurwijdte
+            if (Scheurwijdte != null && !Scheurwijdte.IsValidated)
+            {
+                Validation.AddWarning("Scheurwijdte mogelijk niet voldaan");
+            }
+
+            // Check tand
+            if (TandOpleggingBovenzijde != null)
+            {
+                var tand = TandOpleggingBovenzijde;
+                if (tand.DwarskrachtTand != null &&
+                    tand.DwarskrachtTand.Ved > tand.DwarskrachtTand.DwarskrachtWeerstandBeton)
+                {
+                    Validation.AddError("Tand: dwarskrachtwapening nodig (niet toegestaan)");
+                }
+
+                var subToetsen = tand.GetToetsen();
+
+                foreach (var subToets in subToetsen)
+                {
+                    if (subToets == null)
+                    {
+
+                        continue;
+                    }
+                    foreach (var melding in subToets.Meldingen)
+                    {
+                        switch (melding.Type)
+                        {
+                            case MeldingType.Waarschuwing: Validation.AddWarning("[Tand] " + $"[{subToets.Heading}] " + melding.Bericht); 
+                                break;
+                            case MeldingType.Error: Validation.AddError("[Tand] " + $"[{subToets.Heading}] " + melding.Bericht);
+                                break;
+                        }
+                    }
+                        
+                    
+                }
+
+            }
+
+            // check houtje-touwtje doorbuiging
 
         }
 
@@ -525,7 +732,9 @@ namespace Construct.Domain.Entities
         {
             this.ProfielSchil = profiel;
             this.MomentSchil.Profiel = profiel;
-            this.Slankheid.Profiel = profiel;
+
+            if (this.Slankheid != null)
+                this.Slankheid.Profiel = profiel;
             //this.DoorbuigingContext?.Profiel = profiel;
 
 
@@ -602,7 +811,8 @@ namespace Construct.Domain.Entities
 
         public List<BaseEurocodeContext> GetToetsen()
         {
-            return [MomentSchil, PlaatDekking.Boven, Dwarskracht, Scheurwijdte, DoorbuigingValidatie];
+
+            return [MomentSchil, PlaatDekking.Boven, Dwarskracht, Scheurwijdte, DoorbuigingValidatie, TandOpleggingBovenzijde];
         }
         
 
@@ -668,15 +878,25 @@ namespace Construct.Domain.Entities
         [TableColumn("Schildikte", stringFormat: "0.# mm", order: 31)]
         public double SchilDikte
         {
-            get => _profielSchil.Hoogte;
-            //set
-            //{
-            //    if (SetProperty(ref _profielSchil.Hoogte, value))
-            //    {
-            //        DoorbuigingBijwerken();
-            //    }
-
-            //}
+            get => MainSlab?.Dikte ?? _profielSchil.Hoogte; // ✅ Lees van MainPlate indien beschikbaar
+            set
+            {
+                // ✅ Sync met MainPlate
+                if (MainSlab != null)
+                {
+                    MainSlab.Dikte = value;
+                }
+                
+                // ✅ Update ProfielSchil (geen ref mogelijk op property)
+                var oldValue = _profielSchil.Hoogte;
+                _profielSchil.Hoogte = value;
+                
+                if (oldValue != value)
+                {
+                    OnPropertyChanged(nameof(SchilDikte));
+                    DoorbuigingBijwerken();
+                }
+            }
         }
 
 
@@ -689,6 +909,11 @@ namespace Construct.Domain.Entities
             {
                 return Math.Sqrt(Math.Pow(AantredeMaat, 2) + Math.Pow(OptredeMaat, 2));
             }
+        }
+
+        public double Hellingshoek
+        {
+            get => Math.Atan(OptredeMaat / AantredeMaat) * (180.0 / Math.PI);
         }
 
 
@@ -751,7 +976,7 @@ namespace Construct.Domain.Entities
             if (ReferenceEquals(sender, _profielSchil))
             {
                 Console.WriteLine("[NestedPropertyChanged] ProfielSchil bijgewerkt");
-                this.GetKrachten();
+                //this.GetKrachten();
                 this.IsAkkoord();
             }
             if (ReferenceEquals(sender, this._dekkingBoven))
@@ -779,6 +1004,33 @@ namespace Construct.Domain.Entities
         //public Eurocode.BetonConstructies.BetonContext Beton;
 
         public WapeningContext WapeningSchil { get; set; }
+        
+        /// <summary>
+        /// ✅ NIEUW: Wapening constraints voor trap schil berekeningen.
+        /// Gebruikt voor automatische optimalisatie van schilwapening.
+        /// </summary>
+        public WapeningConstraint OnderHoofdConstraint { get; set; } = new(8, null, 150);
+        public WapeningConstraint OnderVerdeelConstraint { get; set; } = new(6, null, 250);
+        public WapeningConstraint BovenHoofdConstraint { get; set; } = new(6, null, 150);
+        public WapeningConstraint BovenVerdeelConstraint { get; set; } = new(6, null, 250);
+        
+        /// <summary>
+        /// ✅ NIEUW: Plaatwapening voor trap schil (delegeert naar MainPlate).
+        /// Voor trap: LaagHoofdwapening = 1 (in plaats van 2 bij bordes).
+        /// </summary>
+        [JsonIgnore]
+        public PlaatWapening? PlaatWapening
+        {
+            get => MainSlab?.PlaatWapening;
+            set
+            {
+                if (MainSlab != null)
+                {
+                    MainSlab.PlaatWapening = value;
+                }
+            }
+        }
+        
         //public WapeningContext WapeningSchilVerdeel;
         //public WapeningContext WapeningBoven;
         //[Obsolete]
@@ -906,7 +1158,8 @@ namespace Construct.Domain.Entities
                 this.Krachten = SteekTrapExtensions.GetKrachten(this);
             }
 
-            if (this.DoorbuigingValidatie == null) return;
+            if (this.DoorbuigingValidatie == null) 
+                return;
 
 
             this.DoorbuigingValidatie.LengteMM = this.LengteSchuin;
@@ -921,9 +1174,14 @@ namespace Construct.Domain.Entities
             var quasiBlijvend = this.DoorbuigingValidatie.CombinatieContexts.FirstOrDefault(c => c.CombinatieType == BelastingCombinatieTypeEnum.QuasiBlijvend);
             var frequent = this.DoorbuigingValidatie.CombinatieContexts.FirstOrDefault(c => c.CombinatieType == BelastingCombinatieTypeEnum.Frequent);
 
-            if (blijvend != null) blijvend.Lijnlast = this.Krachten.qG * FactorProjectieZToLocalZ;
-            if (quasiBlijvend != null) quasiBlijvend.Lijnlast = this.Krachten.qEqp * FactorProjectieZToLocalZ;
-            if (frequent != null) frequent.Lijnlast = this.Krachten.qEfr * FactorProjectieZToLocalZ;
+            if (blijvend != null) 
+                blijvend.Lijnlast = this.Krachten.qG * FactorProjectieZToLocalZ;
+
+            if (quasiBlijvend != null)
+                quasiBlijvend.Lijnlast = this.Krachten.qEqp * FactorProjectieZToLocalZ;
+
+            if (frequent != null)
+                frequent.Lijnlast = this.Krachten.qEfr * FactorProjectieZToLocalZ;
 
             if (!this.DoorbuigingValidatie.BerekenEnValideer())
             {
@@ -990,14 +1248,42 @@ namespace Construct.Domain.Entities
         public TandOplegging? TandOpleggingBovenzijde { get; set; } = null;
         public TandOplegging? TandOpleggingOnderzijde { get; set; } = null;
 
-        public UitkragingContext DemoUitkraging { get; set; } = new();
+        public double MinimaleTandhoogte
+        {
+            get
+            {
+                var c1 = this.PlaatDekking.Boven.DekkingToe;
+                var c2 = this.PlaatDekking.Onder.DekkingToe;
+                var diam = this.TandOpleggingBovenzijde?.WapeningAlgemeen.GemiddeldeDiameter ?? 8;
+
+                var minHoogte = c1 + c2 + 7 * diam;
+
+                minHoogte /= 10;
+                minHoogte = Math.Ceiling(minHoogte) * 10;
+
+                return minHoogte;
+            }
+        }
+
+        public double MaximaleTandLengte
+        {
+            get
+            {
+                
+                return AantredeMaat - 80;
+            }
+        }
+
+        //public UitkragingContext DemoUitkraging { get; set; } = new();
 
         //public BendingResults DemoBuiging { get; set; } = new();
         public BendingResults BuigingBGT { get; set; } = new();
 
-        public List<BendingResults> MomentCollectie { get; set; } = new();
+        
+        public List<BendingResults> MomentCollectie { get; set; } = [];
 
         private KrachtenDemo _krachten;
+        [JsonIgnore]
         public KrachtenDemo Krachten
         {
             get => _krachten;
@@ -1034,6 +1320,8 @@ namespace Construct.Domain.Entities
 
         //public Snedekrachten Snedekrachten => SteekTrapExtensions.GetSnedekrachten(this);
         private BetonProfiel _profielSchil = new();
+
+        [JsonIgnore] // wordt gevuld bij init
         public BetonProfiel ProfielSchil
         {
             get => _profielSchil;
@@ -1043,6 +1331,8 @@ namespace Construct.Domain.Entities
 
 
         private DwarskrachtWapContext _dwarskracht = new();
+
+        [JsonIgnore]
         public DwarskrachtWapContext Dwarskracht
         {
             get => _dwarskracht;
@@ -1056,18 +1346,16 @@ namespace Construct.Domain.Entities
         /// <summary>
         /// Toets voor de slankheid van het element
         /// </summary>
+        [JsonIgnore]
         public GrenswaardeSlankheidContext Slankheid { get; set; }
 
         /// <summary>
         /// Toets voor de buiging momentwapening van de schil
         /// </summary>
+        [JsonIgnore]
         public BendingResults MomentSchil { get; set; }
 
-        public BendingResults MomentSchilToevallig { get; set; }
-
-
-
-
+        [JsonIgnore]
         public ScheurwijdteContext Scheurwijdte { get; set; } = new();
 
 
@@ -1087,7 +1375,29 @@ namespace Construct.Domain.Entities
             }
         }
 
+        /// <summary>
+        /// ✅ NIEUW: Creëer MainPart (PlatePart) voor steektrap.
+        /// Wordt aangeroepen in constructor.
+        /// PlaatDekking en PlaatWapening worden later gezet via Init().
+        /// </summary>
+        private SlabPart CreateMainPart()
+        {
+            return new SlabPart
+            {
+                Name = "Trapschil",
+                Dikte = 120, // Standaard schildikte
+                Material = this.Materiaal, // ✅ Shared reference
+                ParentAssemblage = this
+                // ⚠️ PlaatDekking wordt gezet in Init() / RestoreReferencesAfterDeserialization()
+            };
+        }
 
+        /// <summary>
+        /// ✅ NIEUW: Helper property voor type-safe access naar MainPart als SlabPart.
+        /// Returns null indien MainPart geen SlabPart is.
+        /// </summary>
+        [JsonIgnore]
+        public SlabPart? MainSlab => MainPart as SlabPart;
 
 
     }
@@ -1246,6 +1556,7 @@ namespace Construct.Domain.Entities
             KrachtenDemo returnItem = new();
             // belastingen
             double qG = steekTrap.GetPermanenteBelasting();
+            steekTrap.EigenGewichtPerM2 = qG;
             var opgelegdeBelastingen = steekTrap.GetOpgelegdeBelasting();
 
             if (opgelegdeBelastingen == null)

@@ -36,6 +36,10 @@ i {
     background: white;
 }
 
+.form-control-text{
+    padding-left:2mm;
+}
+
 /* ====== BASE TABLE ====== */
 .ec-tableXXX {
     border-collapse: separate;
@@ -436,6 +440,42 @@ nav.sitenav {
             padding-left: 10px;
         }
 
+
+
+.kaskon-form-control {
+    appearance: none;
+    color: inherit;
+    width: 100%;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #ced4da;
+    height: calc(100% - 4px);
+    margin-top: auto;
+    margin-bottom: auto;
+    padding: 0 calc(var(--design-unit) * 2px + 1px);
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+}
+
+.kaskon-form-controlX {
+    display: block;
+    width: 100%;
+    padding: .2rem .75rem;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #212529;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #ced4da;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border-radius: .25rem;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+}
     /*.ec-accordion::before {
         content: "✒️ ";
         white-space: pre;
@@ -567,6 +607,7 @@ svg.has-warning line{
     .preview-container .ec-panel {
         --panel-width: 210mm;
         --panel-height: 297mm;
+        color: black;
         width: var(--panel-width);
         height: var(--panel-height);
         background: white;
@@ -1365,5 +1406,39 @@ table.borderless {
 }
 
 
+.form-control {
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+    background-color: #fff;
+    /* ... */
+}
+
+@media (prefers-color-scheme: dark) {
+    .form-control {
+        background-color: #23272f !important;
+        color: #fff;
+    }
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 1.5px var(--accent, #006a6a);
+    border-color: var(--accent, #006a6a);
+    outline: none;
+}
+
+.form-control {
+    border: none;
+    border-bottom: 1px solid #ccc;
+    border-radius: 0;
+    background: transparent;
+    transition: border-color 0.2s;
+    box-shadow: none;
+}
+
+    .form-control:focus {
+        border-bottom: 2.5px solid var(--accent, #006a6a);
+        outline: none;
+        box-shadow: 0 4px 0 0 rgba(0,106,106,0.35); /* meer opacity */
+    }
 
 

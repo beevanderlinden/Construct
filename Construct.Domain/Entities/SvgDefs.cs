@@ -4,7 +4,7 @@ namespace Construct.Domain.Entities
 {
     public class SvgDefs : BaseSvg
     {
-        public List<BaseSvg> Children { get; } = new();
+        public List<BaseSvg> Children { get; } = [];
 
         protected override string TagName => "defs";
 

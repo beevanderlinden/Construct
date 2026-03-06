@@ -7,7 +7,7 @@ namespace Construct.Domain.Entities
     /// </summary>
     public class DocumentValidationResult
     {
-        public List<AssemblageValidation> AssemblageValidations { get; set; } = new();
+        public List<AssemblageValidation> AssemblageValidations { get; set; } = [];
         
         public bool HasWarnings => AssemblageValidations.Any(a => a.Warnings.Any());
         public bool HasErrors => AssemblageValidations.Any(a => a.Errors.Any());
@@ -19,9 +19,9 @@ namespace Construct.Domain.Entities
         /// <summary>
         /// Voeg een nieuwe assemblage validatie toe
         /// </summary>
-        public AssemblageValidation AddAssemblage(string merk, string naam)
+        public AssemblageValidation AddAssemblage(string merk, string naam, object? data = null)
         {
-            var validation = new AssemblageValidation { Merk = merk, Naam = naam };
+            var validation = new AssemblageValidation { Merk = merk, Naam = naam , Data = data};
             AssemblageValidations.Add(validation);
             return validation;
         }
@@ -44,14 +44,32 @@ namespace Construct.Domain.Entities
     /// </summary>
     public class AssemblageValidation
     {
+        public object? Data { get; set; }
         public string Merk { get; set; } = "";
         public string Naam { get; set; } = "";
-        public List<Melding> Warnings { get; set; } = new();
-        public List<Melding> Errors { get; set; } = new();
+        public List<Melding> Warnings { get; set; } = [];
+        public List<Melding> Errors { get; set; } = [];
         
         public bool HasWarnings => Warnings.Any();
         public bool HasErrors => Errors.Any();
         public bool IsValid => !HasErrors;
+
+        /// <summary>
+        /// Constructor voor assemblage validatie
+        /// </summary>
+        public AssemblageValidation(string merk, string naam, object? data = null)
+        {
+            Merk = merk;
+            Naam = naam;
+            Data = data;
+        }
+
+        /// <summary>
+        /// Default constructor voor deserialisatie
+        /// </summary>
+        public AssemblageValidation()
+        {
+        }
 
         public void AddWarning(string message, string? detail = null)
         {
@@ -98,8 +116,13 @@ namespace Construct.Domain.Entities
                 parts.Add($"{Errors.Count} error(s)");
             if (Warnings.Any())
                 parts.Add($"{Warnings.Count} waarschuwing(en)");
+
+            foreach (var warning in Warnings)
+            {
+                parts.Add(warning.Bericht);
+            }
             
-            return string.Join(" - ", parts);
+            return string.Join(" \r\n ", parts);
         }
     }
 }

@@ -593,10 +593,12 @@
                 double yText = yBasis - hFig / 2.0;
 
 
-                svgText = new($"{Math.Abs(Math.Max(dl.StartMagnitude, dl.EndMagnitude)):0.##}", dl.LabelPosition.X, yText);
-                svgText.Anchor = dl.LabelPosition.Anchor;
+                svgText = new($"{Math.Abs(Math.Max(dl.StartMagnitude, dl.EndMagnitude)):0.##}", dl.LabelPosition.X, yText)
+                {
+                    Anchor = dl.LabelPosition.Anchor
+                };
 
-                
+
 
 
             }
@@ -629,11 +631,6 @@
                 punten.Add(new(dl.StartPosition, dl.StartMagnitude * scaleY));
 
                 svgText = new($"{Math.Max(dl.StartMagnitude, dl.EndMagnitude):0.##}", dl.StartPosition, 0, dl.EndPosition, 0);
-
-
-
-
-
             }
 
             return MakePath(punten);
@@ -642,17 +639,11 @@
 
         public static void AddToSection(this SvgDocument svgDoc, SectionContent section, SBLigger beam)
         {
-            //ParagraphContent par = new();
-
             var tag = svgDoc.Tag;
-
 
             switch (svgDoc.Name.Trim().ToLower())
             {
                 case "figuur":
-                    
-                    
-
                     if (tag is Eurocode.Belastingen.BelastingGeval geval)
                     {
                         section.Elements.Add(new ParagraphContent($"Belastinggeval ({geval.Naam} | {geval.Type})", "Kop 3"));
@@ -668,17 +659,16 @@
                     break;
 
                 case "vz":
-                    //section.Elements.Add(new ParagraphContent($"Dwarskrachten ({tag})", "Kop 3"));
                     section.Elements.Add(new ParagraphContent(svgDoc.Render()));
                     break;
 
                 case "my":
-                    //section.Elements.Add(new ParagraphContent($"Momenten ({tag})", "Kop 3"));
                     section.Elements.Add(new ParagraphContent(svgDoc.Render()));
                     break;
             }
-
         }
+
+
 
         public static List<SvgDocument> ToSvgDocumentsOpt(
             this SBLigger beam, int w, int h, string style, 
@@ -688,7 +678,7 @@
         {
             List<SvgDocument> collection = [];
             
-            foreach (var bg in belastingGevallen ?? new List<BelastingGeval>())
+            foreach (var bg in belastingGevallen ?? [])
             {
                 BoundingBox boundingBox = new();
                 var xml = SvgGenerator.GenerateBeamSvgContent(
@@ -783,71 +773,6 @@
 
             }
                       
-
-            return collection;
-        }
-
-
-        public static List<SvgDocument> ToSvgDocuments(this StrookEntity strook, string svgStyle, double widthPx = 800, double heightPx = 9999)
-        {
-            List<SvgDocument> collection = [];
-            BoundingBox boundingBox = new();
-
-
-
-            string xmlStrook = SvgGenerator.GenerateStrookSvgXml(strook, boundingBox, widthPx, heightPx, svgStyle, 
-                toonMomentenlijn: !true, toonDwarskrachtenlijn: false, toonFiguren: true, strook.Beam.LoadContext?.BelastingGevallen.FirstOrDefault());
-            var svgDoc = new SvgDocument(300, 300)
-            {
-                Name = "Figuur",
-                Style = svgStyle,
-                ViewBoxWidth = boundingBox.Width,
-                ViewBoxHeight = boundingBox.Height,
-                ViewBoxMinX = boundingBox.MinX,
-                ViewBoxMinY = boundingBox.MinY
-            };
-
-           
-            svgDoc.RawFragments.Clear();
-            svgDoc.RawFragments.Add(xmlStrook);
-            collection.Add(svgDoc);
-
-            //par = new(svgDoc.Render());
-            //section.Elements.Add(par);
-
-            boundingBox.Reset();
-            svgDoc = new(300, 300) { Style = svgStyle, Name="Vz" };
-            xmlStrook = SvgGenerator.GenerateStrookSvgXml(strook, boundingBox, widthPx, heightPx, svgStyle, toonFiguren: false, toonDwarskrachtenlijn: true);
-            svgDoc.ViewBoxWidth = boundingBox.Width;
-            svgDoc.ViewBoxHeight = boundingBox.Height;
-            svgDoc.ViewBoxMinY = boundingBox.MinY;
-            svgDoc.ViewBoxMinX = boundingBox.MinX;
-
-
-
-            svgDoc.RawFragments.Clear();
-            svgDoc.RawFragments.Add(xmlStrook);
-            collection.Add(svgDoc);
-
-            //par = new(svgDoc.Render());
-            //section.Elements.Add(par);
-
-
-            boundingBox.Reset();
-            svgDoc = new(300, 300) { Style = svgStyle, Name="My" };
-            xmlStrook = SvgGenerator.GenerateStrookSvgXml(strook, boundingBox, widthPx, heightPx, svgStyle, toonFiguren: false, toonMomentenlijn: true);
-            svgDoc.ViewBoxWidth = boundingBox.Width;
-            svgDoc.ViewBoxHeight = boundingBox.Height;
-            svgDoc.ViewBoxMinY = boundingBox.MinY;
-            svgDoc.ViewBoxMinX = boundingBox.MinX;
-            
-            svgDoc.RawFragments.Clear();
-            svgDoc.RawFragments.Add(xmlStrook);
-            collection.Add(svgDoc);
-
-            //par = new(svgDoc.Render());
-            //section.Elements.Add(par);
-
 
             return collection;
         }
@@ -1376,10 +1301,11 @@
                 .OrderBy(g => g.Key)
                 .ToList();
 
-            var envelope = new List<(double x, double m)>();
-
-            // Start altijd bij (0, 0)
-            envelope.Add((0, 0));
+            var envelope = new List<(double x, double m)>
+            {
+                // Start altijd bij (0, 0)
+                (0, 0)
+            };
 
             // Bottom line: van links naar rechts, met MINIMALE Y per X
             foreach (var group in groupedByX)
@@ -1493,7 +1419,7 @@
                     // Zelfde sign: voeg toe aan huidig segment
                     if (currentSegment == null)
                     {
-                        currentSegment = new List<(double x, double m)>();
+                        currentSegment = [];
                         currentSign = sign;
                     }
                     currentSegment.Add(pt);
@@ -1505,7 +1431,7 @@
                     {
                         segments.Add(currentSegment);
                     }
-                    currentSegment = new List<(double x, double m)> { pt };
+                    currentSegment = [pt];
                     currentSign = sign;
                 }
             }
@@ -1583,8 +1509,8 @@
                     polygon2.Select(p => new Clipper2Lib.PointD(p.x, p.m)).ToList());
 
                 var clipper = new Clipper2Lib.ClipperD(); 
-                clipper.AddSubject(new Clipper2Lib.PathsD { path1 });
-                clipper.AddClip(new Clipper2Lib.PathsD { path2 });
+                clipper.AddSubject([path1]);
+                clipper.AddClip([path2]);
 
                 // Execute vult solution parameter in en retourneert bool
                 var solution = new Clipper2Lib.PathsD();
@@ -1709,15 +1635,7 @@
             double scale = layout.Scale;
             double scaleX = layout.ViewBox.ScaleX(wPx);
 
-            double maxWidthBereikt = layout.ViewBox.ScaleX(wPx) / scale;
-            
-            if (maxWidthBereikt > 1)
-            {
 
-                string debug = "wat kan ik hiermee";
-            }
-
-            var margin = layout.Margin;
             // 2️⃣ boundingbox init
             bb.MinX = layout.ViewBox.X;
             bb.MinY = layout.ViewBox.Y;
@@ -1884,7 +1802,6 @@
             )
         {
             SvgHelper svgHelper = new();
-            SvgDocumentInfo? info = null;
 
             if (strook == null) 
                 return "";
@@ -1897,10 +1814,6 @@
             // 💡maak de paden en maatlijnen
             List<Punt> punten = [new(), new(strook.Beam.Length, 0)];
 
-            //List<SvgPath> svgPaths = [MakePath(punten)];
-            //List<SvgDimLine> dimLines = [];
-            //List<SvgText> teksten = [];
-            string status = "";
 
             // Bepaal de viewBox
             double hoogte = 0.1;
@@ -2406,7 +2319,7 @@
             
             List<BaseSvg> svgPaths = [basisPath]; // ✅ Wijziging: BaseSvg i.p.v. SvgPath voor wapening support
 
-            if(bordes.Trap1?.AansluitendElement != null)
+            if(bordes.Trap1?.AansluitendElement != null || bordes.Trap1!.GebruikEigenOpgave)
             {
                 var c = bordes.Trap1;
                 double left = c.Pos.Start;
@@ -2429,7 +2342,7 @@
 
                 svgPaths.Add(path1);
             }
-            if (bordes.Trap2?.AansluitendElement != null)
+            if (bordes.Trap2?.AansluitendElement != null || bordes.Trap2!.GebruikEigenOpgave)
             {
                 var c = bordes.Trap2;
                 double left = c.Pos.Start;
@@ -2454,9 +2367,12 @@
             }
 
 
-            var vsY1 = -100.0;
-            if (bordes.Trap1 != null) vsY1 = -bordes.Trap1.Breedte;
+            var vsY1 = -Math.Max(bordes.Trap1.Breedte, bordes.Trap2.Breedte);
+
+
+            
             var vsY2 = vsY1 - bordes.BreedteVersterkteStrook;
+            var vsHartY = (vsY1 + vsY2) / 2.0;
 
 
             List<Punt> vs = [new(0, vsY1), new(bordes.Lengte, vsY1), new(bordes.Lengte, vsY2), new (0, vsY2)];
@@ -2548,7 +2464,7 @@
             // ✅ Normale maatlijnen en teksten NIET toevoegen als wapening getoond wordt
             if (!toonWapening && toonMaatlijnen)
             {
-                dimLines.AddRange(TrapSvgGenerator.GenerateBordesDimLines(bordes));
+                dimLines.AddRange(TrapSvgGenerator.GenerateBordesDimLines(bordes, vsHartY));
                 teksten = TrapSvgGenerator.GenerateBordesSvgText(bordes);
             }
 
@@ -3041,6 +2957,27 @@
 
             //returnList.Add(txt);
 
+            if (!trap.GebruikEigenLengte)
+            {
+                var dx = 20 - trap.WelMaat * 0.5;
+                var dy = -trap.OptredeMaat + 20;
+                for (int n = 0; n < trap.OptredeAantal1; n++)
+                {
+                    var x = 0 + n * trap.AantredeMaat +dx;
+                    var y = 0 - n * trap.OptredeMaat +dy;
+                    returnList.Add(new()
+                    {
+                        X = x,
+                        Y = y,
+                        Text = $"{n + 1}",
+                        DominantBaseLine = "hanging",
+                        Anchor = "left"
+
+                    }); 
+                }
+            }
+
+
             return returnList;
 
         }
@@ -3055,23 +2992,23 @@
             {
                 var c = bordes.Trap1;
                 
-                if (c.AansluitendElement != null)
-                    list.Add(new SvgText(c.AansluitendElement?.Merk ?? "TRAP" , c.Randafstand, 10, c.Randafstand + c.Lengte, 10) { DominantBaseLine = "hanging"});
+                if (c.AansluitendElement != null || c.GebruikEigenOpgave)
+                    list.Add(new SvgText($"q={c.Reacties.G:0.0} ({c.Reacties.Q:0.0})" , c.Randafstand, 10, c.Randafstand + c.Lengte, 10) { DominantBaseLine = "hanging"});
                 
                 double yVS = c.Breedte + bordes.BreedteVersterkteStrook / 2.0;
                 list.Add(new SvgText("versterkte strook",x: 0, y: -yVS, x2:bordes.Lengte, y2:-yVS, scale:1));
             }
 
-            if (bordes.Trap2?.AansluitendElement != null)
+            if (bordes.Trap2 != null)
             {
                 var c = bordes.Trap2;
 
-                if (c.AansluitendElement != null)
-                    list.Add(new SvgText(c.AansluitendElement?.Merk ?? "TRAP", bordes.Lengte - c.Randafstand - c.Lengte, 10, bordes.Lengte -  c.Randafstand, 10) { DominantBaseLine = "hanging"});
+                if (c.AansluitendElement != null || c.GebruikEigenOpgave)
+                    list.Add(new SvgText( $"q={c.Reacties.G:0.0} ({c.Reacties.Q:0.0})", bordes.Lengte - c.Randafstand - c.Lengte, 10, bordes.Lengte -  c.Randafstand, 10) { DominantBaseLine = "hanging"});
             }
 
             
-            list.Add(new SvgText("basis strook",x: 0, y: -bordes.Breedte + 500, x2:bordes.Lengte, y2:-bordes.Breedte +500, scale:1));
+            list.Add(new SvgText("basisstrook",x: 0, y: -bordes.Breedte + 500, x2:bordes.Lengte, y2:-bordes.Breedte +500, scale:1));
 
 
 
@@ -3142,6 +3079,7 @@
                 int laagNummerOnder = wapOnder.LaagNummer ?? 1;
                 int laagNummerBoven = 0;
                 string wapeningTekstOnder = $"{wapOnder}";
+                
                 string wapeningTekstBoven = $"{wapOnder}";
                 bool tweeVerschillendeLijnen = false;
 
@@ -3483,8 +3421,8 @@
             // ===============================================
             // 2️⃣ VERSTERKTE STROOK WAPENING 
             // ===============================================
-            if (bordes.Trap1.AansluitendElement != null || 
-                bordes.Trap2.AansluitendElement != null)
+            if (bordes.Trap1.AansluitendElement != null || bordes.Trap1.GebruikEigenOpgave ||
+                bordes.Trap2.AansluitendElement != null || bordes.Trap2.GebruikEigenOpgave)
             {
                 var wapeningOnder = bordes.BijlegWapeningOnder;
                 var wapeningBoven = bordes.BijlegWapeningBoven;
@@ -3516,6 +3454,7 @@
                         // Verschillende wapening → twee lijnen
                         tweeVerschillendeBijlegLijnen = true;
                         wapeningTekstBoven = wapeningBoven.ToString();
+                        wapeningTekstOnder = wapeningOnder?.ToString();
                     }
                     else
                     {
@@ -3890,10 +3829,11 @@
         }
 
 
-        public static List<SvgDimLine> GenerateBordesDimLines(BordesEntity bordes)
+        public static List<SvgDimLine> GenerateBordesDimLines(BordesEntity bordes, double vsY)
         {
             var t1R = 0.0;
             var t2L = 0.0;
+            
 
             List<SvgDimLine> returnList = [];
             returnList.Add(new SvgDimLine
@@ -3911,7 +3851,7 @@
                 StrokeColor = "var(--neutral-foreground-rest, black)"
             });
 
-            if (bordes.Trap1?.AansluitendElement != null)
+            if (bordes.Trap1?.AansluitendElement != null || bordes.Trap1!.GebruikEigenOpgave)
             {
                 var c = bordes.Trap1;
                 t1R = c.Randafstand + c.Lengte;
@@ -3978,18 +3918,15 @@
 
 
                 var armY1 = c.Breedte / 2.0;
-                var armY2 = c.Breedte + bordes.BreedteVersterkteStrook / 2.0;
                 returnList.Add(new SvgDimLine
                 {
                     Mode = DimLineMode.Vertical,
                     X1 = c.Randafstand + c.Lengte / 2.0,
                     Y1 = -armY1,
                     X2 = c.Randafstand + c.Lengte / 2.0,
-                    Y2 = -armY2,
+                    Y2 = vsY,
                     Offset = 0,
                     OffsetLines = 0,
-                    //Value = trap.HoogteTotaal,
-                    Text = $"{(armY2 - armY1).ToString("0")}",
                     StrokeWidth = 1,
                     StrokeColor = "var(--neutral-foreground-rest, black)"
                 });
@@ -3999,7 +3936,7 @@
             }
 
 
-            if (bordes.Trap2?.AansluitendElement != null)
+            if (bordes.Trap2?.AansluitendElement != null || bordes.Trap2!.GebruikEigenOpgave)
             {
                 var c = bordes.Trap2;
                 t2L = bordes.Lengte - c.Randafstand - c.Lengte;
@@ -4032,18 +3969,15 @@
                 }
 
                 var armY1 = c.Breedte / 2.0;
-                var armY2 = c.Breedte + bordes.BreedteVersterkteStrook / 2.0;
                 returnList.Add(new SvgDimLine
                 {
                     Mode = DimLineMode.Vertical,
                     X1 = bordes.Lengte - c.Randafstand - c.Lengte / 2.0,
                     Y1 = -armY1,
                     X2 = bordes.Lengte - c.Randafstand - c.Lengte / 2.0,
-                    Y2 = -armY2,
+                    Y2 = vsY,
                     Offset = 0,
                     OffsetLines = 0,
-                    //Value = trap.HoogteTotaal,
-                    Text = $"{(armY2 - armY1).ToString("0")}",
                     StrokeWidth = 1,
                     StrokeColor = "var(--neutral-foreground-rest, black)"
                 });
@@ -4112,7 +4046,6 @@
                 Offset = trap.WelMaat,
                 OffsetLines = 3,
                 //Value = trap.HoogteTotaal,
-                Text = $"{trap.OptredeAantal1}×{trap.OptredeMaat:0.#} = {trap.HoogteTotaal:0}",
                 StrokeWidth = 1,
                 StrokeColor = "var(--neutral-foreground-rest, black)"
             });
@@ -4185,6 +4118,19 @@
                         Offset = -trap.TandOpleggingBovenzijde.TandHoogte,
                         OffsetLines = -2,
                     });
+
+                    returnList.Add(new SvgDimLine
+                    {
+                        Mode = DimLineMode.Horizontal,
+                        X1 = trap.LengteTotaal - trap.TandOpleggingBovenzijde.TandLengte - trap.TandOpleggingBovenzijde.HalsDikte,
+                        Y1 = -trap.HoogteTotaal + trap.TandOpleggingBovenzijde.TandHoogte,
+                        X2 = trap.LengteTotaal - trap.TandOpleggingBovenzijde.TandLengte,
+                        Y2 = -trap.HoogteTotaal,
+                        Offset = -trap.TandOpleggingBovenzijde.TandHoogte,
+                        OffsetLines = -2,
+                    });
+
+
 
                     returnList.Add(new SvgDimLine
                     {

@@ -3,6 +3,7 @@
 //using Mechanica.LiggerSB;
 using System.Text.Json.Serialization;
 using Construct.Domain.Common;
+using Plotly.Blazor.ConfigLib;
 
 namespace Construct.Domain.Entities
 {
@@ -68,10 +69,37 @@ namespace Construct.Domain.Entities
         public double BreedteEigenOpgave { get; set; } = 100;
         public double HoogteEigenOpgave { get; set; } = 105;
         public double Randafstand { get; set; } = 150;
+        public double EigenOpgaveG { get; set; } = 10.0;
+        public double EigenOpgaveQ { get; set; } = 5.0;
         public bool Gespiegeld { get; set; } = false;
 
 
-        
+        // helpers
+        public double G
+        {
+            get
+            {
+                if (GebruikEigenOpgave)
+                    return EigenOpgaveG;
+                else if (AansluitendElement is SteekTrapEntity trap)
+                    return trap.ReactieG;
+                else return 0;
+            }
+        }
+
+        public double Q
+        {
+            get
+            {
+                if (GebruikEigenOpgave)
+                    return EigenOpgaveQ;
+                else if (AansluitendElement is SteekTrapEntity trap)
+                    return trap.ReactieQ;
+                else return 0;
+            }
+        }
+
+        public double TandHoogte => Father.Hoogte - Hoogte;
 
 
         /// <summary>
@@ -157,8 +185,14 @@ namespace Construct.Domain.Entities
         {
             get
              {
-                 if (AansluitendElement == null) return (0, 0);
-                 else if (AansluitendElement is SteekTrapEntity steektrap)
+                if (AansluitendElement == null)
+                {
+                    if (GebruikEigenOpgave)
+                        return (EigenOpgaveG, EigenOpgaveQ);
+                    else 
+                        return (0, 0);
+                } 
+                else if (AansluitendElement is SteekTrapEntity steektrap)
                  {
                      return (steektrap.ReactieG, steektrap.ReactieQ);
                  }

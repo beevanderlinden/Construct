@@ -1,0 +1,182 @@
+﻿@using System.Globalization
+@inject IProjectStateService ProjectState
+
+@if(SteekTrap != null)
+{
+    <KaskonInputContainer Label="type">
+        <FluentSelectEnum TEnum="SteekTrapTypeEnum"
+                          ExcludeEnumItems="@excludedSteekTrapTypen.ToArray()"
+                          @bind-EnumSelectedValue="SteekTrap.SteekTrapType"></FluentSelectEnum>
+    </KaskonInputContainer>
+    
+
+    <KaskonInputContainer Label="bepaal L<sub>t</sub>">
+        <FluentSwitch @bind-Value="SteekTrap.GebruikEigenLengte" CheckedMessage="opgave gebruiker" UncheckedMessage="automatisch"></FluentSwitch>
+    </KaskonInputContainer>
+
+    @if (SteekTrap.GebruikEigenLengte)
+    {
+        <KaskonInputContainer>Eigen opgave van de theoretische lengte (horizontaal) van het element</KaskonInputContainer>
+        <KaskonInputContainer Label="opgave L<sub>t</sub>">
+            <input type="number"
+                   class="form-control"
+                   @bind="SteekTrap.LengteTotaal"
+                   @bind:after="OnModelChanged"
+                   min=500
+                   max=8000 />
+        </KaskonInputContainer>
+
+        
+
+
+    }
+    else
+    {
+        // Opgave aantal optreden, Lt is automatisch  
+        <KaskonInputContainer>De theoretische lengte (horizontaal) wordt bepaald door opgave aantal treden</KaskonInputContainer>
+
+        @* <KaskonInputContainer Label="L<sub>t</sub>">
+            <KitInputNumber T="double" Value="SteekTrap.LengteTotaal" Disabled="!true" Unit="mm" />
+        </KaskonInputContainer> *@
+
+        <KaskonInputContainer Label="aantal optreden">
+            <KitInputNumber T="int" Min="3" Max="23" Unit="st" @bind-Value="SteekTrap.OptredeAantal1" OnValueChanged="OnModelChanged" />
+        </KaskonInputContainer>
+
+
+
+        
+    }
+
+    <KaskonInputContainer Label="optrede ↕">
+        <KitInputNumber T="double" Min="100" Max="500" Unit="mm" @bind-Value="SteekTrap.OptredeMaat" OnValueChanged="OnModelChanged" />
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="aantrede ↔">
+        <KitInputNumber T="double" Min="180" Max="800" Unit="mm" @bind-Value="SteekTrap.AantredeMaat" OnValueChanged="OnModelChanged"/>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="wel">
+        <KitInputNumber T="double" Min="0" Max="50" Unit="mm" @bind-Value="SteekTrap.WelMaat" OnValueChanged="OnModelChanged" />
+    </KaskonInputContainer>
+
+   @*  <KaskonInputContainer Label="schuine/hoek">
+        <input type="text"
+               class="form-control"
+               value="@(SteekTrap.SchuineMaat.ToString("0.# mm") + $" / {SteekTrap.Hellingshoek:0.#} graden")"
+ 
+               disabled />
+    </KaskonInputContainer> *@
+
+
+    <KaskonInputContainer Label="schildikte">
+        <KitInputNumber T="double" Min="60" Max="400" Step="10" @bind-Value="SteekTrap.ProfielSchil.Hoogte" Unit="mm" OnValueChanged="OnModelChanged"/>
+
+       @*  <input type="number"
+               class="form-control"
+               @bind="SteekTrap.ProfielSchil.Hoogte"
+               @bind:after="OnModelChanged"
+               step=10
+               min=60
+               max=400> *@
+    </KaskonInputContainer>
+
+    <KaskonInputContainer>
+        <div class="form-control-text">@SteekTrap.Slankheid.EffectieveDikte</div>
+    </KaskonInputContainer>
+
+
+    <KaskonInputContainer Label="breedte [mm]">
+        <KitInputNumber T="double" Min="600" Max="4000" Step="100" @bind-Value="SteekTrap.Breedte" Unit="mm" />
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="afwerking [kN/m²]">
+        <KitInputNumber T="double" Min="0" Max="50" Step="0.5" @bind-Value="SteekTrap.BelastingAfwerking" Unit="kN/m²" />
+    </KaskonInputContainer>
+
+    <KaskonMilieuklasseDekking Boven="@SteekTrap.PlaatDekking.Boven"
+                               Onder="@SteekTrap.PlaatDekking.Onder"
+                               Merk="@SteekTrap.Merk"
+                               OnChanged="OnModelChanged" />
+
+   <br/>
+
+    @if(SteekTrap.TandOpleggingBovenzijde != null)
+    {
+
+
+
+        <KaskonInputContainer Label="<strong>tand boven</strong>"/>
+
+
+        <KaskonInputContainer Label="lengte boven" >
+
+        </KaskonInputContainer>
+
+        @if(SteekTrap.MinimaleTandhoogte > SteekTrap.TandOpleggingBovenzijde?.TandHoogte)
+        {
+            <div>Let op! Minimale tandhoogte = @SteekTrap.MinimaleTandhoogte mm</div>
+        }
+
+        <KaskonInputContainer Label="tand hoogte">
+            <KitInputNumber T="double" Min="@SteekTrap.MinimaleTandhoogte" Max="200" Step="10" @bind-Value="SteekTrap.TandOpleggingBovenzijde.TandHoogte" Unit="mm" OnValueChanged="OnModelChanged" />
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="tand lengte">
+            <KitInputNumber T="double" Min="100" Max="@SteekTrap.MaximaleTandLengte" Step="10" @bind-Value="SteekTrap.TandOpleggingBovenzijde.TandLengte" Unit="mm" OnValueChanged="OnModelChanged" />
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="dikte hals">
+            <div class="form-control-text">
+                @SteekTrap.TandOpleggingBovenzijde?.HalsDikte mm
+            </div>
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="haarspelden">
+            <FluentTextField @bind-Value="SteekTrap.TandOpleggingBovenzijde.WapeningAlgemeen.Tekst" />
+        </KaskonInputContainer>
+
+
+
+
+
+    }
+    
+
+
+
+
+
+
+}
+
+
+@code 
+{
+    [Parameter] public SteekTrapEntity? SteekTrap{ get; set; }
+    [Parameter] public EventCallback<SteekTrapEntity> SteekTrapChanged{ get; set; }
+    [CascadingParameter] public Action? RequestParentRefresh { get; set; }
+    void OnModelChanged() => RequestParentRefresh?.Invoke();
+    
+    // Nog geen raamwerk -> tot die tijd deze vormen uitsluiten
+    private List<SteekTrapTypeEnum> excludedSteekTrapTypen { get; set; } = [
+        SteekTrapTypeEnum.TrapBordes,
+        SteekTrapTypeEnum.BordesTrap,
+        SteekTrapTypeEnum.BordesTrapBordes,
+        SteekTrapTypeEnum.TrapBordesTrap,
+        SteekTrapTypeEnum.BordesTrapBordesTrap,
+        SteekTrapTypeEnum.TrapBordesTrapBordes,
+        SteekTrapTypeEnum.BordesTrapBordesTrapBordes,
+    ];
+
+
+
+
+
+
+
+
+
+
+
+}

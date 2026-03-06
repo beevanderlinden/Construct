@@ -13,7 +13,7 @@ namespace Construct.Domain.Entities
         public double RefY { get; set; } = 0;
         public string Orient { get; set; } = "auto";
 
-        public List<BaseSvg> Children { get; } = new();
+        public List<BaseSvg> Children { get; } = [];
 
         protected override void ApplyAttributes()
         {

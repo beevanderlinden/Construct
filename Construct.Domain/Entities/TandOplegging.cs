@@ -9,9 +9,12 @@ using System.Text.Json.Serialization;
 
 namespace Construct.Domain.Entities
 {
-    public class TandOplegging : INotifyPropertyChanged
+    public class TandOplegging : BaseEurocodeContext
     {
+        public override string Heading { get; set; } = "Tand";
+
         public event PropertyChangedEventHandler? PropertyChanged;
+
 
         protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
@@ -41,6 +44,7 @@ namespace Construct.Domain.Entities
 
             this._buigingTand = new BendingResults(beton ?? new(), this.ProfielTand, this.WapeningAlgemeen, this.SnedekrachtenTand)
             {
+                Heading = "Momentwapening tand",
                 PosLabel = "tand",
                 Name = "Tand",
                 IsGedrongenLigger = this.TandGedrongen,
@@ -388,7 +392,14 @@ namespace Construct.Domain.Entities
             get
             {
                 var beton = this.Father.Materiaal as BetonContext;
-                return new BendingResults(beton ?? new(), this.ProfielHals, this.WapeningAlgemeen, this.SnedekrachtenHals) { PosLabel="hals", Name = "Hals", IsGedrongenLigger = !true, LengteMaatBijGedrongenLiggerInMM = 2 * ArmVoorHals };
+                return new BendingResults(beton ?? new(), this.ProfielHals, this.WapeningAlgemeen, this.SnedekrachtenHals)
+                {
+                    Heading = "Momentwapening hals",
+                    PosLabel ="hals", 
+                    Name = "Hals",
+                    IsGedrongenLigger = !true, 
+                    LengteMaatBijGedrongenLiggerInMM = 2 * ArmVoorHals
+                };
             }
         }
 
@@ -434,18 +445,16 @@ namespace Construct.Domain.Entities
 
         public void Initialize(OpleggingContext context)
         {
+            var beton = Father?.Materiaal as BetonContext;
+
             if (Father != null && Father is SteekTrapEntity steektrap)
             {
-                // Stel de live delegate in
-                var beton = Father.Materiaal as BetonContext;
-
+                // ✅ Voor SteekTrapEntity: gebruik steektrap krachten
                 Oplegging.BerekenOplegReactieRekenwaarde = () => steektrap.Krachten.VEd;
                 Oplegging.BerekenLengteOndersteundeElement = () => steektrap.LengteTotaal;
                 Oplegging.BetonOndersteundeElement = beton ?? new();
 
-
-
-                Oplegging.OplegLengteNettoAanwezig = steektrap.TandOpleggingBovenzijde?.TandLengte ?? 50; // todo ONDER/BOVEN mogelijk maken.
+                Oplegging.OplegLengteNettoAanwezig = steektrap.TandOpleggingBovenzijde?.TandLengte ?? 50;
                 Oplegging.OplegBreedteNetto = context?.OplegBreedteNetto ?? 1000;
                 Oplegging.DetailleringWapening = context?.DetailleringWapening ?? OpleggingContext.DetailleringWapeningEnum.VerticaleHaarspelden;
                 Oplegging.DrogeVerbinding = context?.DrogeVerbinding ?? false;
@@ -456,11 +465,49 @@ namespace Construct.Domain.Entities
 
                 Oplegging.Update();
             }
+            else if (Father != null && Father is BordesEntity bordes)
+            {
+                // ✅ Voor BordesEntity: gebruik maximale reactiekracht van aansluitende trappen
+                Oplegging.BerekenOplegReactieRekenwaarde = () => Math.Abs(this.OplegReactie);
+                
+                // ✅ Lengte ondersteund element: gebruik langste trap (Trap1 of Trap2)
+                Oplegging.BerekenLengteOndersteundeElement = () =>
+                {
+                    double trap1Lengte = 0;
+                    double trap2Lengte = 0;
+                    
+                    if (bordes.Trap1?.AansluitendElement is SteekTrapEntity trap1)
+                        trap1Lengte = trap1.LengteTotaal;
+                    
+                    if (bordes.Trap2?.AansluitendElement is SteekTrapEntity trap2)
+                        trap2Lengte = trap2.LengteTotaal;
+                    
+                    return Math.Max(trap1Lengte, trap2Lengte);
+                };
+                
+                Oplegging.BetonOndersteundeElement = beton ?? new();
 
+                Oplegging.OplegLengteNettoAanwezig = this.TandLengte - this.VoegBreedte;
+                Oplegging.OplegBreedteNetto = context?.OplegBreedteNetto ?? bordes.Breedte;
+                Oplegging.DetailleringWapening = context?.DetailleringWapening ?? OpleggingContext.DetailleringWapeningEnum.VerticaleHaarspelden;
+                Oplegging.DrogeVerbinding = context?.DrogeVerbinding ?? false;
+                Oplegging.OpleggingElementType = context?.OpleggingElementType ?? OpleggingContext.OpleggingElementTypeEnum.AfzonderlijkElement;
+                Oplegging.OplegType = context?.OplegType ?? OplegTypeEnum.LIJNVORMIG;
+                Oplegging.OplegMateriaal = context?.OplegMateriaal ?? OplegMateriaalEnum.IHWG_BETON;
+                Oplegging.BetonsterkteklasseDragendeElement = context?.BetonsterkteklasseDragendeElement ?? BetonsterkteklasseEnum.C20_25;
+
+                Oplegging.Update();
+            }
         }
 
+        protected override void Bereken()
+        {
+            //
+        }
 
-
-
+        protected override bool Valideer()
+        {
+            return Meldingen.Count == 0;
+        }
     }
 }

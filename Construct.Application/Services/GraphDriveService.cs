@@ -210,7 +210,7 @@ namespace Construct.Application.Services
                         Item = item,
                         Path = fullPath,
                         WebUrl = item.WebUrl,
-                        Children = new()
+                        Children = []
                     };
 
                     parentList.Add(folderNode);

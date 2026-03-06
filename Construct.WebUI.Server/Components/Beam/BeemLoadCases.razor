@@ -144,7 +144,6 @@
 
                             @if (materiaal is BetonContext beton)
                             {
-                                <h3>Tabel hoofdwapening</h3>
                                 var tblM = BeamResultsHelper.GetTabelBendingResults(Beam, profiel, beton);
                                 <TableContentRenderer Table="tblM.Hoofd" Title="Momentwapening" />
 

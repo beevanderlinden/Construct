@@ -1,4 +1,5 @@
 ﻿@page "/Project/assemblages"
+@page "/Project/assemblages/{assemblageId}"
 @using Construct.Application.Interfaces
 @using Construct.Domain
 @inject IDialogService DialogService
@@ -22,14 +23,7 @@
 @* <FluentSwitch Value="_toonCardView"></FluentSwitch> Cardview: @_toonCardView *@
 
 
-@if (_geselecteerdeAssemblage != null &&
-_geselecteerdeAssemblage is SteekTrapEntity
-)
-{
-    <EditSteekTrap Visible="_wizardVisible" 
-    @bind-SteekTrap="@GeselecteerdeSteekTrap"
-    WizardClosed="WizardSteekTrapClosed"></EditSteekTrap>
-}
+
 
 
 @if (_geselecteerdeAssemblage != null)
@@ -40,6 +34,14 @@ _geselecteerdeAssemblage is SteekTrapEntity
         EditorClosed="WizardSteekTrapClosed"></EditAssemblage>
 }
 
+@if (_geselecteerdeAssemblage != null &&
+_geselecteerdeAssemblage is SteekTrapEntity
+)
+{
+    <EditSteekTrap Visible="_wizardVisible"
+                   @bind-SteekTrap="@GeselecteerdeSteekTrap"
+                   WizardClosed="WizardSteekTrapClosed"></EditSteekTrap>
+}
 
 
 <DataGridAssemblages 
@@ -55,12 +57,51 @@ DeleteItemClicked="DeleteItem" />
 
 
 @code {
+
     //[Parameter]
     //public Kaskon.Toolbox.PrefabModels.Project ToolboxProject { get; set; } = new(); // Cascading Value vanuit MainLayout
 
 
     [CascadingParameter] public ProjectEntity? ProjectEntity { get; set; }
     [CascadingParameter] public IProjectStateService? ProjectState { get; set; }
+
+    [Parameter] public string? AssemblageId { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(AssemblageId) && Guid.TryParse(AssemblageId, out var assemblageGuid))
+        {
+            // Zoek de assemblage op basis van de Guid
+            _geselecteerdeAssemblage = ProjectEntity?.Assemblages.FirstOrDefault(a => a.Id == assemblageGuid);
+
+            if (_geselecteerdeAssemblage != null)
+            {
+                // Assemblage gevonden, voer verdere logica uit
+                Console.WriteLine($"Assemblage gevonden: {_geselecteerdeAssemblage.Naam}");
+
+                // Als het een SteekTrapEntity is, stel deze in
+                if (_geselecteerdeAssemblage is SteekTrapEntity steekTrap)
+                {
+                    _geselecteerdeSteekTrap = steekTrap;
+                }
+
+                // Toon de wizard
+                _wizardVisible = true;
+                _datagridVisible = false;
+                _addButtonVisible = false;
+            }
+            else
+            {
+                // Assemblage niet gevonden
+                ToastService.ShowError("Assemblage niet gevonden.");
+            }
+        }
+        else
+        {
+            // Ongeldige of ontbrekende AssemblageId
+            //ToastService.ShowError("Ongeldige AssemblageId opgegeven.");
+        }
+    }
 
     private bool _toonCardView { get; set; } = !true;
     private AssemblageEntity? _geselecteerdeAssemblage { get; set; } = null; // geselecteerde item (voor wizard) 
@@ -116,7 +157,7 @@ DeleteItemClicked="DeleteItem" />
 
     protected override void OnInitialized()
     {
-        ProjectState.OnProjectChanged += OnProjectChangedHandler;
+        ProjectState!.OnProjectChanged += OnProjectChangedHandler;
 
         LaadItems();
     }
@@ -133,7 +174,7 @@ DeleteItemClicked="DeleteItem" />
 
     public void Dispose()
     {
-        ProjectState.OnProjectChanged -= OnProjectChangedHandler;
+        ProjectState!.OnProjectChanged -= OnProjectChangedHandler;
     }
 
 

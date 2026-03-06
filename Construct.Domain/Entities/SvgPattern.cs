@@ -11,7 +11,7 @@ namespace Construct.Domain.Entities
         public double Height { get; set; }
         public string PatternUnits { get; set; } = "userSpaceOnUse";
 
-        public List<BaseSvg> Children { get; } = new();
+        public List<BaseSvg> Children { get; } = [];
 
         protected override void ApplyAttributes()
         {

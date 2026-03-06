@@ -277,7 +277,7 @@
         private int _index;
 
         public char CurrentCommand { get; private set; }
-        public List<double> CurrentNumbers { get; private set; } = new();
+        public List<double> CurrentNumbers { get; private set; } = [];
 
         public PathTokenizer(string data)
         {
@@ -315,7 +315,7 @@
 
         private List<double> ParseNumbers()
         {
-            List<double> numbers = new();
+            List<double> numbers = [];
 
             while (true)
             {

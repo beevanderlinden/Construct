@@ -1,0 +1,162 @@
+@inject IProjectFileService ProjectFileService
+@inject IFileService FileService
+@inject IToastService ToastService
+@inject IWebHostEnvironment Env
+
+@code {
+    [Parameter]
+    public bool IsOpen { get; set; }
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+    [Parameter]
+    public EventCallback<ProjectFileInfo> OnSelectDefault { get; set; }
+}
+
+@if (IsOpen)
+{
+    <FluentDialog @bind-Hidden="@IsOpen"
+                  Modal="true"
+                  TrapFocus="true"
+                  aria-label="Selecteer een default project">
+        <FluentDialogHeader ShowDismiss="true">
+            <FluentStack VerticalAlignment="VerticalAlignment.Center">
+                <FluentIcon Value="@(new Icons.Regular.Size24.FolderOpen())" />
+                <FluentLabel Typo="Typography.PaneHeader">
+                    Default projecten
+                </FluentLabel>
+            </FluentStack>
+        </FluentDialogHeader>
+        <FluentDialogBody>
+            @if (isLoading)
+            {
+                <FluentProgressRing />
+                <p>Defaults aan het laden...</p>
+            }
+            else if (defaultProjects.Any())
+            {
+                <FluentStack Orientation="Orientation.Vertical" VerticalGap="8">
+                    @foreach (var project in defaultProjects)
+                    {
+                        <FluentCard Style="cursor: pointer; padding: 1rem;"
+                                   @onclick="@(() => SelectDefault(project))">
+                            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                                <FluentIcon Value="@(new Icons.Regular.Size24.Document())" Color="Color.Accent" />
+                                <FluentStack Orientation="Orientation.Vertical">
+                                    <FluentLabel Typo="Typography.Body" Style="font-weight: 600;">
+                                        @(project.Info?.Naam ?? Path.GetFileName(project.FilePath))
+                                    </FluentLabel>
+                                    @if (!string.IsNullOrEmpty(project.Info?.Nummer))
+                                    {
+                                        <FluentLabel Typo="Typography.Body">
+                                            @project.Info.Nummer
+                                        </FluentLabel>
+                                    }
+                                    <FluentLabel Typo="Typography.Body" Color="Color.Lightweight">
+                                        @($"{project.SizeInKB:F1} KB")
+                                        @if (project.LastModified != default)
+                                        {
+                                            <text> • @project.LastModified.ToString("dd-MM-yyyy")</text>
+                                        }
+                                    </FluentLabel>
+                                </FluentStack>
+                            </FluentStack>
+                        </FluentCard>
+                    }
+                </FluentStack>
+            }
+            else
+            {
+                <FluentMessageBar Intent="MessageIntent.Info">
+                    <FluentIcon Value="@(new Icons.Regular.Size24.Info())" Slot="icon" />
+                    Geen default projecten gevonden in de map: <code>@defaultsFolder</code>
+                </FluentMessageBar>
+            }
+        </FluentDialogBody>
+        <FluentDialogFooter>
+            <FluentButton Appearance="Appearance.Neutral" OnClick="@CloseDialog">
+                Annuleren
+            </FluentButton>
+        </FluentDialogFooter>
+    </FluentDialog>
+}
+
+@code {
+    private bool isLoading = false;
+    private List<ProjectFileInfo> defaultProjects = new();
+    private string defaultsFolder = "wwwroot/defaults";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen)
+        {
+            await LoadDefaultProjectsAsync();
+        }
+    }
+
+    private async Task LoadDefaultProjectsAsync()
+    {
+        isLoading = true;
+        defaultProjects.Clear();
+
+        var webRootPath = Env.WebRootPath;
+        var defaultsPath = Path.Combine(webRootPath, "defaults");
+        defaultsFolder = defaultsPath;
+
+        if (!Directory.Exists(defaultsPath))
+        {
+            Directory.CreateDirectory(defaultsPath);
+            isLoading = false;
+            StateHasChanged();
+            return;
+        }
+
+        var files = Directory.GetFiles(defaultsPath, "*.cprj");
+
+        foreach (var filePath in files)
+        {
+            try
+            {
+                var bytes = await File.ReadAllBytesAsync(filePath);
+                var base64 = Convert.ToBase64String(bytes);
+                var fileInfo = new FileInfo(filePath);
+                var projectInfo = await ProjectFileService.LeesProjectInfoUitBytesAsync(bytes);
+                if (projectInfo == null)
+                {
+                    Console.WriteLine($"Kon ProjectInfo niet lezen uit {filePath}");
+                    continue;
+                }
+                defaultProjects.Add(new ProjectFileInfo
+                {
+                    FilePath = filePath,
+                    Base64 = base64,
+                    Info = projectInfo,
+                    SizeInKB = fileInfo.Length / 1024.0,
+                    LastModified = fileInfo.LastWriteTime
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Fout bij laden bestand {filePath}: {ex.Message}");
+            }
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task SelectDefault(ProjectFileInfo projectInfo)
+    {
+        if (OnSelectDefault.HasDelegate)
+        {
+            await OnSelectDefault.InvokeAsync(projectInfo);
+        }
+        await CloseDialog();
+    }
+
+    private async Task CloseDialog()
+    {
+        if (OnClose.HasDelegate)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+}

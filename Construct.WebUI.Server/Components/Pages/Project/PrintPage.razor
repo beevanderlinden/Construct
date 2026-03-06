@@ -31,6 +31,7 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @inject IJSRuntime JS
 @inject ISvgToBitmapService SvgService
+@inject NavigationManager NavigationManager
 
 
 
@@ -887,19 +888,21 @@ else
         section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
 
 
+
+
         section.Elements.Add(new ParagraphContent("Gebruikte normen", "Kop 3"));
 
         var prefix = proj?.ProjectInfo.Grondslagen.NormPrefix ?? "CEN";
         var parNormen = new ParagraphContent();
-        parNormen.Markdown += $"{prefix}-EN 1990: Eurocode 0, Grondslag van het constructief ontwerp\r\n";
-        parNormen.Markdown += $"{prefix}-EN 1991: Eurocode 1, Belastingen op constructies<br />";
-        parNormen.Markdown += $"{prefix}-EN 1992: Eurocode 2, Ontwerp en berekening van betonconstructies<br />";
-        parNormen.Markdown += $"{prefix}-EN 206-1: Beton- specificatie, eigenschappen, vervaardiging en conformiteit<br />";
-        parNormen.Markdown += $"{prefix}-EN 13369: Algemene bepalingen voor vooraf vervaardigde betonproducten<br />";
+        parNormen.Markdown += $"- **{prefix}-EN 1990** : Eurocode 0, Grondslag van het constructief ontwerp\r\n";
+        parNormen.Markdown += $"- **{prefix}-EN 1991** : Eurocode 1, Belastingen op constructies<br />";
+        parNormen.Markdown += $"- **{prefix}-EN 1992** : Eurocode 2, Ontwerp en berekening van betonconstructies<br />";
+        parNormen.Markdown += $"- **{prefix}-EN 206-1** : Beton- specificatie, eigenschappen, vervaardiging en conformiteit<br />";
+        parNormen.Markdown += $"- **{prefix}-EN 13369** : Algemene bepalingen voor vooraf vervaardigde betonproducten<br />";
 
         if(prefix != "CEN")
         {
-            parNormen.Markdown += $"*bovengenoemde normen zijn inclusief de bijbehorende Nationale Bijlage (NB)*<br /><br />";
+            parNormen.Markdown += $"bovengenoemde normen zijn inclusief de bijbehorende Nationale Bijlage (NB)<br /><br />";
         }
 
 
@@ -996,7 +999,9 @@ else
             [new("*req*", width1), new("benodigd (required)", width2)],
             [new("*min/max/nom*", width1), new("minimaal/maximaal/nominaal", width2)],
     ];
-        section.Elements.Add(units);
+        //section.Elements.Add(units);
+
+
 
 
         // check alle assemblages voor gelijke materialen
@@ -1010,6 +1015,36 @@ else
         content.Sections.Add(section);
 
     }
+
+    public void SetInhoudsopgave(DocumentContent  content, List<AssemblageEntity> assemblages)
+    {
+        if (ProjectState?.CurrentProject is not ProjectEntity proj)
+        {
+            return;
+        }
+
+        var section = new SectionContent();
+
+        section.Elements.Add(new ParagraphContent("Inhoudsopgave", "Kop 1"));
+        section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
+
+        // ✅ Voeg eerst document hoofdstukken toe
+        section.Elements.Add(new ParagraphContent($"<a href='#uitgangspunten' onclick=\"scrollToBookmark('uitgangspunten'); return false;\" class='bookmark-link'>Uitgangspunten</a>"));
+
+        // ✅ Dan per assemblage: alleen de EERSTE heading (niet de vervolg pagina's)
+        foreach (var a in assemblages)
+        {
+            // Maak een unieke ID voor de link (gebruik assemblage Id)
+            var merkId = $"assemblage-{a?.Id}";
+            var linkText = $"<a href='#{merkId}' onclick=\"scrollToBookmark('{merkId}'); return false;\" class='bookmark-link'>{a?.Merk ?? "?"} - {a?.Naam ?? ""}</a>";
+            // Gebruik dezelfde patroon als HeadingContent - voeg direct toe aan Elements
+            section.Elements.Add(new ParagraphContent(linkText));
+        }
+
+
+        content.Sections.Add(section);
+    }
+
 
     /// <summary>
     /// Voeg een validatie sectie toe met alle verzamelde berichten
@@ -1112,144 +1147,31 @@ else
 
         foreach (var assemblage in ProjectState.CurrentProject.Assemblages)
         {
-            var validation = result.AddAssemblage(assemblage.Merk ?? "Merk(?)", assemblage?.Naam ?? "Naam(?)");
-
             try
             {
-                // Bereken/update assemblage om meldingen te verzamelen
+                // ✅ Bijwerken zorgt ervoor dat assemblage.Validation wordt gemaakt
                 assemblage?.Bijwerken();
 
-                // AssemblageEntity heeft geen Meldingen property, deze worden verzameld uit child objecten
-
-                // Check specifieke condities per type
-                if (assemblage is BordesEntity bordes)
+                // ✅ Gebruik de validatie die de assemblage zelf heeft gemaakt
+                if (assemblage?.Validation != null)
                 {
-                    ValidateBordes(bordes, validation);
-                }
-                else if (assemblage is SteekTrapEntity trap)
-                {
-                    ValidateSteekTrap(trap, validation);
-                }
-                else if (assemblage is LiggerEntity ligger)
-                {
-                    ValidateLigger(ligger, validation);
+                    result.AssemblageValidations.Add(assemblage.Validation);
                 }
             }
             catch (Exception ex)
             {
+                // Maak een foutmelding als er een exception optreedt
+                var validation = result.AddAssemblage(
+                    assemblage?.Merk ?? "Merk(?)", 
+                    assemblage?.Naam ?? "Naam(?)", 
+                    assemblage
+                );
                 validation.AddError($"Fout bij validatie: {ex.Message}");
             }
         }
 
         await Task.CompletedTask;
         return result;
-    }
-
-    /// <summary>
-    /// Valideer specifiek een bordes element
-    /// </summary>
-    private void ValidateBordes(BordesEntity bordes, AssemblageValidation validation)
-    {
-        // Check stroken voor dwarskrachtwapening
-        foreach (var strook in bordes.Stroken)
-        {
-            if (strook.DwarskrachtCollectie.Any(v => v.IsDwarskrachtWapeningBenodigd()))
-            {
-                var vMax = strook.DwarskrachtCollectie.OrderByDescending(v => v.Ved).FirstOrDefault();
-                validation.AddWarning(
-                    $"Strook '{strook.Naam}': dwarskrachtwapening benodigd",
-                    $"VEd = {vMax?.Ved:0.#} kN > VRd,c = {vMax?.DwarskrachtWeerstand:0.#} kN"
-                );
-            }
-
-            // ✅ Check buigwapening via Meldingen van BendingResults
-            foreach (var bendingResult in strook.BendingResults)
-            {
-                if (bendingResult.Meldingen.Any())
-                {
-                    foreach (var melding in bendingResult.Meldingen)
-                    {
-                        if (melding.Type == MeldingType.Error)
-                        {
-                            validation.AddError($"Strook '{strook.Naam}': {melding.Bericht}");
-                        }
-                        else if (melding.Type == MeldingType.Waarschuwing)
-                        {
-                            validation.AddWarning($"Strook '{strook.Naam}': {melding.Bericht}");
-                        }
-                    }
-                }
-            }
-        }
-
-        // Check tand
-        if (bordes.Tand != null)
-        {
-            if (bordes.Tand.DwarskrachtTand != null && 
-                Math.Abs(bordes.Tand.DwarskrachtTand.Ved) > bordes.Tand.DwarskrachtTand.DwarskrachtWeerstandBeton)
-            {
-                validation.AddError("Tand: dwarskrachtwapening nodig (niet toegestaan)");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Valideer specifiek een steektrap element
-    /// </summary>
-    private void ValidateSteekTrap(SteekTrapEntity trap, AssemblageValidation validation)
-    {
-        foreach (var melding in trap.Meldingen.Where(m => m!= null))
-        {
-            switch (melding.Type)
-            {
-                case MeldingType.Error:
-                case MeldingType.Error | MeldingType.Waarschuwing:
-                case MeldingType.Waarschuwing:
-                
-                validation.AddWarning($"trap '{trap.Merk}': {melding.Bericht}");
-                    break;
-            }
-
-
-           
-        }
-
-
-
-        // Check dwarskracht
-        if (trap.Dwarskracht != null && trap.Dwarskracht.Ved > trap.Dwarskracht.DwarskrachtWeerstandBeton)
-        {
-            validation.AddWarning(
-                "Dwarskrachtwapening benodigd",
-                $"VEd = {trap.Dwarskracht.Ved:0.#} kN > VRd,c = {trap.Dwarskracht.DwarskrachtWeerstandBeton:0.#} kN"
-            );
-        }
-        
-        // Check scheurwijdte
-        if (trap.Scheurwijdte != null && !trap.Scheurwijdte.IsValidated)
-        {
-            validation.AddWarning("Scheurwijdte mogelijk niet voldaan");
-        }
-        
-        // Check tand
-        if (trap.TandOpleggingBovenzijde != null)
-        {
-            var tand = trap.TandOpleggingBovenzijde;
-            if (tand.DwarskrachtTand != null && 
-                tand.DwarskrachtTand.Ved > tand.DwarskrachtTand.DwarskrachtWeerstandBeton)
-            {
-                validation.AddError("Tand: dwarskrachtwapening nodig (niet toegestaan)");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Valideer specifiek een ligger element
-    /// </summary>
-    private void ValidateLigger(LiggerEntity ligger, AssemblageValidation validation)
-    {
-        // SBLigger heeft geen BendingResults property
-        // Validatie zou via andere mechanismen moeten gaan
     }
 
     /// <summary>
@@ -1262,31 +1184,83 @@ else
             ToastService.ShowSuccess(validationResult.GetSummary());
             return;
         }
-        
+
         // Toon samenvatting
         if (validationResult.HasErrors)
         {
             ToastService.ShowError($"{validationResult.TotalErrors} error(s) gevonden in document");
         }
-        
+
         if (validationResult.HasWarnings)
         {
             ToastService.ShowWarning($"{validationResult.TotalWarnings} waarschuwing(en) gevonden in document");
         }
-        
+
         // Toon per assemblage (max 5)
         var topIssues = validationResult.AssemblageValidations
             .Where(a => a.HasErrors || a.HasWarnings)
             .Take(5);
-        
+
         foreach (var validation in topIssues)
         {
             var message = validation.GetSummary();
             if (validation.HasErrors)
                 ToastService.ShowError(message);
-            else if (validation.HasWarnings)
-                ToastService.ShowWarning(message);
+
+            if (validation.HasWarnings)
+            {
+                var assemblage = validation.Data as AssemblageEntity;
+                var tr = ToastResult.Ok(assemblage);
+                message = "Dit merk is niet akkoord.";
+                ToastService.ShowCommunicationToast(new ToastParameters<CommunicationToastContent>()
+                {
+                    Intent = ToastIntent.Warning,
+                    Title = "Merk : " + validation.Merk,
+                    Timeout = 8000,
+                    PrimaryAction = "⚙️ Merk bijwerken",
+                    OnPrimaryAction = EventCallback.Factory.Create<ToastResult>(this, () => ClickedPrimary(tr)),
+                    Content = new CommunicationToastContent()
+                    {
+                        //Subtitle = validation.Merk,
+                        Details = message,
+                    },
+
+                });
+            }
+
+            if (!validation.HasWarnings && !validation.HasErrors)
+            {
+                var tr = ToastResult.Ok(validation.Data as AssemblageEntity);
+                ToastService.ShowCommunicationToast(new ToastParameters<CommunicationToastContent>()
+                {
+                    Intent = ToastIntent.Success,
+                    Title = validation.Merk,
+                    Timeout = 8000,
+                    PrimaryAction = "✅ bewerkt",
+                    OnPrimaryAction = EventCallback.Factory.Create<ToastResult>(this, () => ClickedPrimary(tr)),
+                    Content = new CommunicationToastContent()
+                    {
+                        Subtitle = validation.Merk,
+                        Details = message,
+                    },
+
+                });
+            }
         }
+    }
+
+    private void ClickedPrimary(ToastResult? result)
+    {
+        var assemblage = result.Data as AssemblageEntity;
+        if (result.Data is AssemblageEntity assembly)
+        {
+            NavigationManager.NavigateTo($"/Project/assemblages/{assemblage?.Id}");
+        }
+        else
+        {
+            NavigationManager.NavigateTo($"/Project/assemblages");
+        }
+
     }
 
     private async Task<DocumentContent> GenerateDocumentContent(DocumentValidationResult? validationResult, bool createToc = !true)
@@ -1323,6 +1297,7 @@ else
 
 
 
+            SetInhoudsopgave(content, proj.Assemblages);
 
             SetUitgangspunten(content, proj.ProjectInfo.Grondslagen, proj.Assemblages);
 
@@ -1340,7 +1315,9 @@ else
                     a.Bijwerken();
 
                     section = new SectionContent();
-                    string title = $"<span class='titel'>{a.Merk}</span> <span class='subtitel'>{a.Naam}</span>";
+                    // Voeg een unieke ID toe aan de heading voor bookmarks
+                    var merkId = $"assemblage-{a.Id}";
+                    string title = $"<span id='{merkId}' class='titel'>{a.Merk}</span> <span class='subtitel'>{a.Naam}</span>";
                     section.Elements.Add(new HeadingContent(title, 1));
                     section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
 

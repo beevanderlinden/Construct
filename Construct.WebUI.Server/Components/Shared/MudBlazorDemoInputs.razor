@@ -1,0 +1,15 @@
+@using MudBlazor
+
+<MudText Typo="Typo.h5">MudBlazor Input Demo</MudText>
+
+
+
+<MudNumericField @bind-Value="_numDouble"/>
+<MudNumericField @bind-Value="_numDouble" />
+
+
+@code
+{
+    private double _numDouble;
+    private int _numInt;
+}

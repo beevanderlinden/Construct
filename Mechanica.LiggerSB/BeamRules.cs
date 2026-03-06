@@ -1302,7 +1302,7 @@ namespace Mechanica.SimpleBeam
         }
 
 
-        public ObservableCollection<ILoad> Loads { get; internal set; } = new();
+        public ObservableCollection<ILoad> Loads { get; internal set; } = [];
 
         /// <summary>
         /// Convienience property voor MyEd (max. moment)
@@ -1411,7 +1411,7 @@ namespace Mechanica.SimpleBeam
             }
 
             // Meerdere combinaties
-            BeamResultCollection results = new();
+            BeamResultCollection results = [];
             ResultCollection resultCollection = new();
             foreach (var comb in LoadContext.BelastingCombinaties)
             {
@@ -1816,7 +1816,7 @@ namespace Mechanica.SimpleBeam
             }
 
 
-            List<double> punten = new() { 0, mid, b.Length };
+            List<double> punten = [0, mid, b.Length];
 
             
             Console.WriteLine($"R(A)={b.StartVerticalReaction:F2} kN, R(B)={b.EndVerticalReaction:F2} kN");
@@ -1854,7 +1854,7 @@ namespace Mechanica.SimpleBeam
                 while (!placed)
                 {
                     if (layerIndex >= layers.Count)
-                        layers.Add(new List<ILoad>());
+                        layers.Add([]);
 
                     var layer = layers[layerIndex];
 

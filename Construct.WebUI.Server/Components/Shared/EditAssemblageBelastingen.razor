@@ -1,0 +1,128 @@
+﻿@using Eurocode.Belastingen
+@using Construct.Domain.Entities
+
+@if (Model is null)
+{
+    <p>Geen belastingen beschikbaar.</p>
+}
+else
+{
+    <KaskonInputContainer Label="gebruiksklasse">
+        <FluentSelectEnum LabelPosition="LabelPosition.Top"
+                          TEnum="Eurocode.Belastingen.GebruiksklasseEnum"
+                          @bind-EnumSelectedValue="Model.Gebruiksklasse"></FluentSelectEnum>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="afwerking">
+        <KitInputNumber T="double" @bind-Value="Model.AfwerkingVlaklast" Min="0" Max="5" Step="0.1" Unit="kN/m²" />
+    </KaskonInputContainer>
+
+    <br />
+
+    <KaskonInputContainer Label="gebruiksklasse">
+        <div class="form-control-text">@Model.GebruiksklasseUserFriendlyName</div>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="momentaan factoren">
+        <div class="form-control-text">
+            <i>ψ<sub>0</sub></i> = @Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom0.ToString("0.0#") | 
+            <i>ψ<sub>1</sub></i> = @Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom1.ToString("0.0#") | 
+            <i>ψ<sub>2</sub></i> = @Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom2.ToString("0.0#")
+        </div>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="vlaklast">
+        <div class="form-control-text">
+            <i>q<sub>k</sub></i> = @Model.Belastingen.BelastingGevallen.LastOrDefault()?.OpgelegdeBelastingen.Vlaklast kN/m²
+        </div>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="puntlast">
+        <div class="form-control-text">
+            <i>Q<sub>k</sub></i> = @Model.Belastingen.BelastingGevallen.LastOrDefault()?.OpgelegdeBelastingen.Puntlast kN
+        </div>
+    </KaskonInputContainer>
+
+
+
+   
+    <br />
+
+    <KaskonInputContainer Label="eigen gewicht">
+        <div class="form-control-text">
+            @Model.EigenGewichtPerM2.ToString("0.0#") kN/m²
+        </div>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="afwerking">
+        <div class="form-control-text">
+            @Model.AfwerkingVlaklast.ToString("0.0#") kN/m²
+        </div>
+    </KaskonInputContainer>
+
+   
+
+    <KaskonInputContainer Label="permanent totaal">
+        <div class="form-control-text">
+            @Model.PermanenteBelastingPerM2.ToString("0.0#") kN/m²
+        </div>
+    </KaskonInputContainer>
+
+
+   
+
+    <KaskonInputContainer Label="gevallen en combinaties">
+        <FluentButton Appearance="Appearance.Stealth"
+                      OnClick="@(() => _belastingenDialogHidden = false)"
+                      IconStart="@(new Icons.Regular.Size32.MoreHorizontal())">
+        </FluentButton>
+    </KaskonInputContainer>
+
+    @if (!_belastingenDialogHidden)
+    {
+        <div class="modal-backdrop custom-blur" @onclick="@(() => _belastingenDialogHidden = true)">
+            <div class="modal-content-base modal-content-extra-wide" @onclick:stopPropagation="true">
+                <div class="modal-header">
+                    <FluentStack VerticalAlignment="VerticalAlignment.Center" Style="gap: 0.5rem;">
+                        <FluentIcon Value="@(new Icons.Regular.Size24.DataBarVertical())" />
+                        <h1>Belastingen - @Model.Merk</h1>
+                    </FluentStack>
+                    <FluentButton Appearance="Appearance.Stealth"
+                                  OnClick="@(() => _belastingenDialogHidden = true)">
+                        <FluentIcon Value="@(new Icons.Regular.Size24.Dismiss())" />
+                    </FluentButton>
+                </div>
+
+                <div class="modal-body">
+                    <h3>Opgelegde belastingen</h3>
+                    <KaskonInputContainer Label="<i>q<sub>k</sub></i>">
+                        @Model.Belastingen.BelastingGevallen.FirstOrDefault()?.OpgelegdeBelastingen.Vlaklast kN/m²
+                    </KaskonInputContainer>
+
+                    <KaskonInputContainer Label="<i>Q<sub>k</sub></i>">
+                        @Model.Belastingen.BelastingGevallen.FirstOrDefault()?.OpgelegdeBelastingen.Puntlast kN
+                    </KaskonInputContainer>
+                    
+                    <h3>Belastinggevallen</h3>
+                    <KitBelastingGevallen Model="@Model.Belastingen"></KitBelastingGevallen>
+
+                    <h3>Belastingcombinaties</h3>
+                    <KitBelastingCombinaties Model="@Model.Belastingen" ShowMomentaanFactoren="true"></KitBelastingCombinaties>
+                </div>
+
+                <div class="modal-footer">
+                    <FluentButton Appearance="Appearance.Accent" 
+                                  OnClick="@(() => _belastingenDialogHidden = true)">
+                        Sluiten
+                    </FluentButton>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public AssemblageEntity? Model { get; set; }
+    [Parameter] public EventCallback<AssemblageEntity> ModelChanged { get; set; }
+    private bool _belastingenDialogHidden = true;
+}

@@ -1,0 +1,62 @@
+﻿@using Construct.Domain.Entities
+@using Eurocode.Belastingen
+@using Eurocode.Grondslagen
+@using Microsoft.AspNetCore.Components
+@inject IToastService ToastService
+
+
+<KaskonInputContainer Label="gebruiksklasse (standaard)">
+    <FluentSelectEnum TEnum="Eurocode.Belastingen.GebruiksklasseEnum" Style="max-width:120mm"
+                      @bind-EnumSelectedValue="@SelectedGebruiksklasse" />
+</KaskonInputContainer>
+
+
+    @if (gebruiksklasseChanged && Project?.Assemblages?.Any() == true)
+    {
+        <KaskonInputContainer Label="bijwerken">
+            <FluentButton Appearance="Appearance.Accent" OnClick="UpdateAssemblages">
+                Pas alle assemblages aan naar nieuwe gebruiksklasse
+            </FluentButton>
+        </KaskonInputContainer>
+
+    }
+
+
+
+@code {
+    [Parameter]
+    public ProjectEntity? Project { get; set; }
+
+    private GebruiksklasseEnum? SelectedGebruiksklasse
+    {
+        get => Project?.DefaultGebruiksklasse ?? null;
+        set
+        {
+            if (Project != null && Project.DefaultGebruiksklasse != value)
+            {
+                Project.DefaultGebruiksklasse = value;
+                gebruiksklasseChanged = true;
+            }
+        }
+    }
+
+    private bool gebruiksklasseChanged = false;
+
+    private void UpdateAssemblages()
+    {
+        if (Project?.Assemblages == null)
+            return;
+
+        foreach (var assemblage in Project.Assemblages)
+        {
+            // Assemblages die een gebruiksklasse property hebben
+            var prop = assemblage.GetType().GetProperty("Gebruiksklasse");
+            if (prop != null && prop.PropertyType == typeof(Eurocode.Belastingen.GebruiksklasseEnum?))
+            {
+                prop.SetValue(assemblage, Project.DefaultGebruiksklasse);
+            }
+        }
+        gebruiksklasseChanged = false;
+        ToastService.ShowSuccess("Alle assemblages zijn bijgewerkt naar de nieuwe gebruiksklasse.");
+    }
+}

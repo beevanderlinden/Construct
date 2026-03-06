@@ -22,7 +22,7 @@ public static class BeamResultsHelper
     private static List<(double X, string Position, InternalForces Forces)> GetKritiekePunten(SBLigger beam)
     {
         // Verzamel alle moment/shear data
-        var allResults = beam.ResultCollection?.All?.ToList() ?? new();
+        var allResults = beam.ResultCollection?.All?.ToList() ?? [];
         
         if (allResults.Count == 0)
             return [];
@@ -264,6 +264,7 @@ public static class BeamResultsHelper
             new(new("positie", "4cm")),
             new(new("vlak", "4cm")),
             new(new("*d*")),
+            new(new("*x/d*")),
             new(new("*M~y,Ed~* [kNm]", "4cm")),
             new(new("*A~s,req~* [mm²]", "4cm")),
             new(new("*A~s,prov~* [mm²]", "4cm")),
@@ -315,9 +316,10 @@ public static class BeamResultsHelper
             hoofd.Rows.Add([
                 new(p.Position, "2cm"),
                 new(vlak, "2cm"),
-                new(bending.D.ToString("0.0"), "2cm"),
-                new(My.ToString("0.0", CultureInfo.InvariantCulture), "4cm"),
-                new(asReq.ToString("0", CultureInfo.InvariantCulture), "4cm"),
+                new(bending.D.ToString("0.0"), "1.5cm"),
+                new(bending.XuD.ToString("0.###"), width: "1.5cm"),
+                new(My.ToString("0.0", CultureInfo.InvariantCulture), "3cm"),
+                new(asReq.ToString("0", CultureInfo.InvariantCulture), "3cm"),
                 new($"{asProvTekst}", "4cm"),
                 new($"{uc:0.00}" + (uc > 1.01? "⚠️" : ""),"2cm")
             ]);

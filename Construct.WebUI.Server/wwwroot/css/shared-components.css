@@ -1,0 +1,95 @@
+/* Shared component styles voor hergebruik */
+
+/* Readonly field styling - gebruikt in EditBordesGeometry en BetonDekkingDuoEditor */
+.readonly-field {
+    background-color: #e9ecef !important;
+    border-color: #ced4da;
+    color: #6c757d;
+    cursor: not-allowed;
+}
+
+
+
+/* Modal backdrop - gebruikt voor custom popups - overschrijft Bootstrap */
+.modal-backdrop.custom-blur {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(240, 240, 240, 0.3) !important;
+    backdrop-filter: blur(1px) saturate(120%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(180%) !important; /* Safari support */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 1000 !important;
+    animation: fadeIn 0.2s ease-in-out !important;
+}
+
+/* Modal content base styling */
+.modal-content-base {
+    background: var(--neutral-layer-1, white);
+    border-radius: 8px;
+    max-width: 95vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Modal header */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--neutral-stroke-divider, #e0e0e0);
+}
+
+/* Modal body */
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Modal footer */
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--neutral-stroke-divider, #e0e0e0);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+/* Modal varianten - verschillende breedtes */
+.modal-content-standard {
+    width: 800px;
+}
+
+.modal-content-wide {
+    width: 900px;
+}
+
+.modal-content-extra-wide {
+    width: 1200px;
+}
+
+/* Animaties */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

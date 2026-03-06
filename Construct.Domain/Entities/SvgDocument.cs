@@ -27,9 +27,9 @@ namespace Construct.Domain.Entities
         public string? Background { get; set; } = null; // optioneel
 
         // Jouw paths, texts, lines gaan hier in
-        public List<BaseSvg> Children { get; } = new();
+        public List<BaseSvg> Children { get; } = [];
         // 🔥 NIEUWE FEATURE: los HTML/SVG fragmenten
-        public List<string> RawFragments { get; } = new();
+        public List<string> RawFragments { get; } = [];
 
         public SvgDocument(double width, double height)
         {

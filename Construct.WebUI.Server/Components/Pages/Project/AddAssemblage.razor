@@ -175,6 +175,7 @@
             Merk = "TR-1",
             Materiaal = betonMaterialContext,  // ✅ Voeg materiaal toe
             MateriaalId = betonMaterialContext.Id,  // ✅ En ID
+            Gebruiksklasse = ProjectEntity.DefaultGebruiksklasse,
         };
 
         steekTrap.Belastingen.GenereerBelastingCombinaties(steekTrap.Belastingen, steekTrap.Belastingen.BelastingGevallen, steekTrap.Belastingen.CombinatiesTypes);
@@ -312,6 +313,8 @@
                         Lengte = 2550,
                         Materiaal = betonMaterialContextBordes,  // ✅ Voeg materiaal toe
                         MateriaalId = betonMaterialContextBordes.Id,  // ✅ En ID
+                        Gebruiksklasse = ProjectEntity.DefaultGebruiksklasse,
+                        
 
                     };
                     

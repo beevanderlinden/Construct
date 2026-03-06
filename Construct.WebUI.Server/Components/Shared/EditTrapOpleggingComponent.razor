@@ -1,0 +1,149 @@
+﻿@using Construct.Domain.Entities
+
+@if (TrapOplegging?.AansluitendElement != null)
+{
+    <KaskonInputContainer Label="randafstand">
+        <KitInputNumber T="double"
+                        @bind-Value="TrapOplegging.Randafstand"
+                        Unit="mm" Step="10" Min="0" Max="1500"
+                        OnValueChanged="OnChanged" />
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="trap.breedte">
+        <div class="form-control-text">
+            @TrapOplegging.Lengte mm
+        </div>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="inkassing.hoogte">
+        <div class="form-control-text">
+            @TrapOplegging.Hoogte mm
+        </div>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="inkassing.breedte">
+        <div class="form-control-text">
+            @TrapOplegging.Breedte mm
+        </div>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="tandhoogte">
+        <div class="form-control-text">@TrapOplegging.TandHoogte mm</div>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="<i>G<sub>k</sub></i>">
+        <div class="form-control-text">
+            @GetReactieG()
+        </div>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="<i>Q<sub>k</sub></i>">
+        <div class="form-control-text">
+            @GetReactieQ()
+        </div>
+    </KaskonInputContainer>
+    <br />
+}
+
+@if (TrapOplegging?.GebruikEigenOpgave == true)
+{
+    <KaskonInputContainer Label="randafstand">
+        <KitInputNumber T="double" 
+                        Step="50" 
+                        Min="0" 
+                        Max="@MaxRandafstand" 
+                        Unit="mm" 
+                        @bind-Value="TrapOplegging.Randafstand" 
+                        OnValueChanged="OnChanged" />
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="eigen lengte">
+        <KitInputNumber T="double" 
+                        Step="50" 
+                        Min="100" 
+                        Max="5000" 
+                        Unit="mm" 
+                        @bind-Value="TrapOplegging.LengteEigenOpgave" 
+                        OnValueChanged="OnChanged" />
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="eigen breedte">
+        <KitInputNumber T="double" 
+                        Step="10" 
+                        Min="100" 
+                        Max="150" 
+                        Unit="mm" 
+                        @bind-Value="TrapOplegging.BreedteEigenOpgave" 
+                        OnValueChanged="OnChanged" />
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="hoogte inkassing">
+        <KitInputNumber T="double" 
+                        Step="10" 
+                        Min="80" 
+                        Max="160" 
+                        Unit="mm" 
+                        @bind-Value="TrapOplegging.HoogteEigenOpgave" 
+                        OnValueChanged="OnChanged" />
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="tandhoogte">
+        <div class="form-control-text">@TrapOplegging.TandHoogte mm</div>
+        @if (TrapOplegging.TandHoogte < MinimaleTandHoogte)
+        {
+            <div class="text-warning">⚠️ onvoldoende tandhoogte (minimaal @MinimaleTandHoogte mm)</div>
+        }
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="<i>G<sub>k</sub></i>">
+        <KitInputNumber T="double" 
+                        Step="0.5" 
+                        Min="0" 
+                        Max="100" 
+                        Unit="kN/m¹" 
+                        @bind-Value="TrapOplegging.EigenOpgaveG" 
+                        OnValueChanged="OnChanged" />
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="<i>Q<sub>k</sub></i>">
+        <KitInputNumber T="double" 
+                        Step="0.5" 
+                        Min="0" 
+                        Max="100" 
+                        Unit="kN/m¹" 
+                        @bind-Value="TrapOplegging.EigenOpgaveQ" 
+                        OnValueChanged="OnChanged" />
+    </KaskonInputContainer>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public VerbindingAansluitendElement? TrapOplegging { get; set; }
+
+    [Parameter]
+    public double MinimaleTandHoogte { get; set; }
+
+    [Parameter]
+    public double MaxRandafstand { get; set; } = 1500;
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private string GetReactieG()
+    {
+        if (TrapOplegging?.AansluitendElement is SteekTrapEntity trap)
+        {
+            return $"{trap.ReactieG:0.0} kN/m¹";
+        }
+        return "onbekend";
+    }
+
+    private string GetReactieQ()
+    {
+        if (TrapOplegging?.AansluitendElement is SteekTrapEntity trap)
+        {
+            return $"{trap.ReactieQ:0.0} kN/m¹";
+        }
+        return "onbekend";
+    }
+}

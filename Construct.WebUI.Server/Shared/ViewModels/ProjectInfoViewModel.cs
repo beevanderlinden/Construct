@@ -19,12 +19,16 @@ namespace Construct.WebUI.Server.Shared.ViewModels
         [MaxLength(20, ErrorMessage = "{0} maximaal {1} leestekens")]
         public string? Nummer { get; set; }
 
-
-        [Required(ErrorMessage = "{0} is verplicht")]
+        private string? _plaatsnaam;
+        //[Required(ErrorMessage = "{0} is verplicht")]
         [Display(Name = "Plaatsnaam")]
         [MinLength(2, ErrorMessage = "{0} minimaal {1} leestekens")]
         [MaxLength(30, ErrorMessage = "{0} maximaal {1} leestekens")]
-        public string? Plaatsnaam { get; set; }
+        public string? Plaatsnaam 
+        { 
+            get => _plaatsnaam;
+            set => _plaatsnaam = string.IsNullOrWhiteSpace(value) ? null : value; 
+        }
 
 
 

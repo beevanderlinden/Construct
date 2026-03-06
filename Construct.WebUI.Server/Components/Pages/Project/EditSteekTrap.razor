@@ -23,7 +23,7 @@
 
     <FluentButton Appearance="Appearance.Neutral" OnClick="OnFinishedAsync" IconStart="@(new Icons.Regular.Size20.ArrowEnter())">
         @* Bewerking @SteekTrap.Merk Afronden *@
-        Afronden
+        Afronden DEZE VERWIJDEREN | NIET MEER GEBRUIKEN
     </FluentButton>
 
     @*  <head>
@@ -328,6 +328,33 @@
                     </Content>
                 </FluentTab>
 
+                <FluentTab Id="tab-EcT">
+                    <Header>
+                        <FluentIcon Value="@(new Icons.Regular.Size28.Star())" Color="@Color.Accent"></FluentIcon>
+                        Eurocode Toetsen
+                    </Header>
+                    <Content>
+                        <p>Hier komen de toetsen volgens de Eurocode. De toetsen worden automatisch bijgewerkt wanneer de relevante parameters worden aangepast in de andere tabbladen.</p>
+                        <p>De toetsen zijn onderverdeeld in verschillende categorieën, zoals doorbuiging, dekking en duurzaamheid, moment wapening, scheurwijdte, dwarskracht en oplegspanningen. Klik op een categorie om de details te bekijken.</p>
+                        @foreach (var ect in SteekTrap.Toetsen)
+                        {
+                            <KaskonInputContainer Label="@ect.Heading">
+                                <div>...detailknop</div>
+                                @if (ect.HeeftWaarschuwing())
+                                {
+                                    <div>waarschuwingen (@ect.Meldingen.Count)</div>
+                                }
+                                else
+                                {
+                                    <div>✅</div>
+                                }
+                            </KaskonInputContainer>
+
+                        }
+
+                    </Content>
+                </FluentTab>
+
 
                 <FluentTab Id="tab-Toetsen" Label="Toetsen">
                     <Header>
@@ -609,7 +636,7 @@
 
     private async Task ValideerSvg()
     {
-        string status = SteekTrap.IsAkkoord() ? "" : "warning";
+        string status = SteekTrap.Akkoord ? "" : "warning";
 
         await SetSvgStatusAsync(SteekTrap.Id.ToString(), status);
     }

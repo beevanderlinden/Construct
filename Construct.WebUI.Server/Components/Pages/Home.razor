@@ -5,6 +5,7 @@
 @using Construct.WebUI.Server.Components.Pages.Project
 @inject IJSRuntime JS
 @inject IProjectStateService ProjectState
+@inject IFileService FileService
 @inject IToastService ToastService
 @inject NavigationManager NavigationManager
 @inject IWebHostEnvironment Env
@@ -26,19 +27,66 @@ Welkom bij Construct. Engineer hier uw prefab betonelementen.
 
 <h2>Snelle stappen</h2>
 
-<FluentButton OnClick="NaarNieuwProject">Nieuw project</FluentButton>
-<FluentButton OnClick="NaarOpenProject">Open project</FluentButton>
+<FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
+    <FluentButton OnClick="NaarNieuwProject" 
+                  IconStart="@(new Icons.Regular.Size24.DocumentAdd())">
+        Nieuw project
+    </FluentButton>
+    
+    <FluentButton OnClick="NaarOpenProject"
+                  IconStart="@(new Icons.Regular.Size24.FolderOpen())">
+        Open project
+    </FluentButton>
+    
+    
+</FluentStack>
 
-@if(ProjectState.CurrentProject != null)
-{
-    <p>Huidig project:</p>
-    <ProjectInfo Model="null"></ProjectInfo>
-}
+
+
+
 
 
 @* <FluentButton OnClick="LaadProjectVanLocalStorage">Ga verder waar ik gebleven was</FluentButton> *@
 
 @code {
+
+
+    private bool showDefaultsPopup = false;
+
+
+    private void OpenDefaultsPopup()
+    {
+        showDefaultsPopup = true;
+    }
+
+    private async Task OnDefaultsPopupClose()
+    {
+        showDefaultsPopup = false;
+        await Task.CompletedTask;
+    }
+
+    private async Task OnSelectDefaultProject(ProjectFileInfo projectInfo)
+    {
+        showDefaultsPopup = false;
+        if (projectInfo != null)
+        {
+            var bytes = Convert.FromBase64String(projectInfo.Base64);
+            var project = FileService.LoadFromBytes<Construct.Domain.Entities.ProjectEntity>(bytes);
+            if (project != null)
+            {
+                project.InitAll();
+                ProjectState.SetProject(project);
+                ToastService.ShowSuccess($"Default project '{Path.GetFileName(projectInfo.FilePath)}' geladen.");
+                NavigationManager.NavigateTo("/project/info");
+            }
+            else
+            {
+                ToastService.ShowError("Kon project niet laden.");
+            }
+        }
+        await Task.CompletedTask;
+    }
+
     private void NaarNieuwProject()
     {
         NavigationManager.NavigateTo("/File/newProjectSaveFile");

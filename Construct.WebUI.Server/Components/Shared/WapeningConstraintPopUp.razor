@@ -1,0 +1,286 @@
+﻿@using System.Collections.Generic
+@using Microsoft.AspNetCore.Components
+@using Construct.Domain.Entities
+
+<FluentButton Appearance="Appearance.Stealth" OnClick="ShowPopup" IconStart="@(new Icons.Regular.Size28.MoreHorizontal())">
+    
+</FluentButton>
+
+@if (showPopup)
+{
+    <div class="modal-backdrop custom-blur" @onclick="HidePopup">
+        <div class="modal-content-base modal-content-wide" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h2>Wapening Constraints</h2>
+                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="HidePopup">
+                    ✕
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <p style="color: var(--neutral-foreground-hint); font-size: 0.9em; margin: 0;">
+                       
+                        Deze waarden worden aangehouden bij de berekening van de wapening.
+                    </p>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        @if (ShowPreset)
+                        {
+                            <FluentButton id="btnPreset"
+                                          Appearance="Appearance.Outline"
+                                          IconEnd="@(new Icons.Regular.Size16.ChevronDown())"
+                                          OnClick="OnPresetMenuOpen"
+                                          Style="font-size: 0.875rem;">
+                                Preset laden
+                            </FluentButton>
+                            <FluentMenu @bind-Open="@_presetMenuOpen" Width="250px">
+                                <FluentMenuItem OnClick="@(() => ApplyPresetInternal(WapeningPreset.Diameter6_150_250))">
+                                    Ø6-150/250 (standaard)
+                                </FluentMenuItem>
+                                <FluentMenuItem OnClick="@(() => ApplyPresetInternal(WapeningPreset.Diameter6_150))">
+                                    #Ø6-150 (licht)
+                                </FluentMenuItem>
+                                <FluentMenuItem OnClick="@(() => ApplyPresetInternal(WapeningPreset.Diameter8_150))">
+                                    #Ø8-150 (zwaar)
+                                </FluentMenuItem>
+                            </FluentMenu>
+                        }
+                    </div>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 0.5rem; ">
+                    <thead>
+                        <tr style="background-color: var(--neutral-layer-2); border-bottom: 2px solid var(--neutral-stroke-divider);">
+                            <th style="padding: 0.5rem; text-align: left;">Type</th>
+                            <th style="padding: 0.5rem; text-align: center;">Øk (≥) [mm]</th>
+                            <th style="padding: 0.5rem; text-align: center;">n (≥)</th>
+                            <th style="padding: 0.5rem; text-align: center;">hoh (≤) [mm]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <WapeningConstraintEditor Constraint="BijlegBovenConstraint" 
+                            Label="Bijleg boven" DiameterOpties="DiametersBijleg" ToonDiameter="true" ToonAantal="true" />
+
+                        <WapeningConstraintEditor Constraint="BijlegOnderConstraint" 
+                            Label="Bijleg onder" DiameterOpties="DiametersBijleg" ToonDiameter="true" ToonAantal="true" />
+
+                        <WapeningConstraintEditor Constraint="DetailWapeningConstraint" 
+                            Label="Detail wapening" DiameterOpties="DiametersDetail" ToonDiameter="true" ToonHoh="true" />
+
+                      
+                        <WapeningConstraintEditor Constraint="BovenHoofdConstraint" 
+                            Label="Hoofdwapening boven" DiameterOpties="DiametersHoofdVerdeel" ToonDiameter="true" ToonHoh="true" />
+
+                        <WapeningConstraintEditor Constraint="BovenVerdeelConstraint" 
+                            Label="Verdeelwapening boven" DiameterOpties="DiametersHoofdVerdeel" ToonDiameter="true" ToonHoh="true" />
+
+                        <WapeningConstraintEditor Constraint="OnderHoofdConstraint" 
+                            Label="Hoofdwapeneing onder" DiameterOpties="DiametersHoofdVerdeel" ToonDiameter="true" ToonHoh="true" />
+
+                        <WapeningConstraintEditor Constraint="OnderVerdeelConstraint" 
+                            Label="Verdeelwapening onder" DiameterOpties="DiametersHoofdVerdeel" ToonDiameter="true" ToonHoh="true" />
+
+
+
+                        
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public WapeningConstraint? BijlegBovenConstraint { get; set; }
+    [Parameter] public WapeningConstraint? BijlegOnderConstraint { get; set; }
+    [Parameter] public WapeningConstraint? DetailWapeningConstraint { get; set; }
+    [Parameter] public WapeningConstraint? BovenHoofdConstraint { get; set; }
+    [Parameter] public WapeningConstraint? BovenVerdeelConstraint { get; set; }
+    [Parameter] public WapeningConstraint? OnderHoofdConstraint { get; set; }
+    [Parameter] public WapeningConstraint? OnderVerdeelConstraint { get; set; }
+    [Parameter] public IEnumerable<double> DiametersBijleg { get; set; } = new List<double>();
+    [Parameter] public IEnumerable<double> DiametersDetail { get; set; } = new List<double>();
+    [Parameter] public IEnumerable<double> DiametersHoofdVerdeel { get; set; } = new List<double>();
+    [Parameter] public bool ShowPreset { get; set; } = true;
+    
+    /// <summary>
+    /// PlaatWapening om de wapening teksten bij te werken na een preset
+    /// </summary>
+    [Parameter] public PlaatWapening? PlaatWapening { get; set; }
+    
+    /// <summary>
+    /// EventCallback die wordt aangeroepen na het toepassen van een preset
+    /// </summary>
+    [Parameter] public EventCallback OnPresetApplied { get; set; }
+
+    private bool showPopup = false;
+    private bool _presetMenuOpen = false;
+
+    private void ShowPopup() => showPopup = true;
+    private void HidePopup() => showPopup = false;
+    private void OnPresetMenuOpen() => _presetMenuOpen = !_presetMenuOpen;
+
+    /// <summary>
+    /// Wapening preset enum
+    /// </summary>
+    private enum WapeningPreset
+    {
+        Diameter6_150_250,  // Ø6 hoofdwapening hoh-150, verdeelwapening hoh-250
+        Diameter6_150,      // Ø6 alle wapening hoh-150
+        Diameter8_150       // Ø8 alle wapening hoh-150
+    }
+
+    private void ApplyPresetInternal(WapeningPreset preset)
+    {
+        switch (preset)
+        {
+            case WapeningPreset.Diameter6_150_250:
+                // Standaard preset: Ø6 met hoh 150 voor hoofdwapening, 250 voor verdeelwapening
+                if (OnderHoofdConstraint != null)
+                {
+                    OnderHoofdConstraint.DiameterMin = 6;
+                    OnderHoofdConstraint.HohMax = 150;
+                }
+                if (OnderVerdeelConstraint != null)
+                {
+                    OnderVerdeelConstraint.DiameterMin = 6;
+                    OnderVerdeelConstraint.HohMax = 300;
+                }
+                if (BovenHoofdConstraint != null)
+                {
+                    BovenHoofdConstraint.DiameterMin = 6;
+                    BovenHoofdConstraint.HohMax = 150;
+                }
+                if (BovenVerdeelConstraint != null)
+                {
+                    BovenVerdeelConstraint.DiameterMin = 6;
+                    BovenVerdeelConstraint.HohMax = 300;
+                }
+                if (DetailWapeningConstraint != null)
+                {
+                    DetailWapeningConstraint.DiameterMin = 6;
+                    DetailWapeningConstraint.HohMax = 150;
+                }
+                if (BijlegBovenConstraint != null)
+                {
+                    BijlegBovenConstraint.DiameterMin = 8;
+                    BijlegBovenConstraint.AantalMin = 2;
+                }
+                if (BijlegOnderConstraint != null)
+                {
+                    BijlegOnderConstraint.DiameterMin = 8;
+                    BijlegOnderConstraint.AantalMin = 2;
+                }
+
+               
+
+                break;
+
+            case WapeningPreset.Diameter6_150:
+                // Fijn preset: Ø6 overal met hoh 150
+                if (OnderHoofdConstraint != null)
+                {
+                    OnderHoofdConstraint.DiameterMin = 6;
+                    OnderHoofdConstraint.HohMax = 150;
+                }
+                if (OnderVerdeelConstraint != null)
+                {
+                    OnderVerdeelConstraint.DiameterMin = 6;
+                    OnderVerdeelConstraint.HohMax = 150;
+                }
+                if (BovenHoofdConstraint != null)
+                {
+                    BovenHoofdConstraint.DiameterMin = 6;
+                    BovenHoofdConstraint.HohMax = 150;
+                }
+                if (BovenVerdeelConstraint != null)
+                {
+                    BovenVerdeelConstraint.DiameterMin = 6;
+                    BovenVerdeelConstraint.HohMax = 150;
+                }
+                if (DetailWapeningConstraint != null)
+                {
+                    DetailWapeningConstraint.DiameterMin = 6;
+                    DetailWapeningConstraint.HohMax = 125;
+                }
+                if (BijlegBovenConstraint != null)
+                {
+                    BijlegBovenConstraint.DiameterMin = 8;
+                    BijlegBovenConstraint.AantalMin = 2;
+                }
+                if (BijlegOnderConstraint != null)
+                {
+                    BijlegOnderConstraint.DiameterMin = 8;
+                    BijlegOnderConstraint.AantalMin = 2;
+                }
+
+               
+
+                break;
+
+            case WapeningPreset.Diameter8_150:
+                // Zwaar preset: Ø8 overal met hoh 150
+                if (OnderHoofdConstraint != null)
+                {
+                    OnderHoofdConstraint.DiameterMin = 8;
+                    OnderHoofdConstraint.HohMax = 150;
+                }
+                if (OnderVerdeelConstraint != null)
+                {
+                    OnderVerdeelConstraint.DiameterMin = 8;
+                    OnderVerdeelConstraint.HohMax = 150;
+                }
+                if (BovenHoofdConstraint != null)
+                {
+                    BovenHoofdConstraint.DiameterMin = 8;
+                    BovenHoofdConstraint.HohMax = 150;
+                }
+                if (BovenVerdeelConstraint != null)
+                {
+                    BovenVerdeelConstraint.DiameterMin = 8;
+                    BovenVerdeelConstraint.HohMax = 150;
+                }
+                if (DetailWapeningConstraint != null)
+                {
+                    DetailWapeningConstraint.DiameterMin = 8;
+                    DetailWapeningConstraint.HohMax = 125;
+                }
+                if (BijlegBovenConstraint != null)
+                {
+                    BijlegBovenConstraint.DiameterMin = 8;
+                    BijlegBovenConstraint.AantalMin = 2;
+                }
+                if (BijlegOnderConstraint != null)
+                {
+                    BijlegOnderConstraint.DiameterMin = 10;
+                    BijlegOnderConstraint.AantalMin = 2;
+                }
+
+               
+
+                break;
+        }
+
+        // Update plaatwapening
+        if (PlaatWapening != null)
+        {
+            if (PlaatWapening.Onder?.BasisWapening != null)
+                PlaatWapening.Onder.BasisWapening.Tekst = $"r{OnderHoofdConstraint?.DiameterMin ?? 6}-{OnderHoofdConstraint?.HohMax ?? 150}";
+
+            if (PlaatWapening.Onder?.VerdeelWapening != null)
+                PlaatWapening.Onder.VerdeelWapening.Tekst = $"r{OnderVerdeelConstraint?.DiameterMin ?? 6}-{OnderVerdeelConstraint?.HohMax ?? 150}";
+
+            if (PlaatWapening.Boven?.BasisWapening != null)
+                PlaatWapening.Boven.BasisWapening.Tekst = $"r{BovenHoofdConstraint?.DiameterMin ?? 6}-{BovenHoofdConstraint?.HohMax ?? 150}";
+
+            if (PlaatWapening.Boven?.VerdeelWapening != null)
+                PlaatWapening.Boven.VerdeelWapening.Tekst = $"r{BovenVerdeelConstraint?.DiameterMin ?? 6}-{BovenVerdeelConstraint?.HohMax ?? 150}";
+
+        }
+
+
+        // Sluit het menu
+        _presetMenuOpen = false;
+
+        // Roep callback aan
+        OnPresetApplied.InvokeAsync();
+    }
+}

@@ -13,7 +13,7 @@
         public double StartFixMoment { get; private set; }
         public double EndFixMoment { get; private set; }
 
-        public List<ILoad> Loads { get; } = new();
+        public List<ILoad> Loads { get; } = [];
 
         public SBLiggerTestBak(double length)
         {

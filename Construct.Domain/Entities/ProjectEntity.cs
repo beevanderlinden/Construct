@@ -53,67 +53,14 @@ namespace Construct.Domain.Entities
             Materialen.Remove(id);
         }
 
-        // Mogelijkheid voor Defaults in project
-        //public List<BetonContext> Materialen { get; set; } = [new BetonContext("C45/55")];
+        /// <summary>
+        /// Standaard voor gebruiksklasse
+        /// Elementen krijgen hun eigen klasse (geen referentie) maar wel op basis van deze standaard
+        /// </summary>
+        public Eurocode.Belastingen.GebruiksklasseEnum? DefaultGebruiksklasse { get; set; } = GebruiksklasseEnum.C5_bijeenkomst_grote_menigtes;
+        public DekkingContext DefaultDekking { get; set; } = new();
 
-        // TODO implementeer een JsonConverter voor IMateriaal 
-        //public List<IMateriaal> Materialen { get; set; } = [new BetonContext("C45/55")];
 
 
     }
-
-
-
-
-
-    //public class AssemblageNummer
-    //{
-    //    public string? Prefix { get; set; }
-    //    public int Nummer
-    //    {
-    //        get
-    //        {
-    //            return StartIndex + VolgNummer;
-    //        }
-    //    }
-    //    public int StartNummer { get; set; } = 1;
-    //    public int StartIndex { get { return StartNummer - 1; } }
-    //    public int VolgNummer { get; set; } = 1;
-    //    public int? SubNummer { get; set; } = null;
-
-    //    public string Merk
-    //    {
-    //        get
-    //        {
-    //            return $"{Prefix}{Nummer}{SubNummer}";
-    //        }
-    //    }
-
-
-    //}
-
-
-    //public class Trapvlucht
-    //{
-    //    public double OptredeMaat { get; set; }
-    //    public double AantredeMaat { get; set; }
-    //    public double OptredeAantal { get; set; }
-
-    //    public double Wel { get; set; }
-
-
-    //}
-
-    //public class TrapBordes
-    //{
-    //    public double Dikte { get; set; }
-    //    public double Breedte { get; set; }
-
-
-    //}
-
-
-
-
-
 }

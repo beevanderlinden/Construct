@@ -1,6 +1,7 @@
 ﻿using Eurocode.Belastingen;
 using System.Collections.Immutable;
 using System.Drawing;
+using Tekla.Structures.RemotingHelper;
 
 namespace Construct.Domain.Entities
 {
@@ -19,7 +20,6 @@ namespace Construct.Domain.Entities
             {
                 crossSection.Add(new(crossSection.Last().X, crossSection.Last().Y + (float)tr.OptredeMaat)); // optrede
                 crossSection.Add(new(crossSection.Last().X + (float)tr.AantredeMaat, crossSection.Last().Y)); // aantrede
-
 
             }
 
@@ -43,7 +43,11 @@ namespace Construct.Domain.Entities
             {
                 default:
                 case SteekTrapTypeEnum.Standaard:
-                    hartlijn.Add(new(hartlijn.Last().X + (float)(tr.OptredeAantal1 * tr.AantredeMaat), hartlijn.Last().Y + (float)(tr.OptredeAantal1 * tr.OptredeMaat))); // trap
+                    var dx = tr.LengteTotaal;
+                    var dy = tr.OptredeAantal1 * tr.OptredeMaat;
+                    if (tr.GebruikEigenLengte)
+                        dy = Math.Tan(tr.Hellingshoek * Math.PI / 180.0) * dx;
+                    hartlijn.Add(new(hartlijn.Last().X + (float)(dx), hartlijn.Last().Y + (float)(dy))); // trap
                     return hartlijn;
 
                 case SteekTrapTypeEnum.TrapBordes:
@@ -206,8 +210,8 @@ namespace Construct.Domain.Entities
 
         public static double GetLengteTotaal(this SteekTrapEntity tr)
         {
-            var hartlijn = tr.GetHartlijn().OrderBy(p => p.X).ToImmutableList();
-            var lengteTotaal = hartlijn.Last().X - hartlijn.First().X;
+            //var hartlijn = tr.GetHartlijn().OrderBy(p => p.X).ToImmutableList();
+            var lengteTotaal = tr.OptredeAantal1 * tr.AantredeMaat;
 
             if (tr.Slankheid != null)
             {

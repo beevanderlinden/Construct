@@ -197,12 +197,12 @@ namespace Construct.Application.Services
             {
                 return new ReferenceValidationHelper.ValidationReport
                 {
-                    Issues = new() { new ReferenceValidationHelper.ReferenceCheckResult
+                    Issues = [ new ReferenceValidationHelper.ReferenceCheckResult
                     {
                         EntityName = "ProjectStateService",
                         IsValid = false,
                         ErrorMessage = "CurrentProject is null"
-                    }}
+                    }]
                 };
             }
 

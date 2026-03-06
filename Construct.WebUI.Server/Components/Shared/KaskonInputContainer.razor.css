@@ -6,7 +6,9 @@
     .kaskon-input-container.horizontal {
         flex-direction: row;
         align-items: center;
-        margin-bottom: 0.5em;
+        margin-bottom: 0.25em;
+        min-height:30px;
+
     }
 
     .kaskon-input-container.vertical {
@@ -17,7 +19,8 @@
     .kaskon-input-container.horizontal .kaskon-input-label {
         flex-shrink: 0;
         text-align: left;
-        margin-left: 3.5px;
+
+        margin-left: 1mm;
         padding-right: 0.5rem;
         width: var(--label-width, 200px);
     }
@@ -29,9 +32,15 @@
 
 .kaskon-input-content {
     flex: 1;
-    width: 100%;
+    width: auto;
 }
 
+
+.kaskon-input-hint {
+    font-size: 0.92em;
+    opacity: 0.65;
+    /* color niet instellen, zodat het automatisch meeverandert met light/dark */
+}
 
 /* 📏 Container query: als de container < 600px wordt, forceer Top layout */
 @container leftcol (max-width: 600px) {

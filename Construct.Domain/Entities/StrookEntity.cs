@@ -379,36 +379,60 @@ namespace Construct.Domain.Entities
 
     public class DekkingContext : BaseEurocodeContext
     {
+        public override string Heading { get; set; } = "Dekking/Duurzaamheid";
         public event Action? OnChanged;
 
         private BetonDekkingContext _onder = new();
         public BetonDekkingContext Onder
         {
             get => _onder;
-            set { _onder = value; OnChanged?.Invoke(); }
+            set => SetNestedProperty(ref _onder, value);
         }
 
         private BetonDekkingContext _boven = new();
         public BetonDekkingContext Boven
         {
             get => _boven;
-            set { _boven = value; OnChanged?.Invoke(); }
+            set => SetNestedProperty(ref _boven, value);
+        }
+
+        public override void Init()
+        {
+            // Subscribe to child property changes
+            if (_onder != null)
+            {
+                _onder.Init();
+            }
+            if (_boven != null)
+            {
+                _boven.Init();
+            }
+            
+            base.Init(); // Roept SubscribeAllNestedProperties aan
         }
 
         protected override void Bereken()
         {
-
+            // Bereken children eerst
+            _onder?.BerekenEnValideer();
+            _boven?.BerekenEnValideer();
         }
 
         protected override bool Valideer()
         {
-            if (!Onder.BerekenEnValideer())
+            // Check de IsValidated property van children
+            if (_onder != null && !_onder.IsValidated)
+            {
+                AddMeldingWaarschuwing("Dekking onder niet akkoord");
                 return false;
+            }
 
-            if (!Boven.BerekenEnValideer())
+            if (_boven != null && !_boven.IsValidated)
+            {
+                AddMeldingWaarschuwing("Dekking boven niet akkoord");
                 return false;
-            
-            
+            }
+
             return true;
         }
     }

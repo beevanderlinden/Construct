@@ -74,7 +74,7 @@
     public string Label { get; set; } = "";
 
     [Parameter]
-    public List<double> DiameterOpties { get; set; } = new() { 6, 8, 10, 12, 16, 20, 25 };
+    public IEnumerable<double> DiameterOpties { get; set; } = [6, 8, 10, 12, 16, 20, 25, 32, 40];
 
     [Parameter]
     public bool ToonDiameter { get; set; } = true;
