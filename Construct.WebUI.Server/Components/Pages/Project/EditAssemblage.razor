@@ -83,7 +83,7 @@
                                  <FluentTab Id="tab-slab" Label="plaat">
                                     <Header><FluentIcon Value="@(new Icons.Regular.Size20.PanelRightContract())" />plaat</Header>
                                     <Content>
-                                        <div>Er is een slab gevonden. Jippie</div>
+                                        <div>Het hoofdonderdeel is een betonnen plaat. Dit zijn de eigenschappen van de plaatwapening.</div>
 
                                         @if (slab.PlaatDekking != null)
                                         {
@@ -97,6 +97,11 @@
                                                                   Breedte="1000"
                                                                   Hoogte="@slab.Dikte"
                                                                   MaxDisplayHeight="300" />
+
+                                       
+
+                                                                  
+
                                     </Content>
                                 </FluentTab>
                             }
@@ -233,6 +238,11 @@
                                     <h3>Plaatwapening</h3>
                                     <PlaatWapeningTabelPosComponent @bind-Model="@bordes.PlaatWapening" />
 
+                                    <h3 style="margin-top: 2rem;">Wapening details en ondergrenzen</h3>
+                                    <WapeningContextTabel PlaatWapening="@bordes.PlaatWapening" 
+                                                         TandWapening="@bordes.Tand?.WapeningAlgemeen"
+                                                         OnChanged="@(() => StateHasChanged())" />
+
                                     <PlaatProfielVisualisatie Wapening="@bordes.PlaatWapening"
                                                               Breedte="500"
                                                               Hoogte="@bordes.Hoogte"
@@ -248,19 +258,24 @@
                             <FluentTab Id="tab-trap-wapening" Label="wapening">
                                 <Header><FluentIcon Value="@(new Icons.Regular.Size20.CircleSparkle())" />wapening</Header>
                                 <Content>
-                                    <p>Een trap heeft plaatwapening</p>
-                                    <p>Een bordes heeft plaatwapening</p>
-                                    <p>Dus maak een generiek : PlaatElement</p>
-                                    <p>Voor het bordes zit hoofd in 2e laag, verder gelijk</p>
-                                    <p>We willen (defaults) knop<br/>
-                                        Bereken knop<br/>
-                                        Dat is alles. Misschien nog een detail 
+                                    <h3>Plaatwapening trap</h3>
+                                    <p>Configureer de wapening voor de trap inclusief minimale ondergrenzen</p>
+                                    
+                                    @if (trap.PlaatWapening != null)
+                                    {
+                                        <WapeningContextTabel PlaatWapening="@trap.PlaatWapening" 
+                                                             OnChanged="@(() => StateHasChanged())" />
 
-                                    </p>
-
-
-
-
+                                        <h3 style="margin-top: 2rem;">Visualisatie</h3>
+                                        <PlaatProfielVisualisatie Wapening="@trap.PlaatWapening"
+                                                                  Breedte="1000"
+                                                                  Hoogte="@(trap.MainSlab?.Dikte ?? 100)"
+                                                                  MaxDisplayHeight="300" />
+                                    }
+                                    else
+                                    {
+                                        <p>Geen plaatwapening gedefinieerd voor deze trap</p>
+                                    }
                                 </Content>
                             </FluentTab>
                         }

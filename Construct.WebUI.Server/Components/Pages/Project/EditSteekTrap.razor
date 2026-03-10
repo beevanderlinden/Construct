@@ -336,7 +336,7 @@
                     <Content>
                         <p>Hier komen de toetsen volgens de Eurocode. De toetsen worden automatisch bijgewerkt wanneer de relevante parameters worden aangepast in de andere tabbladen.</p>
                         <p>De toetsen zijn onderverdeeld in verschillende categorieën, zoals doorbuiging, dekking en duurzaamheid, moment wapening, scheurwijdte, dwarskracht en oplegspanningen. Klik op een categorie om de details te bekijken.</p>
-                        @foreach (var ect in SteekTrap.Toetsen)
+                        @foreach (var ect in SteekTrap.Toetsen.Where(t=> t != null))
                         {
                             <KaskonInputContainer Label="@ect.Heading">
                                 <div>...detailknop</div>

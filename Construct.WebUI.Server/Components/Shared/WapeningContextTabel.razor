@@ -1,0 +1,165 @@
+@using Eurocode.BetonConstructies
+
+@if (WapeningContexten == null || !WapeningContexten.Any())
+{
+    <p>Geen wapening gedefinieerd</p>
+}
+else
+{
+    <div class="table-wrap">
+        <table class="ec-table col-head">
+            <thead>
+                <tr>
+                    <th>Positie</th>
+                    <th>c [mm]</th>
+                    <th>Toegepast</th>
+                    <th>Ondergrens</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in WapeningContexten)
+                {
+                    <tr>
+                        <td>@item.Label</td>
+                        <td>@item.Context?.DekkingToegepast</td>
+                        <td>
+                            @item.Context?.SanitizedTekst()
+                           
+                        </td>
+                        <td>
+                            <FluentTextField Value="@(item.Context?.TekstOndergrens ?? string.Empty)" 
+                                           ValueChanged="@(v => OnTekstOndergrensChanged(item.Context, v))" 
+                                           Style="min-width: 120px;" 
+                                           Placeholder="nvt" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// Directe lijst van WapeningContextItem voor maximale flexibiliteit
+    /// </summary>
+    [Parameter]
+    public List<WapeningContextItem>? WapeningContexten { get; set; }
+
+    /// <summary>
+    /// Alternatief: PlaatWapening parameter die automatisch wordt omgezet naar WapeningContexten
+    /// </summary>
+    [Parameter]
+    public PlaatWapening? PlaatWapening { get; set; }
+
+    /// <summary>
+    /// Eventuele TandWapening toevoegen (voor bordes)
+    /// </summary>
+    [Parameter]
+    public WapeningContext? TandWapening { get; set; }
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        // Als PlaatWapening is opgegeven maar WapeningContexten niet, genereer dan automatisch de lijst
+        if (PlaatWapening != null && (WapeningContexten == null || !WapeningContexten.Any()))
+        {
+            WapeningContexten = GenereerWapeningContexten();
+        }
+    }
+
+    private List<WapeningContextItem> GenereerWapeningContexten()
+    {
+        var lijst = new List<WapeningContextItem>();
+
+        if (PlaatWapening?.Boven != null)
+        {
+            if (PlaatWapening.Boven.BasisWapening != null)
+            {
+                lijst.Add(new WapeningContextItem
+                {
+                    Label = "Boven - Hoofd",
+                    Context = PlaatWapening.Boven.BasisWapening,
+                    Dekking = PlaatWapening.Boven.DekkingLaag1
+                });
+            }
+
+            if (PlaatWapening.Boven.VerdeelWapening != null)
+            {
+                lijst.Add(new WapeningContextItem
+                {
+                    Label = "Boven - Verdeel",
+                    Context = PlaatWapening.Boven.VerdeelWapening,
+                    Dekking = PlaatWapening.Boven.DekkingLaag2
+                });
+            }
+        }
+
+        if (PlaatWapening?.Onder != null)
+        {
+            if (PlaatWapening.Onder.BasisWapening != null)
+            {
+                lijst.Add(new WapeningContextItem
+                {
+                    Label = "Onder - Hoofd",
+                    Context = PlaatWapening.Onder.BasisWapening,
+                    Dekking = PlaatWapening.Onder.DekkingLaag1
+                });
+            }
+
+            if (PlaatWapening.Onder.VerdeelWapening != null)
+            {
+                lijst.Add(new WapeningContextItem
+                {
+                    Label = "Onder - Verdeel",
+                    Context = PlaatWapening.Onder.VerdeelWapening,
+                    Dekking = PlaatWapening.Onder.DekkingLaag2
+                });
+            }
+        }
+
+        // Optioneel: Tand wapening toevoegen
+        if (TandWapening != null)
+        {
+            lijst.Add(new WapeningContextItem
+            {
+                Label = "Tand",
+                Context = TandWapening,
+                Dekking = TandWapening.ReferentieDekking
+            });
+        }
+
+        return lijst;
+    }
+
+    private void OnTekstChanged(WapeningContext? context, string nieuweWaarde)
+    {
+        if (context == null) return;
+        
+        context.Tekst = nieuweWaarde;
+        context.SetZRef();
+        OnChanged.InvokeAsync();
+    }
+
+    private void OnTekstOndergrensChanged(WapeningContext? context, string nieuweWaarde)
+    {
+        if (context == null) return;
+        
+        context.TekstOndergrens = nieuweWaarde;
+        OnChanged.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Hulpklasse voor tabelweergave van WapeningContext met label en dekking
+    /// </summary>
+    public class WapeningContextItem
+    {
+        public string Label { get; set; } = string.Empty;
+        public WapeningContext? Context { get; set; }
+        public double? Dekking { get; set; }
+    }
+}

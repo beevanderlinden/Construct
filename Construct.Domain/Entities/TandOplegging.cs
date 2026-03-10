@@ -77,8 +77,11 @@ namespace Construct.Domain.Entities
 
         [JsonIgnore]
         public AssemblageEntity Father { get; set; }
-        
+
+        [TableColumn (Symbol = "*h~t~*", Description = "tandhoogte", Unit = "mm")]
         public double TandHoogte { get; set; } = 100;
+
+        [TableColumn(Symbol = "*b~voeg~*", Description = "voegbreedte", Unit = "mm")]
 
         public double VoegBreedte { get; set; } = 10;
 
@@ -86,6 +89,8 @@ namespace Construct.Domain.Entities
         private double _afstandVoorGedrongenLigger;
 
         private double _oplegReactie;
+        [TableColumn(Symbol = "*F~Ed~*", Description = "oplegreactie", Unit = "kN")]
+
         public double OplegReactie
         {
             get => _oplegReactie;
@@ -134,7 +139,7 @@ namespace Construct.Domain.Entities
             }
         }
 
-
+        [TableColumn(Symbol = "*k~hor~*", Description = "factor horizontale belasting", Unit = "-")]
         public double PercentageHorizontaleBelasting { get; set; } = 0.4;
 
         /// <summary>
@@ -144,9 +149,14 @@ namespace Construct.Domain.Entities
         public bool IsOndertand { get; set; } = false;
         public bool IsBoventand => !IsOndertand;
 
+        [TableColumn(Symbol = "*b*", Description = "werkende breedt", Unit = "mm")]
+
         public double WerkendeBreedte { get; set; } = 1000;
 
+        [TableColumn(Symbol = "*L~t~*", Description = "tandlengte", Unit = "mm")]
+
         public double TandLengte { get; set; } = 100;
+
 
         public double HalsDikte { get; set; } = 100;
         public double DekkingAlgemeen { get; set; } = 30;
@@ -162,6 +172,7 @@ namespace Construct.Domain.Entities
             }
         }
 
+        [TableColumn(Symbol = "*a~b~*", Description = "lengte", Unit = "mm")]
 
         public double LengteAb
         {
@@ -185,6 +196,8 @@ namespace Construct.Domain.Entities
             }
         }
 
+        [TableColumn(Symbol = "*a~tand~*", Description = "arm voor tand", Unit = "mm")]
+
         public double ArmVoorTand
         {
             get
@@ -192,6 +205,8 @@ namespace Construct.Domain.Entities
                 return ((TandLengte + 20) / 2.0 + KleinsteWaardeVoorArm); // toevoeging 20mm komt uit Excel.
             }
         }
+
+        [TableColumn(Symbol = "*L~t,tand~*", Description = "theoretische lengte voor tand", Unit = "mm")]
 
         public double OverspanningVoorTand
         {
@@ -208,6 +223,8 @@ namespace Construct.Domain.Entities
                 return OverspanningVoorTand / TandHoogte;
             }
         }
+
+        [TableColumn(Description = "gedrongen (tand)?")]
 
         public bool TandGedrongen
         {
@@ -273,6 +290,7 @@ namespace Construct.Domain.Entities
             }
         }
 
+
         public double NuttigeHoogteTand
         {
             get
@@ -327,6 +345,7 @@ namespace Construct.Domain.Entities
             }
         }
 
+        [TableColumn(Description = "oplegging")]
         public string ConclusieOplegging
         {
             get

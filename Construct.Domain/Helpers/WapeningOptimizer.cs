@@ -1,4 +1,4 @@
-using Construct.Domain.Entities;
+﻿using Construct.Domain.Entities;
 using Eurocode.BetonConstructies;
 using System;
 using System.Collections.Generic;
@@ -13,10 +13,25 @@ namespace Construct.Domain.Helpers
     /// </summary>
     public static class WapeningOptimizer
     {
+
+        public static (string tekst, double asProvided) BepaalPlaatWapening(double asRequired, WapeningContext wap)
+        {
+            double startDiameter = 6;
+            double startHoh = 400;
+            var ondergrens = ParseWapeningTekst(wap.TekstOndergrens);
+            if (ondergrens != null)
+            {
+                startHoh = ondergrens.Value.hoh;
+                startDiameter = ondergrens.Value.diameter;
+            }
+            return BepaalPlaatWapening(asRequired, wap.ReferentieLengte, startDiameter, startHoh);
+        }
+
+
         /// <summary>
         /// Bepaalt optimale plaatwapening (diameter + hoh) op basis van benodigde As.
         /// </summary>
-        /// <param name="asRequired">Benodigde wapeningsdoorsnede (mm�)</param>
+        /// <param name="asRequired">Benodigde wapeningsdoorsnede (mm²)</param>
         /// <param name="beschikbareBreedte">Beschikbare breedte voor wapening (mm)</param>
         /// <param name="constraint">Optionele constraints (min diameter, max hoh)</param>
         /// <param name="startDiameter">Start diameter (default 6mm)</param>
@@ -25,93 +40,62 @@ namespace Construct.Domain.Helpers
         public static (string tekst, double asProvided) BepaalPlaatWapening(
             double asRequired,
             double beschikbareBreedte,
-            WapeningConstraint? constraint = null,
             double startDiameter = 6,
             double startHoh = 150)
         {
             // Beschikbare diameters
-            List<double> diameters = [6, 8, 10, 12, 16, 20];
+            List<double> diameters = [6, 8, 10, 12, 16, 20, 25, 32, 40];
             
             // Haal constraints op
-            double minDiameter = constraint?.DiameterMin ?? startDiameter;
-            double maxHoh = constraint?.HohMax ?? 9999;
+            //double minDiameter = constraint?.DiameterMin ?? startDiameter;
+            //double maxHoh = constraint?.HohMax ?? 9999;
             
             // Start bij kleinste bruikbare diameter
-            var beschikbareDiameters = diameters.Where(d => d >= minDiameter).ToList();
+            var beschikbareDiameters = diameters.Where(d => d >= startDiameter).ToList();
             if (!beschikbareDiameters.Any())
-                beschikbareDiameters = [minDiameter];
+                beschikbareDiameters = [startDiameter];
             
             // Begin met startDiameter en startHoh (bijv. r6-150)
             double currentDiameter = beschikbareDiameters.First();
-            double currentHoh = Math.Min(startHoh, maxHoh);
+            double currentHoh = startHoh;
             
             // Bereken As voor start configuratie
             double asProvided = BerekenAsPlaatWapening(currentDiameter, currentHoh, beschikbareBreedte);
             
             // Als al voldoende ? klaar
-            if (asProvided >= asRequired)
+            if (asProvided >= asRequired * 1.01) // neem 1% meer om afronding te voorkomen
             {
                 return ($"r{currentDiameter:0}-{currentHoh:0}", asProvided);
             }
             
             // Stap 1: Bereken benodigde hoh voor huidige diameter
-            double benodigdeHoh = BerekenBenodigdeHoh(asRequired, currentDiameter, beschikbareBreedte);
+            double benodigdeHoh = BerekenBenodigdeHoh(asRequired * 1.01, currentDiameter, beschikbareBreedte);
             
             // Stap 2: Rond af naar veelvoud van 5 (naar beneden) indien hoh >= 75mm
             if (benodigdeHoh >= 75)
             {
                 benodigdeHoh = Math.Floor(benodigdeHoh / 5.0) * 5.0;
+                return ($"r{currentDiameter:0}-{benodigdeHoh:0}", asProvided);
             }
             
-            // Stap 3: Check of hoh binnen constraints valt
-            if (benodigdeHoh >= 50 && benodigdeHoh <= maxHoh)
-            {
-                currentHoh = benodigdeHoh;
-                asProvided = BerekenAsPlaatWapening(currentDiameter, currentHoh, beschikbareBreedte);
-                
-                if (asProvided >= asRequired)
-                {
-                    return ($"r{currentDiameter:0}-{currentHoh:0}", asProvided);
-                }
-            }
-            
-            // Stap 4: Als hoh < 100mm ? verhoog diameter en herhaal
+                       
+            // Stap 3: verhoog diameter en herhaal
             foreach (var diameter in beschikbareDiameters.Skip(1))
             {
                 currentDiameter = diameter;
+                currentHoh = startHoh;
                 
                 // Bereken benodigde hoh voor deze diameter
-                benodigdeHoh = BerekenBenodigdeHoh(asRequired, currentDiameter, beschikbareBreedte);
+                benodigdeHoh = BerekenBenodigdeHoh(asRequired * 1.05, currentDiameter, beschikbareBreedte); // bij verhoging diameter neem 105%
                 
                 // Rond af naar veelvoud van 5 indien >= 75mm
                 if (benodigdeHoh >= 75)
                 {
                     benodigdeHoh = Math.Floor(benodigdeHoh / 5.0) * 5.0;
+                    return ($"r{currentDiameter:0}-{benodigdeHoh:0}", asProvided);
                 }
                 
-                // Clamp tussen 50mm en maxHoh
-                currentHoh = Math.Max(50, Math.Min(benodigdeHoh, maxHoh));
-                
-                asProvided = BerekenAsPlaatWapening(currentDiameter, currentHoh, beschikbareBreedte);
-                
-                if (asProvided >= asRequired)
-                {
-                    return ($"r{currentDiameter:0}-{currentHoh:0}", asProvided);
-                }
-                
-                // Als hoh >= 100mm en nog steeds onvoldoende ? probeer volgende diameter
-                if (currentHoh >= 100)
-                    continue;
-                
-                // Hoh < 100mm maar toch onvoldoende ? probeer met kleinere hoh (min 50mm)
-                for (double hoh = currentHoh - 5; hoh >= 50; hoh -= 5)
-                {
-                    asProvided = BerekenAsPlaatWapening(currentDiameter, hoh, beschikbareBreedte);
-                    if (asProvided >= asRequired)
-                    {
-                        return ($"r{currentDiameter:0}-{hoh:0}", asProvided);
-                    }
-                }
+
             }
             
             // Fallback: gebruik grootste diameter met minimale hoh
@@ -119,7 +103,7 @@ namespace Construct.Domain.Helpers
             currentHoh = 50; // Minimale hoh
             asProvided = BerekenAsPlaatWapening(maxDiameter, currentHoh, beschikbareBreedte);
             
-            Console.WriteLine($"?? Geen optimale wapening gevonden. Fallback: r{maxDiameter:0}-{currentHoh:0} (As={asProvided:0}mm�, benodigd={asRequired:0}mm�)");
+            Console.WriteLine($"?? Geen optimale wapening gevonden. Fallback: r{maxDiameter:0}-{currentHoh:0} (As={asProvided:0}mm², benodigd={asRequired:0}mm²)");
             return ($"r{maxDiameter:0}-{currentHoh:0}", asProvided);
         }
         
@@ -153,17 +137,21 @@ namespace Construct.Domain.Helpers
         }
         
         /// <summary>
-        /// Parseert wapening tekst zoals "r6-150" naar (diameter, hoh).
+        /// Parseert plaatwapening tekst naar (diameter, hoh).
+        /// Ondersteunt formaten: "r6-150", "Ø8-200", "d8-100", "8-150" (prefix optioneel).
         /// </summary>
+        /// <param name="tekst">Wapening tekst (bijv. "r8-150", "8-100", "Ø10-125")</param>
+        /// <returns>(diameter, hoh) of null als parsing faalt</returns>
         public static (double diameter, double hoh)? ParseWapeningTekst(string? tekst)
         {
             if (string.IsNullOrWhiteSpace(tekst))
                 return null;
 
-            // Format: "r6-150" of "�8-200"
+            // Format: "r6-150", "Ø8-200", "d8-100", of "8-150" (prefix optioneel)
+            // Regex: optionele prefix [rØødD], gevolgd door diameter-hoh
             var match = System.Text.RegularExpressions.Regex.Match(
                 tekst,
-                @"[r��](\d+(?:[.,]\d+)?)-(\d+(?:[.,]\d+)?)",
+                @"[rØødD]?(\d+(?:[.,]\d+)?)-(\d+(?:[.,]\d+)?)",
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
             if (match.Success)
@@ -173,6 +161,35 @@ namespace Construct.Domain.Helpers
                 double diameter = double.Parse(diamStr, CultureInfo.InvariantCulture);
                 double hoh = double.Parse(hohStr, CultureInfo.InvariantCulture);
                 return (diameter, hoh);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Parseert bijlegwapening tekst naar (aantal, diameter).
+        /// Ondersteunt formaten: "3r12", "5Ø16", "2d10".
+        /// </summary>
+        /// <param name="tekst">Bijlegwapening tekst (bijv. "3r12", "5Ø16")</param>
+        /// <returns>(aantal, diameter) of null als parsing faalt</returns>
+        public static (int aantal, double diameter)? ParseBijlegWapening(string? tekst)
+        {
+            if (string.IsNullOrWhiteSpace(tekst))
+                return null;
+
+            // Format: "3r12", "5Ø16", "2d10"
+            // Regex: aantal, prefix [rØødD], diameter
+            var match = System.Text.RegularExpressions.Regex.Match(
+                tekst,
+                @"(\d+)[rØødD](\d+(?:[.,]\d+)?)",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            if (match.Success)
+            {
+                int aantal = int.Parse(match.Groups[1].Value);
+                string diamStr = match.Groups[2].Value.Replace(',', '.');
+                double diameter = double.Parse(diamStr, CultureInfo.InvariantCulture);
+                return (aantal, diameter);
             }
 
             return null;
@@ -190,7 +207,7 @@ namespace Construct.Domain.Helpers
         }
         
         /// <summary>
-        /// Berekent As voor gegeven aantal staven en diameter (mm�).
+        /// Berekent As voor gegeven aantal staven en diameter (mm²).
         /// </summary>
         public static double BerekenAs(int aantal, double diameterMm)
         {
@@ -202,7 +219,7 @@ namespace Construct.Domain.Helpers
         /// Bepaalt optimale plaatwapening met FIXED hoh-maat (alleen diameter aanpassen).
         /// Gebruikt voor basisstrook bordes waar hoh niet mag wijzigen.
         /// </summary>
-        /// <param name="asRequired">Benodigde wapeningsdoorsnede (mm�)</param>
+        /// <param name="asRequired">Benodigde wapeningsdoorsnede (mm²)</param>
         /// <param name="fixedHoh">Vaste hoh-maat (mm)</param>
         /// <param name="currentDiameter">Huidige diameter (mm)</param>
         /// <param name="constraint">Optionele constraints</param>
@@ -230,7 +247,7 @@ namespace Construct.Domain.Helpers
             {
                 // Geen hogere diameter beschikbaar ? gebruik huidige
                 var asProvided = BerekenAsPlaatWapening(currentDiameter, fixedHoh, 1000);
-                Console.WriteLine($"?? Geen hogere diameter beschikbaar dan �{currentDiameter}. AsProvided={asProvided:0}mm�, AsRequired={asRequired:0}mm�");
+                Console.WriteLine($"?? Geen hogere diameter beschikbaar dan Ø{currentDiameter}. AsProvided={asProvided:0}mm², AsRequired={asRequired:0}mm²");
                 return ($"r{currentDiameter:0}-{fixedHoh:0}", asProvided);
             }
             
@@ -245,13 +262,13 @@ namespace Construct.Domain.Helpers
                 if (herberekening != null)
                 {
                     asRequiredAangepast = herberekening(diameter);
-                    Console.WriteLine($"[HERBEREKEN] AsRequired aangepast van {asRequired:0} ? {asRequiredAangepast:0}mm� (�{diameter}, hoh={fixedHoh})");
+                    Console.WriteLine($"[HERBEREKEN] AsRequired aangepast van {asRequired:0} ? {asRequiredAangepast:0}mm² (Ø{diameter}, hoh={fixedHoh})");
                 }
                 
                 // Check of voldoende
                 if (asProvided >= asRequiredAangepast)
                 {
-                    Console.WriteLine($"? Wapening gevonden: r{diameter:0}-{fixedHoh:0} (As={asProvided:0}mm� >= {asRequiredAangepast:0}mm�)");
+                    Console.WriteLine($"? Wapening gevonden: r{diameter:0}-{fixedHoh:0} (As={asProvided:0}mm² >= {asRequiredAangepast:0}mm²)");
                     return ($"r{diameter:0}-{fixedHoh:0}", asProvided);
                 }
             }
@@ -259,15 +276,15 @@ namespace Construct.Domain.Helpers
             // Fallback: gebruik grootste diameter
             var maxDiameter = beschikbareDiameters.Last();
             var asFallback = BerekenAsPlaatWapening(maxDiameter, fixedHoh, 1000);
-            Console.WriteLine($"?? Geen voldoende wapening gevonden. Fallback: r{maxDiameter:0}-{fixedHoh:0} (As={asFallback:0}mm� < {asRequired:0}mm�)");
+            Console.WriteLine($"?? Geen voldoende wapening gevonden. Fallback: r{maxDiameter:0}-{fixedHoh:0} (As={asFallback:0}mm² < {asRequired:0}mm²)");
             return ($"r{maxDiameter:0}-{fixedHoh:0}", asFallback);
         }
         
         /// <summary>
         /// Bepaalt bijlegwapening (aantal staven + diameter) voor versterkte strook.
-        /// Format: "3r12" (3 staven van �12).
+        /// Format: "3r12" (3 staven van Ø12).
         /// </summary>
-        /// <param name="asRequired">Benodigde extra wapeningsdoorsnede (mm�)</param>
+        /// <param name="asRequired">Benodigde extra wapeningsdoorsnede (mm²)</param>
         /// <param name="strookBreedte">Breedte van versterkte strook (mm)</param>
         /// <param name="constraint">Optionele constraints (min aantal, min diameter)</param>
         /// <param name="dGemiddeld">Gemiddelde diameter basiswapening (voor nuttige hoogte correctie)</param>
@@ -313,7 +330,7 @@ namespace Construct.Domain.Helpers
                 
                 if (asTest >= asRequiredAangepast)
                 {
-                    Console.WriteLine($"? Bijlegwapening: {aantalStaven}r{d:0} (As={asTest:0}mm� >= {asRequiredAangepast:0}mm�, factor={verhogingFactor:0.###})");
+                    Console.WriteLine($"? Bijlegwapening: {aantalStaven}r{d:0} (As={asTest:0}mm² >= {asRequiredAangepast:0}mm², factor={verhogingFactor:0.###})");
                     return (MaakBijlegTekst(aantalStaven, d), aantalStaven, d, asTest);
                 }
             }
@@ -326,8 +343,159 @@ namespace Construct.Domain.Helpers
             aantalStaven = Math.Max(aantalStaven, minAantal);
             
             var asFinal = BerekenAs(aantalStaven, maxDiameter);
-            Console.WriteLine($"?? Bijlegwapening verhoogd aantal: {aantalStaven}r{maxDiameter:0} (As={asFinal:0}mm�)");
+            Console.WriteLine($"?? Bijlegwapening verhoogd aantal: {aantalStaven}r{maxDiameter:0} (As={asFinal:0}mm²)");
             return (MaakBijlegTekst(aantalStaven, maxDiameter), aantalStaven, maxDiameter, asFinal);
         }
+        
+        /// <summary>
+        /// Verschaalt bestaande plaatwapening met een factor (bijv. 1.1 voor 110%).
+        /// Probeert eerst hart-op-hart afstand te verkleinen tot minimaal 75mm,
+        /// daarna wordt diameter verhoogd.
+        /// </summary>
+        /// <param name="huidigeWapening">Huidige wapening tekst (bijv. "r8-150")</param>
+        /// <param name="factor">Schaalfactor (bijv. 1.1 voor 110%, 1.5 voor 150%)</param>
+        /// <param name="beschikbareBreedte">Beschikbare breedte (mm)</param>
+        /// <param name="constraint">Optionele constraints</param>
+        /// <returns>Nieuwe wapening tekst en toegepaste As</returns>
+        public static (string tekst, double asProvided) VerschaalPlaatWapening(
+            string huidigeWapening,
+            double factor,
+            double beschikbareBreedte = 1000,
+            WapeningConstraint? constraint = null)
+        {
+            // Parse huidige wapening
+            var parsed = ParseWapeningTekst(huidigeWapening);
+            if (!parsed.HasValue)
+            {
+                Console.WriteLine($"⚠️ Kon wapening '{huidigeWapening}' niet parsen");
+                return (huidigeWapening, 0);
+            }
+            
+            var (huidigeDiameter, huidigeHoh) = parsed.Value;
+            
+            // Bereken huidige As
+            double huidigeAs = BerekenAsPlaatWapening(huidigeDiameter, huidigeHoh, beschikbareBreedte);
+            
+            // Bereken benodigde As
+            double benodigdeAs = huidigeAs * factor;
+            
+            Console.WriteLine($"📊 VerschaalPlaatWapening: {huidigeWapening} × {factor:P0} → benodigd As={benodigdeAs:0}mm² (was {huidigeAs:0}mm²)");
+            
+            // Beschikbare diameters
+            List<double> diameters = [6, 8, 10, 12, 16, 20];
+            double minDiameter = constraint?.DiameterMin ?? huidigeDiameter;
+            double minHoh = 75; // Minimale hart-op-hart afstand
+            
+            // ===================================
+            // STAP 1: Probeer hoh te verkleinen
+            // ===================================
+            double nieuweHoh = BerekenBenodigdeHoh(benodigdeAs, huidigeDiameter, beschikbareBreedte);
+            
+            // Rond af naar veelvoud van 5 (naar beneden)
+            nieuweHoh = Math.Floor(nieuweHoh / 5.0) * 5.0;
+            
+            if (nieuweHoh >= minHoh)
+            {
+                // Hoh verkleinen is voldoende!
+                double asProvided = BerekenAsPlaatWapening(huidigeDiameter, nieuweHoh, beschikbareBreedte);
+                Console.WriteLine($"✅ Hoh verkleinen: r{huidigeDiameter:0}-{nieuweHoh:0} (As={asProvided:0}mm²)");
+                return ($"r{huidigeDiameter:0}-{nieuweHoh:0}", asProvided);
+            }
+            
+            // ===================================
+            // STAP 2: Hoh te klein → verhoog diameter
+            // ===================================
+            var beschikbareDiameters = diameters
+                .Where(d => d > huidigeDiameter && d >= minDiameter)
+                .ToList();
+            
+            if (!beschikbareDiameters.Any())
+            {
+                // Geen grotere diameter beschikbaar → gebruik huidige diameter met minimale hoh
+                double asProvided = BerekenAsPlaatWapening(huidigeDiameter, minHoh, beschikbareBreedte);
+                Console.WriteLine($"⚠️ Geen grotere diameter beschikbaar. Gebruik minimale hoh: r{huidigeDiameter:0}-{minHoh:0} (As={asProvided:0}mm²)");
+                return ($"r{huidigeDiameter:0}-{minHoh:0}", asProvided);
+            }
+            
+            // Probeer elke grotere diameter
+            foreach (var diameter in beschikbareDiameters)
+            {
+                // Bereken benodigde hoh voor deze diameter
+                double benodigdeHoh = BerekenBenodigdeHoh(benodigdeAs, diameter, beschikbareBreedte);
+                
+                // Rond af naar veelvoud van 5
+                benodigdeHoh = Math.Floor(benodigdeHoh / 5.0) * 5.0;
+                
+                // Zorg dat hoh >= minHoh
+                benodigdeHoh = Math.Max(benodigdeHoh, minHoh);
+                
+                double asProvided = BerekenAsPlaatWapening(diameter, benodigdeHoh, beschikbareBreedte);
+                
+                // Check of voldoende
+                if (asProvided >= benodigdeAs)
+                {
+                    Console.WriteLine($"✅ Diameter verhoogd: r{diameter:0}-{benodigdeHoh:0} (As={asProvided:0}mm²)");
+                    return ($"r{diameter:0}-{benodigdeHoh:0}", asProvided);
+                }
+            }
+            
+            // Fallback: gebruik grootste diameter met minimale hoh
+            var maxDiameter = beschikbareDiameters.Last();
+            double asFallback = BerekenAsPlaatWapening(maxDiameter, minHoh, beschikbareBreedte);
+            Console.WriteLine($"⚠️ Fallback: r{maxDiameter:0}-{minHoh:0} (As={asFallback:0}mm² < {benodigdeAs:0}mm²)");
+            return ($"r{maxDiameter:0}-{minHoh:0}", asFallback);
+        }
+
+        /// <summary>
+        /// Past ondergrens toe op berekende wapening.
+        /// Vergelijkt berekende wapening met ondergrens en neemt het maximum van beide.
+        /// - Diameter: neem maximum van (berekend vs ondergrens)
+        /// - Hart-op-hart: neem minimum van (berekend vs ondergrens)
+        /// </summary>
+        /// <param name="berekendeWapening">Berekende wapening tekst (bijv. "r6-150")</param>
+        /// <param name="ondergrens">Ondergrens wapening tekst (bijv. "r8-100")</param>
+        /// <returns>Definitieve wapening tekst na toepassing ondergrens</returns>
+        public static string PasOndergrensToe(string? berekendeWapening, string? ondergrens)
+        {
+            // Als geen ondergrens, gebruik berekende waarde
+            if (string.IsNullOrWhiteSpace(ondergrens))
+                return berekendeWapening ?? "r6-150";
+
+            // Als geen berekende waarde, gebruik ondergrens
+            if (string.IsNullOrWhiteSpace(berekendeWapening))
+                return ondergrens;
+
+            // Parse beide waarden
+            var parsedBerekend = ParseWapeningTekst(berekendeWapening);
+            var parsedOndergrens = ParseWapeningTekst(ondergrens);
+
+            if (!parsedBerekend.HasValue)
+                return ondergrens; // Berekend ongeldig → gebruik ondergrens
+
+            if (!parsedOndergrens.HasValue)
+                return berekendeWapening; // Ondergrens ongeldig → gebruik berekend
+
+            var (diameterBerekend, hohBerekend) = parsedBerekend.Value;
+            var (diameterOndergrens, hohOndergrens) = parsedOndergrens.Value;
+
+            // Neem maximum diameter (zwaarste wapening)
+            double definitieveDiameter = Math.Max(diameterBerekend, diameterOndergrens);
+
+            // Neem minimum hoh (meeste staven)
+            double definitieveHoh = Math.Min(hohBerekend, hohOndergrens);
+
+            string resultaat = $"r{definitieveDiameter:0}-{definitieveHoh:0}";
+
+            // Logging voor debugging
+            if (definitieveDiameter > diameterBerekend || definitieveHoh < hohBerekend)
+            {
+                Console.WriteLine($"📌 Ondergrens toegepast: {berekendeWapening} → {resultaat} (ondergrens: {ondergrens})");
+            }
+
+            return resultaat;
+        }
     }
+
+
 }
+

@@ -3,8 +3,9 @@ using System;
 namespace Construct.Domain.Entities
 {
     /// <summary>
-    /// Constraints voor wapeningsberekeningen
+    /// Constraints voor wapeningsberekeningen.
     /// </summary>
+    [Obsolete("Gebruik WapeningContext.TekstOndergrens in plaats van WapeningConstraint. Bijvoorbeeld: wapening.TekstOndergrens = \"r8-100\" in plaats van constraint = new WapeningConstraint(8, null, 100).")]
     public class WapeningConstraint
     {
         /// <summary>

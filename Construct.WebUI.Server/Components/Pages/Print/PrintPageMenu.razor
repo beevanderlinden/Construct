@@ -41,6 +41,29 @@
                 @InfoButtonText
             </FluentNavLink>
 
+            @if (Bookmarks != null && Bookmarks.Any())
+            {
+                <FluentDivider Style="margin: 8px 0;" />
+                
+                <FluentNavGroup Title="Navigatie" 
+                               Icon="@(new Icons.Regular.Size20.BookmarkMultiple())"
+                               Expanded="true">
+                    @foreach (var bookmark in Bookmarks)
+                    {
+                        <FluentNavLink OnClick="@(() => ScrollToBookmark(bookmark.Id))"
+                                      Icon="@(new Icons.Regular.Size20.Bookmark())"
+                                      IconColor="Color.Neutral">
+                            @bookmark.Title
+                        </FluentNavLink>
+                    }
+                </FluentNavGroup>
+            }
+
+
+            
+
+
+
 
             
 
@@ -169,20 +192,44 @@
 </style>
 
 @code {
-    [Parameter] public bool IsVisible { get; set; }
-    [Parameter] public bool IsLoading { get; set; }
-    [Parameter] public string InfoButtonText { get; set; } = "Bewerk info";
+[Parameter] public bool IsVisible { get; set; }
+[Parameter] public bool IsLoading { get; set; }
+[Parameter] public string InfoButtonText { get; set; } = "Bewerk info";
+[Parameter] public List<PageBookmark>? Bookmarks { get; set; }
     
-    [Parameter] public EventCallback OnPrintClick { get; set; }
-    [Parameter] public EventCallback OnDownloadRtfClick { get; set; }
-    [Parameter] public EventCallback OnRefreshClick { get; set; }
-    [Parameter] public EventCallback OnToggleInfoClick { get; set; }
-    [Parameter] public EventCallback OnTestMarkdownClick { get; set; }
-    [Parameter] public EventCallback OnTestPrintClick { get; set; }
+[Parameter] public EventCallback OnPrintClick { get; set; }
+[Parameter] public EventCallback OnDownloadRtfClick { get; set; }
+[Parameter] public EventCallback OnRefreshClick { get; set; }
+[Parameter] public EventCallback OnToggleInfoClick { get; set; }
+[Parameter] public EventCallback OnTestMarkdownClick { get; set; }
+[Parameter] public EventCallback OnTestPrintClick { get; set; }
 
-    private bool expanded = !true;
+[Inject] private IJSRuntime JS { get; set; } = default!;
 
-    // Wrapper methods die de expanded state behouden
+private bool expanded = !true;
+
+// Helper class voor bookmarks
+public class PageBookmark
+{
+    public string Id { get; set; } = "";
+    public string Title { get; set; } = "";
+    public int PageNumber { get; set; }
+}
+
+// Scroll naar bookmark via JavaScript
+private async Task ScrollToBookmark(string bookmarkId)
+{
+    try
+    {
+        await JS.InvokeVoidAsync("scrollToBookmark", bookmarkId);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error scrolling to bookmark: {ex.Message}");
+    }
+}
+
+// Wrapper methods die de expanded state behouden
     private async Task HandlePrintClick()
     {
         var wasExpanded = expanded;

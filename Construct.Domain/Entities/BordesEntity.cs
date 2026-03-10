@@ -301,14 +301,28 @@ namespace Construct.Domain.Entities
         public TandOplegging Tand { get; set; }
         
         /// <summary>
-        /// Wapening constraints voor berekeningen
+        /// Wapening constraints voor berekeningen.
+        /// OBSOLETE: Gebruik WapeningContext.TekstOndergrens in plaats van constraints.
         /// </summary>
+        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Onder.BasisWapening.TekstOndergrens = \"8-150\"")]
         public WapeningConstraint BijlegBovenConstraint { get; set; } = new(8, 2, null);
+        
+        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Onder.BasisWapening.TekstOndergrens = \"8-150\"")]
         public WapeningConstraint BijlegOnderConstraint { get; set; } = new(8, 2, null);
+        
+        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: Tand.WapeningAlgemeen.TekstOndergrens = \"6-125\"")]
         public WapeningConstraint DetailWapeningConstraint { get; set; } = new(6, null, 125);
+        
+        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Onder.BasisWapening.TekstOndergrens = \"6-150\"")]
         public WapeningConstraint OnderHoofdConstraint { get; set; } = new(6, null, 150);
+        
+        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Onder.VerdeelWapening.TekstOndergrens = \"6-250\"")]
         public WapeningConstraint OnderVerdeelConstraint { get; set; } = new(6, null, 250);
+        
+        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Boven.BasisWapening.TekstOndergrens = \"6-150\"")]
         public WapeningConstraint BovenHoofdConstraint { get; set; } = new(6, null, 150);
+        
+        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Boven.VerdeelWapening.TekstOndergrens = \"6-250\"")]
         public WapeningConstraint BovenVerdeelConstraint { get; set; } = new(6, null, 250);
         
         /// <summary>
@@ -553,11 +567,23 @@ namespace Construct.Domain.Entities
                 // Update wapening met resultaat
                 this.PlaatWapening.Onder.BasisWapening.Tekst = resultaat.tekst;
                 this.PlaatWapening.Onder.BasisWapening.SetZRef();
+                
+                // ✅ Pas ondergrens toe
+                var definitieveWapening = WapeningOptimizer.PasOndergrensToe(
+                    resultaat.tekst, 
+                    this.PlaatWapening.Onder.BasisWapening.TekstOndergrens);
+                
+                if (definitieveWapening != resultaat.tekst)
+                {
+                    this.PlaatWapening.Onder.BasisWapening.Tekst = definitieveWapening;
+                    this.PlaatWapening.Onder.BasisWapening.SetZRef();
+                }
+                
                 strook.Profiel.Hoogte = this.Dikte;
                 strook.BerekenStrook();
                 
                 rMin = strook.BendingResults.OrderBy(r => r.Moment).First();
-                Console.WriteLine($"✅ Basiswapening onder geoptimaliseerd: {resultaat.tekst} (As={resultaat.asProvided:0}mm², benodigd={rMin.AsRequired:0}mm²)");
+                Console.WriteLine($"✅ Basiswapening onder geoptimaliseerd: {definitieveWapening} (As={rMin.AsApplied:0}mm², benodigd={rMin.AsRequired:0}mm²)");
             }
             else
             {
@@ -650,6 +676,15 @@ namespace Construct.Domain.Entities
                     
                     if (this.Tand.BuigingTand.AsRequired <= this.Tand.BuigingTand.AsApplied * targetUtilization)
                     {
+                        // ✅ Pas ondergrens toe
+                        var huidigeWapening = $"Ø{currentDiameter:0.#}-{currentHoh:0}";
+                        var definitieveWapening = WapeningOptimizer.PasOndergrensToe(
+                            huidigeWapening, 
+                            this.Tand.WapeningAlgemeen.TekstOndergrens);
+                        
+                        this.Tand.WapeningAlgemeen.Tekst = definitieveWapening;
+                        this.Tand.Bijwerken();
+                        
                         Console.WriteLine($"✅ Detailwapening: hoh aangepast naar {currentHoh}mm (Ø{currentDiameter} gehandhaafd, constraint: Ø{constraintDiameter}-{constraintMaxHoh})");
                         return; // Voldoende met kleinere hoh
                     }
@@ -669,7 +704,16 @@ namespace Construct.Domain.Entities
                     
                     if (this.Tand.BuigingTand.AsRequired <= this.Tand.BuigingTand.AsApplied)
                     {
-                        Console.WriteLine($"⚠️ Detailwapening aangepast: Ø{d}-{minHoh} (constraint was: Ø{constraintDiameter}-{constraintMaxHoh})");
+                        // ✅ Pas ondergrens toe
+                        var huidigeWapening = $"Ø{d:0.#}-{minHoh:0}";
+                        var definitieveWapening = WapeningOptimizer.PasOndergrensToe(
+                            huidigeWapening, 
+                            this.Tand.WapeningAlgemeen.TekstOndergrens);
+                        
+                        this.Tand.WapeningAlgemeen.Tekst = definitieveWapening;
+                        this.Tand.Bijwerken();
+                        
+                        Console.WriteLine($"⚠️ Detailwapening aangepast: {definitieveWapening} (constraint was: Ø{constraintDiameter}-{constraintMaxHoh})");
                         return;
                     }
                 }
@@ -878,6 +922,13 @@ namespace Construct.Domain.Entities
                 // Update WapeningContext
                 BijlegWapeningOnder ??= new WapeningContext();
                 BijlegWapeningOnder.Tekst = resultaatOnder.tekst;
+                
+                // ✅ Pas ondergrens toe op bijlegwapening
+                var definitieveBijlegOnder = WapeningOptimizer.PasOndergrensToe(
+                    resultaatOnder.tekst,
+                    BijlegWapeningOnder.TekstOndergrens);
+                BijlegWapeningOnder.Tekst = definitieveBijlegOnder;
+                
                 BijlegWapeningOnder.ReferentieVlak = ReferentieVlakEnum.Onder;
                 BijlegWapeningOnder.LaagNummer = PlaatWapening?.Onder?.BasisWapening.LaagNummer ?? 2;
                 BijlegWapeningOnder.DekkingToegepast = PlaatWapening?.Onder?.BasisWapening.DekkingToegepast ?? 30;
@@ -885,7 +936,7 @@ namespace Construct.Domain.Entities
                 
                 strook.Beam.PlaatWapening.Onder.BasisWapening.Tekst += $"+{BijlegWapeningOnder.Tekst}";
                 
-                Console.WriteLine($"✅ Bijlegwapening onder: {resultaatOnder.tekst} (As={resultaatOnder.asProvided:0}mm², benodigd={bijlegReqOnder:0}mm²)");
+                Console.WriteLine($"✅ Bijlegwapening onder: {definitieveBijlegOnder} (As={resultaatOnder.asProvided:0}mm², benodigd={bijlegReqOnder:0}mm²)");
                 
                 // ✅ BOVENWAPENING: 50% van onderwapening
                 var bijlegReqBoven = bijlegReqOnder * 0.5;
@@ -901,6 +952,13 @@ namespace Construct.Domain.Entities
                 // Update WapeningContext
                 BijlegWapeningBoven ??= new WapeningContext();
                 BijlegWapeningBoven.Tekst = resultaatBoven.tekst;
+                
+                // ✅ Pas ondergrens toe op bijlegwapening boven
+                var definitieveBijlegBoven = WapeningOptimizer.PasOndergrensToe(
+                    resultaatBoven.tekst,
+                    BijlegWapeningBoven.TekstOndergrens);
+                BijlegWapeningBoven.Tekst = definitieveBijlegBoven;
+                
                 BijlegWapeningBoven.ReferentieVlak = ReferentieVlakEnum.Boven;
                 BijlegWapeningBoven.LaagNummer = PlaatWapening?.Boven?.BasisWapening.LaagNummer ?? 1;
                 BijlegWapeningBoven.DekkingToegepast = PlaatWapening?.Boven?.BasisWapening.DekkingToegepast ?? 30;
@@ -908,7 +966,7 @@ namespace Construct.Domain.Entities
                 
                 strook.Beam.PlaatWapening.Boven.BasisWapening.Tekst += $"+{BijlegWapeningBoven.Tekst}";
                 
-                Console.WriteLine($"✅ Bijlegwapening boven: {resultaatBoven.tekst} (As={resultaatBoven.asProvided:0}mm², benodigd={bijlegReqBoven:0}mm²)");
+                Console.WriteLine($"✅ Bijlegwapening boven: {definitieveBijlegBoven} (As={resultaatBoven.asProvided:0}mm², benodigd={bijlegReqBoven:0}mm²)");
                 
                 // ✅ HERBEREKEN met bijlegwapening (anders blijft D verkeerd in tabel!)
                 strook.BerekenStrook();
@@ -1006,11 +1064,108 @@ namespace Construct.Domain.Entities
 
 
 
+
+
+        /// <summary>
+        /// Past ondergrenzen toe op alle wapeningen in PlaatWapening.
+        /// Roep deze methode aan NA optimalisatie/berekening van wapening.
+        /// </summary>
+        private void PasOndergrenzenToe()
+        {
+            if (PlaatWapening == null) return;
+
+            // Boven - Hoofd
+            if (PlaatWapening.Boven?.BasisWapening != null)
+            {
+                var wap = PlaatWapening.Boven.BasisWapening;
+                var definitief = WapeningOptimizer.PasOndergrensToe(wap.Tekst, wap.TekstOndergrens);
+                if (definitief != wap.Tekst)
+                {
+                    wap.Tekst = definitief;
+                    wap.SetZRef();
+                }
+            }
+
+            // Boven - Verdeel
+            if (PlaatWapening.Boven?.VerdeelWapening != null)
+            {
+                var wap = PlaatWapening.Boven.VerdeelWapening;
+                var definitief = WapeningOptimizer.PasOndergrensToe(wap.Tekst, wap.TekstOndergrens);
+                if (definitief != wap.Tekst)
+                {
+                    wap.Tekst = definitief;
+                    wap.SetZRef();
+                }
+            }
+
+            // Onder - Hoofd
+            if (PlaatWapening.Onder?.BasisWapening != null)
+            {
+                var wap = PlaatWapening.Onder.BasisWapening;
+                var definitief = WapeningOptimizer.PasOndergrensToe(wap.Tekst, wap.TekstOndergrens);
+                if (definitief != wap.Tekst)
+                {
+                    wap.Tekst = definitief;
+                    wap.SetZRef();
+                }
+            }
+
+            // Onder - Verdeel
+            if (PlaatWapening.Onder?.VerdeelWapening != null)
+            {
+                var wap = PlaatWapening.Onder.VerdeelWapening;
+                var definitief = WapeningOptimizer.PasOndergrensToe(wap.Tekst, wap.TekstOndergrens);
+                if (definitief != wap.Tekst)
+                {
+                    wap.Tekst = definitief;
+                    wap.SetZRef();
+                }
+            }
+
+            // Bijlegwapening Onder
+            if (BijlegWapeningOnder != null)
+            {
+                var definitief = WapeningOptimizer.PasOndergrensToe(BijlegWapeningOnder.Tekst, BijlegWapeningOnder.TekstOndergrens);
+                if (definitief != BijlegWapeningOnder.Tekst)
+                {
+                    BijlegWapeningOnder.Tekst = definitief;
+                    BijlegWapeningOnder.SetZRef();
+                }
+            }
+
+            // Bijlegwapening Boven
+            if (BijlegWapeningBoven != null)
+            {
+                var definitief = WapeningOptimizer.PasOndergrensToe(BijlegWapeningBoven.Tekst, BijlegWapeningBoven.TekstOndergrens);
+                if (definitief != BijlegWapeningBoven.Tekst)
+                {
+                    BijlegWapeningBoven.Tekst = definitief;
+                    BijlegWapeningBoven.SetZRef();
+                }
+            }
+
+            // Tand wapening
+            if (Tand?.WapeningAlgemeen != null)
+            {
+                var wap = Tand.WapeningAlgemeen;
+                var definitief = WapeningOptimizer.PasOndergrensToe(wap.Tekst, wap.TekstOndergrens);
+                if (definitief != wap.Tekst)
+                {
+                    wap.Tekst = definitief;
+                    wap.SetZRef();
+                }
+            }
+        }
+
+
         public override void Bijwerken()
         {
             UpdateStrook1();
             UpdateStrook2();
             UpdateTand();
+            
+            // ✅ Pas ondergrenzen toe op alle wapeningen
+            PasOndergrenzenToe();
             
             // ✅ Roep base aan zodat validatie wordt gemaakt
             base.Bijwerken();

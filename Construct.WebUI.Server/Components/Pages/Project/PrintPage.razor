@@ -46,6 +46,7 @@ else
     <PrintPageMenu IsVisible="@(!ShowInfo && !string.IsNullOrEmpty(Html))"
                    IsLoading="@isLoading"
                    InfoButtonText="@BtnShowInfoTekst"
+                   Bookmarks="@pageBookmarks"
                    OnPrintClick="@PrintPreviewAsync"
                    OnDownloadRtfClick="@DownloadRtfAsync"
                    OnRefreshClick="@GenerateDocuments"
@@ -83,6 +84,9 @@ else
     private string Html = "";
     private bool ShowInfo = false;
     private string BtnShowInfoTekst => ShowInfo? "Verberg info": "Bewerk info";
+
+    // ✅ NIEUW: Lijst met bookmarks voor navigatie
+    private List<Construct.WebUI.Server.Components.Pages.Print.PrintPageMenu.PageBookmark>? pageBookmarks;
 
     // download content
     private string? stringContent = null;
@@ -884,7 +888,9 @@ else
 
 
 
-        section.Elements.Add(new ParagraphContent("Uitgangspunten", "Kop 1"));
+        string title = $"<span id='uitgangspunten' class='titel'>Uitgangspunten</span>";
+        section.Elements.Add(new HeadingContent(title, 1));
+
         section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
 
 
@@ -1016,33 +1022,43 @@ else
 
     }
 
-    public void SetInhoudsopgave(DocumentContent  content, List<AssemblageEntity> assemblages)
+    public void SetInhoudsopgave(DocumentContent content, List<Construct.WebUI.Server.Components.Pages.Print.PrintPageMenu.PageBookmark>? bookmarks)
     {
         if (ProjectState?.CurrentProject is not ProjectEntity proj)
         {
             return;
         }
 
-        var section = new SectionContent();
-
-        section.Elements.Add(new ParagraphContent("Inhoudsopgave", "Kop 1"));
-        section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
-
-        // ✅ Voeg eerst document hoofdstukken toe
-        section.Elements.Add(new ParagraphContent($"<a href='#uitgangspunten' onclick=\"scrollToBookmark('uitgangspunten'); return false;\" class='bookmark-link'>Uitgangspunten</a>"));
-
-        // ✅ Dan per assemblage: alleen de EERSTE heading (niet de vervolg pagina's)
-        foreach (var a in assemblages)
+        if (bookmarks == null || bookmarks.Count == 0)
         {
-            // Maak een unieke ID voor de link (gebruik assemblage Id)
-            var merkId = $"assemblage-{a?.Id}";
-            var linkText = $"<a href='#{merkId}' onclick=\"scrollToBookmark('{merkId}'); return false;\" class='bookmark-link'>{a?.Merk ?? "?"} - {a?.Naam ?? ""}</a>";
-            // Gebruik dezelfde patroon als HeadingContent - voeg direct toe aan Elements
-            section.Elements.Add(new ParagraphContent(linkText));
+            return;
         }
 
+        var section = new SectionContent();
 
-        content.Sections.Add(section);
+        var title = "<span id='inhoudsopgave' class='titel'>Inhoudsopgave</span>";
+        section.Elements.Add(new HeadingContent(title, 1));
+        section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, 2), 3)); // Inhoudsopgave is altijd pagina 2
+
+        // ✅ Filter: Titelpagina EN Inhoudsopgave zelf NIET in de inhoudsopgave
+        var tocBookmarks = bookmarks
+            .Where(b => b.Id != "titelpagina" && b.Id != "inhoudsopgave")
+            .ToList();
+
+        // ✅ Gebruik flexbox layout voor mooie dotted leader lines (nu wel met div support in parser)
+        foreach (var bookmark in tocBookmarks)
+        {
+            var linkHtml = $@"<div style='display: flex; align-items: flex-end; margin-bottom: 2mm;'>
+<a href='#{bookmark.Id}' onclick=""scrollToBookmark('{bookmark.Id}'); return false;"" class='bookmark-link'>{bookmark.Title}</a>
+<span style='flex: 1; border-bottom: 1px dotted #999; margin: 0 5px 2px;'></span>
+<span style='white-space: nowrap;'>pag. {bookmark.PageNumber}</span>
+</div>";
+            section.Elements.Add(new ParagraphContent(linkHtml));
+        }
+
+        // ✅ Voeg de inhoudsopgave sectie toe AAN HET BEGIN (positie 0)
+        // Zo komt de TOC voor uitgangspunten en assemblages
+        content.Sections.Insert(0, section);
     }
 
 
@@ -1053,7 +1069,8 @@ else
     {
         var section = new SectionContent();
 
-        section.AddParagraph("Document validatie", "Kop 1");
+        var title = $"<span id='document-validatie' class='titel'>Document validatie</span>";
+        section.Elements.Add(new HeadingContent(title, 1));
         section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
         section.AddParagraph("Er zijn meldingen in het rapport gevonden. Hieronder een samenvatting van de onderdelen die extra aandacht verdienen.\r\n\r\n");
 
@@ -1265,7 +1282,11 @@ else
 
     private async Task<DocumentContent> GenerateDocumentContent(DocumentValidationResult? validationResult, bool createToc = !true)
     {
-        PageNr = 0;
+        PageNr = 1; // voorblad is pagina 1.
+
+        // ✅ NIEUW: Initialiseer bookmarks lijst
+        pageBookmarks = new List<Construct.WebUI.Server.Components.Pages.Print.PrintPageMenu.PageBookmark>();
+
         if (ProjectState?.CurrentProject != null)
         {
             var proj = ProjectState.CurrentProject;
@@ -1277,7 +1298,17 @@ else
             content.Font = new("roboto", "3mm");
 
             // Mapping voor voorblad
-            UpdateCoverPage(); PageNr++;
+            UpdateCoverPage(); 
+
+            // ✅ Bookmark voor Titelpagina
+            pageBookmarks.Add(new() 
+            { 
+                Id = "titelpagina", 
+                Title = "Titelpagina", 
+                PageNumber = PageNr 
+            });
+
+            PageNr++;
 
             if (!ValidateProject(content)) 
                 return content;
@@ -1295,17 +1326,34 @@ else
             TableContent table = new();
 
 
-
-
-            SetInhoudsopgave(content, proj.Assemblages);
-
-            SetUitgangspunten(content, proj.ProjectInfo.Grondslagen, proj.Assemblages);
-
             // ✅ NIEUW: Voeg validatie sectie toe indien er berichten zijn
             if (validationResult != null && (validationResult.HasWarnings || validationResult.HasErrors))
             {
+                // ✅ Bookmark voor Document validatie
+                pageBookmarks.Add(new() 
+                { 
+                    Id = "document-validatie", 
+                    Title = "Document validatie", 
+                    PageNumber = PageNr 
+                });
+
                 AddValidationSection(content, validationResult);
+
             }
+
+            // ✅ STAP 2: Genereer eerst alle content (uitgangspunten + assemblages)
+            // Dan pas de inhoudsopgave zodat we alle paginanummers hebben
+
+            // Bookmark voor Uitgangspunten
+            pageBookmarks.Add(new() 
+            { 
+                Id = "uitgangspunten", 
+                Title = "Uitgangspunten", 
+                PageNumber = PageNr 
+            });
+
+            SetUitgangspunten(content, proj.ProjectInfo.Grondslagen, proj.Assemblages);
+
 
             foreach (AssemblageEntity a in proj.Assemblages.OrderBy(a=>a.Merk))
             {
@@ -1317,9 +1365,60 @@ else
                     section = new SectionContent();
                     // Voeg een unieke ID toe aan de heading voor bookmarks
                     var merkId = $"assemblage-{a.Id}";
+
+                    // ✅ Voeg bookmark toe aan lijst
+                    pageBookmarks.Add(new() 
+                    { 
+                        Id = merkId, 
+                        Title = $"{a.Merk} - {a.Naam}", 
+                        PageNumber = PageNr 
+                    });
+
                     string title = $"<span id='{merkId}' class='titel'>{a.Merk}</span> <span class='subtitel'>{a.Naam}</span>";
                     section.Elements.Add(new HeadingContent(title, 1));
                     section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
+
+                    if (a.Omschrijving != null)
+                    {
+                        section.AddParagraph(a.Omschrijving);
+                    }
+
+
+                    // HIER DE SVG
+                    if (a is BordesEntity bordesEntity)
+                    {
+                        par = new ParagraphContent();
+                        Construct.Domain.Entities.BoundingBox boundingBox = new();
+
+                        var svgWidth = 180.0;
+                        var svgWidthPixels = svgWidth * 96.0 / 25.4;
+                        var maxHeightPx = 100.0 * 96.0 / 25.4;
+                        string svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; width: {svgWidthPixels:0}; height: auto; max-height: {maxHeightPx:0}";
+
+                        string xml = SvgGenerator.GenerateBordesSvgXml(bordesEntity, boundingBox, svgWidthPixels, 9999, svgStyle);
+                        par.Markdown = xml;
+                        section.Elements.Add(par);
+                    }
+                    if (a is SteekTrapEntity ste)
+                    {
+                        par = new ParagraphContent();
+                        Construct.Domain.Entities.BoundingBox boundingBox = new();
+
+                        var svgWidth = 180.0;
+                        var svgWidthPixels = svgWidth * 96.0 / 25.4;
+                        var maxHeightPx = 100.0 * 96.0 / 25.4;
+                        string svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; width: {svgWidthPixels:0}; height: auto; max-height: {maxHeightPx:0}";
+
+                        var (svgXml, base64Png) =
+                            TrapSvgGenerator.GenerateTrapSvgXmlWithPng(ste, boundingBox, svgWidthPixels, 9999, svgStyle);
+                        par.Markdown = svgXml;
+                        section.Elements.Add(par);
+
+                        
+                    }
+
+
+
 
                     a.Belastingen.BelastingGevallen.AddToSection(section, isDraaiTabel: !true, "Belastinggevallen", "Kop 3");
                     a.Belastingen.BelastingCombinaties.AddToSection(section, isDraaiTabel: !true, "Belastingcombinaties", "Kop 3");
@@ -1436,7 +1535,7 @@ else
 
                     string xml = SvgGenerator.GenerateBordesSvgXml(bordes, boundingBox, svgWidthPixels, 9999, svgStyle);
                     par.Markdown = xml;
-                    section.Elements.Add(par);
+                    //section.Elements.Add(par);
 
                     svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; width: {svgWidthPixels:0}; height: 30mm;";
 
@@ -1941,15 +2040,30 @@ else
             
             
             
+            
+            
             }
 
 
 
            
+           
+            // ✅ STAP 2: Genereer inhoudsopgave als LAATSTE (zodat we alle paginanummers hebben)
+            // Deze wordt op positie 0 ingevoegd (voor uitgangspunten)
+            
+            // ✅ Bookmark voor Inhoudsopgave (VOOR SetInhoudsopgave zodat het in navigatie komt)
+            pageBookmarks.Insert(0, new() 
+            { 
+                Id = "inhoudsopgave", 
+                Title = "Inhoudsopgave", 
+                PageNumber = 2  // Inhoudsopgave is altijd pagina 2
+            });
+            
+            SetInhoudsopgave(content, pageBookmarks);
 
             stopWatch.Stop();
-            toastMessage += $" ({stopWatch.ElapsedMilliseconds} ms)";
-            ToastService.ShowSuccess(toastMessage);
+            //toastMessage += $" ({stopWatch.ElapsedMilliseconds} ms)";
+            //ToastService.ShowSuccess(toastMessage);
 
             return content;
 

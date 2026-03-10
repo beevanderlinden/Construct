@@ -271,7 +271,7 @@ namespace Construct.Domain.Entities
                 new DoorbuigingCombinatieContext(){CombinatieType = BelastingCombinatieTypeEnum.QuasiBlijvend, Lijnlast = Krachten?.qEqp ?? 0},
                 new DoorbuigingCombinatieContext(){CombinatieType = BelastingCombinatieTypeEnum.Frequent, Lijnlast = Krachten?.qEfr ?? 0},
             ];
-            DoorbuigingValidatie = new(beton ?? new(), ProfielSchil, WapeningSchil, LengteSchuin, DoorbuigingCombinatieContexts);
+            DoorbuigingValidatie = new(beton ?? new(), MainSlab?.Profiel ?? ProfielSchil, WapeningSchil, LengteSchuin, DoorbuigingCombinatieContexts);
             DoorbuigingValidatie.Init();
 
             //Doorbuiging = new(DoorbuigingContext)
@@ -281,7 +281,7 @@ namespace Construct.Domain.Entities
             //};
 
 
-            Scheurwijdte = new(SnedekrachtenBGT, beton ?? new(), PlaatDekking.Onder, ProfielSchil, WapeningSchil, ProjectInfo.Grondslagen.NationaleBijlage ?? Eurocode.Grondslagen.NationaleBijlageEnum.EU)
+            Scheurwijdte = new(SnedekrachtenBGT, beton ?? new(), PlaatDekking.Onder, MainSlab?.Profiel ?? ProfielSchil, WapeningSchil, ProjectInfo.Grondslagen.NationaleBijlage ?? Eurocode.Grondslagen.NationaleBijlageEnum.EU)
             {
                 Heading = "Scheurwijdte schil"
             };
@@ -408,6 +408,10 @@ namespace Construct.Domain.Entities
             if(TandOpleggingBovenzijde != null)
             {
                 TandOpleggingBovenzijde.HalsDikte = AantredeMaat - TandOpleggingBovenzijde.TandLengte;
+                TandOpleggingBovenzijde.BerekenEnValideer();
+
+                // ✅ Optimaliseer tandwapening
+                OptimaliseerTandWapening();
             }
 
             
@@ -585,13 +589,188 @@ namespace Construct.Domain.Entities
         //    TandOpleggingBovenzijde = new(this);
         //}
 
+        /// <summary>
+        /// Past ondergrenzen toe op alle wapeningen in PlaatWapening.
+        /// Roep deze methode aan NA optimalisatie/berekening van wapening.
+        /// </summary>
+        private void PasOndergrenzenToe()
+        {
+            if (PlaatWapening == null) return;
+
+            // Boven - Hoofd
+            if (PlaatWapening.Boven?.BasisWapening != null)
+            {
+                var wap = PlaatWapening.Boven.BasisWapening;
+                var definitief = WapeningOptimizer.PasOndergrensToe(wap.Tekst, wap.TekstOndergrens);
+                if (definitief != wap.Tekst)
+                {
+                    wap.Tekst = definitief;
+                    wap.SetZRef();
+                }
+            }
+
+            // Boven - Verdeel
+            if (PlaatWapening.Boven?.VerdeelWapening != null)
+            {
+                var wap = PlaatWapening.Boven.VerdeelWapening;
+                var definitief = WapeningOptimizer.PasOndergrensToe(wap.Tekst, wap.TekstOndergrens);
+                if (definitief != wap.Tekst)
+                {
+                    wap.Tekst = definitief;
+                    wap.SetZRef();
+                }
+            }
+
+            // Onder - Hoofd
+            if (PlaatWapening.Onder?.BasisWapening != null)
+            {
+                var wap = PlaatWapening.Onder.BasisWapening;
+                var definitief = WapeningOptimizer.PasOndergrensToe(wap.Tekst, wap.TekstOndergrens);
+                if (definitief != wap.Tekst)
+                {
+                    wap.Tekst = definitief;
+                    wap.SetZRef();
+                }
+            }
+
+            // Onder - Verdeel
+            if (PlaatWapening.Onder?.VerdeelWapening != null)
+            {
+                var wap = PlaatWapening.Onder.VerdeelWapening;
+                var definitief = WapeningOptimizer.PasOndergrensToe(wap.Tekst, wap.TekstOndergrens);
+                if (definitief != wap.Tekst)
+                {
+                    wap.Tekst = definitief;
+                    wap.SetZRef();
+                }
+            }
+
+            // WapeningSchil sync (zelfde als Onder.BasisWapening)
+            if (WapeningSchil != null)
+            {
+                var definitief = WapeningOptimizer.PasOndergrensToe(WapeningSchil.Tekst, WapeningSchil.TekstOndergrens);
+                if (definitief != WapeningSchil.Tekst)
+                {
+                    WapeningSchil.Tekst = definitief;
+                    WapeningSchil.SetZRef();
+                }
+            }
+        }
+
         public override void Bijwerken()
         {
             // ✅ NIEUW: Optimaliseer schilwapening op basis van benodigde As
             OptimaliseerSchilWapening();
             
-            DoorbuigingBijwerken();
+            // ✅ Pas ondergrenzen toe op alle wapeningen
+            PasOndergrenzenToe();
+
+            // We weten nu de voor sterkte benodigde en toegepaste wapening
+            var asProvided_UGT = PlaatWapening.Onder.BasisWapening.As;
+            
+
             Scheurwijdte.BerekenEnValideer();
+
+            // ✅ Iteratieve verhoging voor scheurwijdte (max 200%)
+            if (!Scheurwijdte.IsValidated)
+            {
+                Console.WriteLine("⚠️ [SteekTrapEntity] Scheurwijdte niet voldaan, probeer wapening te verhogen...");
+                
+                double verhoging = 1.0;
+                const double verhogingStap = 0.25;
+                const double maxVerhoging = 2.0;
+                
+                // Haal huidige wapening tekst op
+                string huidigeWapeningTekst = WapeningSchil?.Tekst ?? "r8-150";
+                
+                while (!Scheurwijdte.IsValidated && verhoging < maxVerhoging)
+                {
+                    verhoging += verhogingStap;
+                    
+                    // ✅ Verschaal huidige wapening met factor
+                    var resultaat = WapeningOptimizer.VerschaalPlaatWapening(
+                        huidigeWapeningTekst,
+                        factor: verhoging,
+                        beschikbareBreedte: 1000,
+                        constraint: OnderHoofdConstraint
+                    );
+                    
+                    // Update wapening
+                    WapeningSchil.Tekst = resultaat.tekst;
+                    if (PlaatWapening?.Onder?.BasisWapening != null)
+                    {
+                        PlaatWapening.Onder.BasisWapening.Tekst = resultaat.tekst;
+                        PlaatDekking.Onder.WapeningDiameterGelijkwaardig = PlaatWapening.Onder.BasisWapening.GemiddeldeDiameter;
+                    }
+                    
+                    // Herbereken scheurwijdte met nieuwe wapening
+                    Scheurwijdte.Wapening = WapeningSchil;
+                    Scheurwijdte.BerekenEnValideer();
+                    
+                    Console.WriteLine($"   Verhoging {verhoging:P0}: {resultaat.tekst} (As={resultaat.asProvided:0}mm²) → SW valid={Scheurwijdte.IsValidated}");
+                }
+                
+                if (verhoging >= maxVerhoging && !Scheurwijdte.IsValidated)
+                {
+                    Console.WriteLine($"⚠️ [SteekTrapEntity] Scheurwijdte niet voldaan na {maxVerhoging:P0} verhoging");
+                }
+            }
+
+            var huidigeAsProvided = PlaatWapening.Onder.BasisWapening.As;
+
+            DoorbuigingBijwerken();
+
+            // ✅ Iteratieve verhoging voor doorbuiging (max 200%)
+            if (DoorbuigingValidatie != null && !DoorbuigingValidatie.IsValidated)
+            {
+                Console.WriteLine("⚠️ [SteekTrapEntity] Doorbuiging niet voldaan, probeer wapening te verhogen...");
+                Console.WriteLine($"Doorbuiging voor verhoging: Wbijk = {DoorbuigingValidatie.Wbijk:0} mm");
+                Console.WriteLine($"Doorbuiging voor verhoging: Wtot = {DoorbuigingValidatie.Wtot:0} mm");
+                Console.WriteLine($"Doorbuiging voor verhoging: As = {DoorbuigingValidatie.Wapening.As:0} mm²");
+
+                double verhoging = 1.0;
+                const double verhogingStap = 0.25;
+                const double maxVerhoging = 2.0;
+                
+                // Haal huidige wapening tekst op
+                string huidigeWapeningTekst = WapeningSchil?.Tekst ?? "r8-150";
+                
+                while (!DoorbuigingValidatie.IsValidated && verhoging < maxVerhoging)
+                {
+                    verhoging += verhogingStap;
+                    
+                    // ✅ Verschaal huidige wapening met factor
+                    var resultaat = WapeningOptimizer.VerschaalPlaatWapening(
+                        huidigeWapeningTekst,
+                        factor: verhoging,
+                        beschikbareBreedte: 1000,
+                        constraint: OnderHoofdConstraint
+                    );
+                    
+                    // Update wapening
+                    WapeningSchil.Tekst = resultaat.tekst;
+                    if (PlaatWapening?.Onder?.BasisWapening != null)
+                    {
+                        PlaatWapening.Onder.BasisWapening.Tekst = resultaat.tekst;
+                        PlaatDekking.Onder.WapeningDiameterGelijkwaardig = PlaatWapening.Onder.BasisWapening.GemiddeldeDiameter;
+
+                    }
+
+                    // Herbereken doorbuiging met nieuwe wapening
+                    DoorbuigingBijwerken();
+                    
+                    Console.WriteLine($"   Verhoging {verhoging:P0}: {resultaat.tekst} (As={resultaat.asProvided:0}mm²)  Doorbuiging valid={DoorbuigingValidatie.IsValidated}");
+                    Console.WriteLine($"   H = {DoorbuigingValidatie.Profiel.Hoogte:0} mm");
+                    Console.WriteLine($"   Wbijk = {DoorbuigingValidatie.Wbijk:0.#} mm");
+                }
+                
+                if (verhoging >= maxVerhoging && !DoorbuigingValidatie.IsValidated)
+                {
+                    Console.WriteLine($"⚠️ [SteekTrapEntity] Doorbuiging niet voldaan na {maxVerhoging:P0} verhoging");
+                }
+            }
+
+
 
             IsAkkoord();
 
@@ -616,7 +795,6 @@ namespace Construct.Domain.Entities
             MomentSchil.BerekenEnValideer();
             
             var asRequired = MomentSchil.AsRequired;
-            var asApplied = MomentSchil.AsApplied;
             
             if (asRequired <= 0)
             {
@@ -624,31 +802,149 @@ namespace Construct.Domain.Entities
                 return;
             }
             
-            // Gebruik WapeningOptimizer voor automatische bepaling
+
+
+            // Gebruik WapeningOptimizer voor automatische bepaling (vanaf scratch)
             var resultaat = WapeningOptimizer.BepaalPlaatWapening(
                 asRequired,
-                beschikbareBreedte: 1000, // Referentie breedte voor platen
-                constraint: OnderHoofdConstraint,
-                startDiameter: 6,
-                startHoh: 150
+                PlaatWapening.Onder.BasisWapening
             );
             
             // Update WapeningSchil
-            if (WapeningSchil != null)
+            if (PlaatWapening?.Onder?.BasisWapening != null)
             {
-                WapeningSchil.Tekst = resultaat.tekst;
-                Console.WriteLine($"✅ [SteekTrapEntity] Schilwapening geoptimaliseerd: {resultaat.tekst} (As={resultaat.asProvided:0}mm², benodigd={asRequired:0}mm²)");
+                PlaatWapening.Onder.BasisWapening.Tekst = resultaat.tekst;
+                Console.WriteLine($"✅ [SteekTrapEntity] Schilwapening geoptimaliseerd: {WapeningSchil.Tekst} (As={WapeningSchil.As:0}mm², benodigd={asRequired:0}mm²)");
                 
                 // ✅ Update MainPlate.PlaatWapening indien aanwezig
                 if (PlaatWapening?.Onder?.BasisWapening != null)
                 {
                     PlaatWapening.Onder.BasisWapening.Tekst = resultaat.tekst;
+                    PlaatDekking.Onder.WapeningDiameterGelijkwaardig = PlaatWapening.Onder.BasisWapening.GemiddeldeDiameter;
                 }
                 
                 // Herbereken met nieuwe wapening
-                MomentSchil.Wapening = WapeningSchil;
+                MomentSchil.Wapening = PlaatWapening?.Onder.BasisWapening ?? WapeningSchil;
                 MomentSchil.BerekenEnValideer();
+
+
             }
+        }
+        
+        /// <summary>
+        /// ✅ NIEUW: Optimaliseer tandwapening op basis van benodigde As.
+        /// Volgt dezelfde strategie als BordesEntity: eerst hoh verkleinen, dan diameter verhogen.
+        /// </summary>
+        private void OptimaliseerTandWapening()
+        {
+            if (TandOpleggingBovenzijde == null)
+            {
+                Console.WriteLine("⚠️ [SteekTrapEntity] Geen tand beschikbaar, skip optimalisatie");
+                return;
+            }
+            
+            var tand = TandOpleggingBovenzijde;
+            
+            // ✅ Parse huidige wapening (gebruik constraint als startpunt)
+            double constraintDiameter = 8.0; // Default
+            double constraintMaxHoh = 150;   // Default
+            
+            double currentDiameter = constraintDiameter;
+            double currentHoh = constraintMaxHoh;
+            
+            // Zet initiële wapening
+            tand.WapeningAlgemeen.Tekst = $"Ø{currentDiameter:0.#}-{currentHoh:0}";
+            tand.DekkingAlgemeen = Math.Max(PlaatDekking.Boven.DekkingToe, PlaatDekking.Onder.DekkingToe);
+            tand.WapeningAlgemeen.DekkingToegepast = tand.DekkingAlgemeen;
+            
+            if (tand.BuigingTand != null)
+            {
+                tand.BuigingTand.Wapening = tand.WapeningAlgemeen;
+            }
+            
+            // Herbereken tand
+            tand.Bijwerken();
+            
+            // ✅ Check of wapening voldoende is
+            if (tand.BuigingTand?.AsRequired > tand.WapeningAlgemeen.As)
+            {
+                Console.WriteLine($"⚠️ [SteekTrapEntity] Tandwapening onvoldoende: AsReq={tand.BuigingTand.AsRequired:0}mm² > AsProv={tand.WapeningAlgemeen.As:0}mm²");
+                
+                // STAP 1: Probeer hoh te verkleinen (tot 50mm minimum)
+                double minHoh = 50;
+                double targetUtilization = 0.95;
+                
+                while (currentHoh >= minHoh)
+                {
+                    currentHoh -= 5;
+                    if (currentHoh < minHoh) 
+                        currentHoh = minHoh;
+                    
+                    tand.WapeningAlgemeen.Tekst = $"Ø{currentDiameter:0.#}-{currentHoh:0}";
+                    tand.Bijwerken();
+                    
+                    if (tand.BuigingTand.AsRequired <= tand.BuigingTand.AsApplied * targetUtilization)
+                    {
+                        Console.WriteLine($"✅ [SteekTrapEntity] Tandwapening: hoh aangepast naar {currentHoh}mm (Ø{currentDiameter})");
+                        return;
+                    }
+                    
+                    if (currentHoh <= minHoh)
+                        break;
+                }
+                
+                // STAP 2: Als hoh verkleinen niet helpt, verhoog diameter
+                List<double> diameters = [6, 8, 10, 12];
+                var beschikbareDiameters = diameters.Where(d => d >= constraintDiameter).ToList();
+                
+                foreach (var d in beschikbareDiameters.Skip(1)) // Skip eerste (is al geprobeerd)
+                {
+                    tand.WapeningAlgemeen.Tekst = $"Ø{d:0.#}-{minHoh:0}";
+                    tand.Bijwerken();
+                    
+                    if (tand.BuigingTand.AsRequired <= tand.BuigingTand.AsApplied)
+                    {
+                        Console.WriteLine($"✅ [SteekTrapEntity] Tandwapening aangepast: Ø{d}-{minHoh}");
+                        return;
+                    }
+                }
+                
+                Console.WriteLine($"❌ [SteekTrapEntity] Tandwapening: geen oplossing gevonden!");
+            }
+            else if (tand.BuigingTand?.AsRequired < tand.WapeningAlgemeen.As)
+            {
+                // Te veel wapening: verhoog hoh (optimaliseer)
+                double targetUtilization = 0.90;
+                
+                while (currentHoh <= constraintMaxHoh)
+                {
+                    currentHoh += 5;
+                    if (currentHoh > constraintMaxHoh) 
+                        currentHoh = constraintMaxHoh;
+                    
+                    tand.WapeningAlgemeen.Tekst = $"Ø{currentDiameter:0.#}-{currentHoh:0}";
+                    tand.Bijwerken();
+                    
+                    if (tand.BuigingTand.AsRequired >= tand.BuigingTand.AsApplied * targetUtilization)
+                    {
+                        Console.WriteLine($"✅ [SteekTrapEntity] Tandwapening geoptimaliseerd: Ø{currentDiameter}-{currentHoh}mm (benutting ~90%)");
+                        break;
+                    }
+                    
+                    if (currentHoh >= constraintMaxHoh)
+                    {
+                        Console.WriteLine($"✅ [SteekTrapEntity] Tandwapening: Ø{currentDiameter}-{currentHoh}mm (op maximum)");
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine($"✅ [SteekTrapEntity] Tandwapening: Ø{currentDiameter}-{currentHoh}mm is voldoende");
+            }
+            
+            // ✅ Valideer de tand zodat IsValidated correct wordt gezet
+            tand.BerekenEnValideer();
         }
 
         protected override void ValidateAssemblage()
@@ -899,6 +1195,21 @@ namespace Construct.Domain.Entities
             }
         }
 
+        public double AdviesSchildikteMin 
+        {
+            get
+            {
+                var basis = 80;
+
+                // optimale schildikte op basis van eigen onderzoek.
+                var curve = 5.15 * 1e-6 * Math.Pow(LengteSchuin - 2800, 2) + 0.0264 * (LengteSchuin - 2800);
+
+                var h = Math.Max(curve,0) + basis;
+
+                return (int)h;
+            }
+                
+        }
 
 
 
@@ -1006,14 +1317,24 @@ namespace Construct.Domain.Entities
         public WapeningContext WapeningSchil { get; set; }
         
         /// <summary>
-        /// ✅ NIEUW: Wapening constraints voor trap schil berekeningen.
-        /// Gebruikt voor automatische optimalisatie van schilwapening.
+        /// Wapening constraints voor trap schil berekeningen.
+        /// OBSOLETE: Gebruik WapeningContext.TekstOndergrens in plaats van constraints.
         /// </summary>
+        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Onder.BasisWapening.TekstOndergrens = \"8-150\"")]
         public WapeningConstraint OnderHoofdConstraint { get; set; } = new(8, null, 150);
+        
+        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Onder.VerdeelWapening.TekstOndergrens = \"6-250\"")]
         public WapeningConstraint OnderVerdeelConstraint { get; set; } = new(6, null, 250);
+        
+        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Boven.BasisWapening.TekstOndergrens = \"6-150\"")]
         public WapeningConstraint BovenHoofdConstraint { get; set; } = new(6, null, 150);
+        
+        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Boven.VerdeelWapening.TekstOndergrens = \"6-250\"")]
         public WapeningConstraint BovenVerdeelConstraint { get; set; } = new(6, null, 250);
         
+        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: TandOpleggingBovenzijde.WapeningAlgemeen.TekstOndergrens = \"6-100\"")]
+        public WapeningConstraint TandConstraint { get; set; } = new(6, null, 100);
+
         /// <summary>
         /// ✅ NIEUW: Plaatwapening voor trap schil (delegeert naar MainPlate).
         /// Voor trap: LaagHoofdwapening = 1 (in plaats van 2 bij bordes).
@@ -1168,6 +1489,8 @@ namespace Construct.Domain.Entities
             this.DoorbuigingValidatie.FactorBijkomend = 1 / 250.0;
             this.DoorbuigingValidatie.FactorEind = 1 / 250.0;
             this.DoorbuigingValidatie.FactorZeeg = 0.0;
+            this.DoorbuigingValidatie.Wapening = this.PlaatWapening.Onder.BasisWapening;
+            this.DoorbuigingValidatie.Profiel = this.MainSlab.Profiel ?? this.ProfielSchil;
 
 
             var blijvend = this.DoorbuigingValidatie.CombinatieContexts.FirstOrDefault(c => c.CombinatieType == BelastingCombinatieTypeEnum.Blijvend);
@@ -1186,13 +1509,14 @@ namespace Construct.Domain.Entities
             if (!this.DoorbuigingValidatie.BerekenEnValideer())
             {
                 Console.WriteLine("Doorbuiging niet akkoord");
-                foreach (var m in this.DoorbuigingValidatie.Meldingen)
+                foreach (var m in this.DoorbuigingValidatie.Meldingen.ToList())
                 {
                     Console.WriteLine($"{m}");
                 }
             }
 
 
+            
 
 
 

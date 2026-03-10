@@ -2802,9 +2802,9 @@
 
         }
 
-        public static List<SvgPath> GenerateTrapPaths(SteekTrapEntity trap, BoundingBox bb, bool zonderAfrondingen = true)
+        public static List<BaseSvg> GenerateTrapPaths(SteekTrapEntity trap, BoundingBox bb, bool zonderAfrondingen = true)
         {
-            List<SvgPath> returnList = [];
+            List<BaseSvg> returnList = [];
 
             // referentie onderkant
             //returnList.Add(GenerateBottomRef(trap));
@@ -2885,7 +2885,217 @@
 
 
 
-        public static string GenerateTrapSvgXml(SteekTrapEntity trap, BoundingBox bb, double actualWidthPx, double actualHeightPx, string style = "width:auto; height:auto;", bool toonMaatlijnen = true)
+
+        /// <summary>
+        /// Genereert een bovenaanzicht (BAZ) van de steektrap.
+        /// Toont een rechthoek met verticale lijnen voor elk hoekpunt uit de doorsnede.
+        /// </summary>
+        public static string GenerateTrapBazSvgXml(
+            SteekTrapEntity trap, 
+            BoundingBox bb, 
+            double actualWidthPx, 
+            double actualHeightPx,
+            double trapBreedte = 1000,
+            string style = "width:auto; height:auto;", 
+            bool toonMaatlijnen = true)
+        {
+            SvgHelper svgHelper = new();
+            SvgDocumentInfo? info = new()
+            {
+                Id = trap.Id.ToString(),
+                Title = $"{trap.Merk ?? "TRAP"} - Bovenaanzicht",
+                Description = "steektrap bovenaanzicht",
+                Label = trap.Merk ?? "BAZ",
+            };
+
+            List<BaseSvg> svgElements = [];
+            
+            // ✅ Hoofdrechthoek (beton element bovenaanzicht)
+            var rect = new SvgRect
+            {
+                X = 0,
+                Y = 0,
+                Width = trap.LengteTotaal,
+                Height = trapBreedte,
+                Fill = "lightgray",
+                Stroke = "black",
+                StrokeWidth = 2
+            };
+            svgElements.Add(rect);
+            
+            if (!trap.GebruikEigenLengte)
+            {
+                // ✅ Extraheer X-posities uit doorsnede hoekpunten
+                var xPositions = ExtractXPositionsFromDoorsnede(trap);
+                
+                foreach (var (xPos, isVerborgen) in xPositions)
+                {
+                    var lijn = new SvgLine
+                    {
+                        X1 = xPos,
+                        Y1 = 0,
+                        X2 = xPos,
+                        Y2 = trapBreedte,
+                        Stroke = isVerborgen ? "gray" : "black",
+                        StrokeWidth = isVerborgen ? 0.5 : 1,
+                        StrokeDashArray = isVerborgen ? "5,5" : ""
+                    };
+                    svgElements.Add(lijn);
+                }
+            }
+            
+            // Maatlijnen
+            List<SvgDimLine> dimLines = [];
+            if (toonMaatlijnen)
+            {
+                dimLines = GenerateTrapBazDimLines(trap, trapBreedte);
+            }
+            
+            // ViewBox berekenen
+            var x = Math.Min(bb.MinX, 0);
+            var y = Math.Min(bb.MinY, 0);
+            var w = Math.Max(bb.Width, trap.LengteTotaal);
+            var h = Math.Max(bb.Height, trapBreedte);
+            SvgHelper.SvgViewBox viewBox = new(x, y, w, h);
+            
+            var vbWithMargins = viewBox.WithMarginsByText(
+                leftLines: 3,
+                rightLines: 3,
+                topLines: 3,
+                bottomLines: 3,
+                fontSizePx: 12,
+                lineHeight: 1.5,
+                actualWidthPx: actualWidthPx,
+                actualHeightPx: actualHeightPx
+            );
+            
+            bb.MinX = vbWithMargins.X;
+            bb.MinY = vbWithMargins.Y;
+            bb.MaxXValue = vbWithMargins.X + vbWithMargins.Width;
+            bb.MaxYValue = vbWithMargins.Y + vbWithMargins.Height;
+            
+            List<SvgText> teksten = [];
+            var status = trap.Akkoord ? "" : "has-warning";
+            
+            var svg = svgHelper.GetSvgStringOptimal(
+                info, vbWithMargins, svgElements, dimLines, teksten, 
+                actualWidthPx, actualHeightPx, style, status);
+            
+            return svg;
+        }
+
+        /// <summary>
+        /// Extraheert X-posities van hoekpunten uit de doorsnede.
+        /// Retourneert (X, IsVerborgen) tuples.
+        /// </summary>
+        private static List<(double X, bool IsVerborgen)> ExtractXPositionsFromDoorsnede(SteekTrapEntity trap)
+        {
+            var positions = new List<(double X, bool IsVerborgen)>();
+            
+            if (trap.GebruikEigenLengte)
+            {
+                // Simpel geval: alleen start en eind
+                positions.Add((0, false));
+                positions.Add((trap.LengteTotaal, false));
+                return positions;
+            }
+            
+            double wel = trap.WelMaat;
+            
+            // ✅ Voorkant (altijd zichtbaar)
+            positions.Add((0, false));
+            
+            // ✅ Hoekpunten van elke trede
+            for (int i = 0; i < trap.OptredeAantal1; i++)
+            {
+                double xTrede = i * trap.AantredeMaat;
+                
+                // Boven optrede (lijn aan bovenkant trede - ZICHTBAAR vanaf trede 1)
+                if (i > 0)
+                {
+                    positions.Add((xTrede - wel, false));
+                }
+                
+                // Onder optrede (lijn aan onderkant trede - VERBORGEN)
+                double xOnderTrede = xTrede + trap.AantredeMaat;
+                
+                // Laatste trede heeft geen verborgen lijn
+                if (i < trap.OptredeAantal1 - 1)
+                {
+                    positions.Add((xOnderTrede - wel, true));
+                }
+            }
+            
+            // ✅ Achterkant (altijd zichtbaar)
+            double tandLengte = trap.TandOpleggingBovenzijde?.TandLengte ?? 0;
+            positions.Add((trap.LengteTotaal - tandLengte, false));
+            
+            if (tandLengte > 0)
+            {
+                // Tand voorkant
+                positions.Add((trap.LengteTotaal, false));
+            }
+            
+            return positions.OrderBy(p => p.X).ToList();
+        }
+
+        /// <summary>
+        /// Genereert maatlijnen voor het bovenaanzicht.
+        /// </summary>
+        private static List<SvgDimLine> GenerateTrapBazDimLines(SteekTrapEntity trap, double breedte)
+        {
+            List<SvgDimLine> dimLines = [];
+            
+            // Totale lengte (horizontaal)
+            dimLines.Add(new SvgDimLine
+            {
+                Mode = DimLineMode.Horizontal,
+                X1 = 0,
+                Y1 = 0,
+                X2 = trap.LengteTotaal,
+                Y2 = 0,
+                OffsetLines = -2,
+                Text = $"{trap.LengteTotaal:0}",
+                StrokeColor = "var(--neutral-foreground-rest, black)"
+            });
+            
+            // Breedte (verticaal)
+            dimLines.Add(new SvgDimLine
+            {
+                Mode = DimLineMode.Vertical,
+                X1 = 0,
+                Y1 = 0,
+                X2 = 0,
+                Y2 = breedte,
+                OffsetLines = 2,
+                Text = $"{breedte:0}",
+                StrokeColor = "var(--neutral-foreground-rest, black)"
+            });
+            
+            // Optioneel: aantredemaatjes
+            if (!trap.GebruikEigenLengte && trap.OptredeAantal1 > 1)
+            {
+                dimLines.Add(new SvgDimLine
+                {
+                    Mode = DimLineMode.Horizontal,
+                    X1 = 0,
+                    Y1 = breedte,
+                    X2 = trap.AantredeMaat,
+                    Y2 = breedte,
+                    OffsetLines = 2,
+                    Text = $"{trap.AantredeMaat:0}",
+                    StrokeColor = "var(--neutral-foreground-rest, black)"
+                });
+            }
+            
+            return dimLines;
+        }
+
+        public static string GenerateTrapSvgXml(SteekTrapEntity trap, BoundingBox bb, 
+            double actualWidthPx, double actualHeightPx, string style = "width:auto; height:auto;", 
+            bool toonMaatlijnen = true, 
+            bool toonBaz = !true, 
+            double trapBreedte = 1000)
         {
             SvgHelper svgHelper = new();
             SvgDocumentInfo? info = new()
@@ -2897,7 +3107,7 @@
 
             };
 
-            // 💡maak de paden en maatlijnen
+            // 💡maak de paden en maatlijnen voor doorsnede
             var svgPaths = GenerateTrapPaths(trap, bb);
 
             var lijnlast = GenerateLijnlast(0, 0, trap.LengteTotaal, 0, 100, $"q={trap.Krachten.Gk:0.##}({trap.Krachten.Lijnlast_qk:0.##})");
@@ -2907,11 +3117,94 @@
             if (toonMaatlijnen)
                 dimLines = GenerateTrapDimLines(trap);
 
-            // Bepaal de viewBox
+            // ✅ Voeg BAZ toe onder de doorsnede indien gewenst
+            double bazYOffset = 0;
+            List<BaseSvg> bazElements = [];
+            
+            if (toonBaz)
+            {
+                // Offset berekenen: hoogte doorsnede + ruimte tussen views
+                bazYOffset = trap.HoogteTotaal + 200; // 200mm ruimte tussen doorsnede en BAZ
+                
+                // BAZ rechthoek
+                var bazRect = new SvgRect
+                {
+                    X = 0,
+                    Y = bazYOffset,
+                    Width = trap.LengteTotaal,
+                    Height = trapBreedte,
+                    Fill = "lightgray",
+                    Stroke = "black",
+                    StrokeWidth = 2
+                };
+                bazElements.Add(bazRect);
+                
+                // BAZ verticale lijnen (hoekpunten)
+                if (!trap.GebruikEigenLengte)
+                {
+                    var xPositions = ExtractXPositionsFromDoorsnede(trap);
+                    
+                    foreach (var (xPos, isVerborgen) in xPositions)
+                    {
+                        var lijn = new SvgLine
+                        {
+                            X1 = xPos,
+                            Y1 = bazYOffset,
+                            X2 = xPos,
+                            Y2 = bazYOffset + trapBreedte,
+                            Stroke = isVerborgen ? "gray" : "black",
+                            StrokeWidth = isVerborgen ? 0.5 : 1,
+                            StrokeDashArray = isVerborgen ? "5,5" : ""
+                        };
+                        bazElements.Add(lijn);
+                    }
+                }
+                
+                // BAZ maatlijnen
+                if (toonMaatlijnen)
+                {
+                    var bazDimLines = GenerateTrapBazDimLines(trap, trapBreedte);
+                    
+                    // Offset alle maatlijnen met bazYOffset
+                    foreach (var dimLine in bazDimLines)
+                    {
+                        dimLine.Y1 += bazYOffset;
+                        dimLine.Y2 += bazYOffset;
+                    }
+                    
+                    dimLines.AddRange(bazDimLines);
+                }
+                
+                // Voeg BAZ elementen toe aan svgPaths
+                svgPaths.AddRange(bazElements);
+                
+                // Voeg "Bovenaanzicht" tekst toe
+                var bazTitel = new SvgText(
+                    "Bovenaanzicht",
+                    x: trap.LengteTotaal / 2,
+                    y: bazYOffset - 50,
+                    scale: 1.0
+                )
+                {
+                    Anchor = "middle",
+                    DominantBaseLine = "auto"
+                };
+                svgPaths.Add(bazTitel);
+            }
+
+            // Bepaal de viewBox (inclusief BAZ indien van toepassing)
             var x = Math.Min(bb.MinX, 0);
             var y = Math.Min(bb.MinY, -trap.HoogteTotaal);
-            var w = Math.Max(bb.Width, trap.LengteTotaal + trap.WelMaat); // tijdelijke oplossing, gebruik later een boundingBox voor in assemblage-entiteit.
+            var w = Math.Max(bb.Width, trap.LengteTotaal + trap.WelMaat);
             var h = Math.Max(bb.Height, trap.HoogteTotaal);
+            
+            if (toonBaz)
+            {
+                // Vergroot viewbox om BAZ te omvatten
+                h = Math.Max(h, bazYOffset + trapBreedte);
+                w = Math.Max(w, trap.LengteTotaal);
+            }
+            
             SvgHelper.SvgViewBox viewBox = new(x, y, w, h);
 
             // Maak een nieuwe viewbox aan met het aantal regelafstanden in rondom de tekening.
@@ -2919,14 +3212,12 @@
                 leftLines: 5,
                 rightLines: 5,
                 topLines: 4,
-                bottomLines: 1,
+                bottomLines: toonBaz ? 14 : 1,
                 fontSizePx: 12,
                 lineHeight: 1.5,
                 actualWidthPx: actualWidthPx,
                 actualHeightPx: actualHeightPx
             );
-
-
 
             var teksten = GenerateTrapTeksten(trap, bb, vbWithMargins.GetScale(actualWidthPx, actualHeightPx));
 
@@ -2934,12 +3225,11 @@
 
             var svg2 = svgHelper.GetSvgStringOptimal(info, vbWithMargins, svgPaths, dimLines, teksten, actualWidthPx, actualHeightPx, style, status);
 
-
             return svg2;
         }
 
 
-        public static List<SvgText> GenerateTrapTeksten(SteekTrapEntity trap, BoundingBox bb, double scale)
+        public static List<SvgText> GenerateTrapTeksten(SteekTrapEntity trap, BoundingBox bb, double scale, bool toonWapTekst = true)
         {
             List<SvgText> returnList = [];
 
@@ -2960,7 +3250,7 @@
             if (!trap.GebruikEigenLengte)
             {
                 var dx = 20 - trap.WelMaat * 0.5;
-                var dy = -trap.OptredeMaat + 20;
+                var dy = -trap.OptredeMaat - 20;
                 for (int n = 0; n < trap.OptredeAantal1; n++)
                 {
                     var x = 0 + n * trap.AantredeMaat +dx;
@@ -2970,11 +3260,24 @@
                         X = x,
                         Y = y,
                         Text = $"{n + 1}",
-                        DominantBaseLine = "hanging",
+                        DominantBaseLine = "base",
                         Anchor = "left"
 
                     }); 
                 }
+            }
+
+            if (toonWapTekst)
+            {
+                // toon wapeningstekst bij de trap
+                
+                var wapTekst = new SvgText($"\r\n{trap.MainSlab?.PlaatWapening.Onder.BasisWapening.SanitizedTekst()}", x1, y1, x2, y2)
+                {
+                    Fill = "var(--accent-foreground-rest, black)",
+                    Anchor = "middle",
+                    DominantBaseLine = "middle"
+                };
+                returnList.Add(wapTekst);
             }
 
 

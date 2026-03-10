@@ -1200,6 +1200,36 @@ table.borderless {
         line-height: var(--line-height);
     }
 
+/* ✅ Bookmark links styling (voor inhoudsopgave) - met hogere specificiteit */
+.preview-container a.bookmark-link,
+.ec-panel a.bookmark-link,
+a.bookmark-link {
+    text-decoration: none !important;
+    color: inherit !important;
+    font-family: 'Segoe UI', 'Arial Unicode MS', 'Lucida Sans Unicode', sans-serif !important;
+    cursor: pointer;
+}
+
+.preview-container a.bookmark-link:hover,
+.ec-panel a.bookmark-link:hover,
+a.bookmark-link:hover {
+    text-decoration: underline !important;
+    color: var(--accent-fill-rest) !important;
+}
+
+/* ✅ TOC flexbox container voor inhoudsopgave (mooie leader lines) */
+.ec-panel div[style*="display: flex"] {
+    line-height: var(--line-height);
+}
+
+/* Print-friendly dotted line */
+@media print {
+    .ec-panel div[style*="display: flex"] span[style*="border-bottom"] {
+        border-bottom: 1px dotted #666 !important;
+    }
+}
+    }
+
 /* Basis layout: Links | Rechts */
 .kop1,
 .kop2,

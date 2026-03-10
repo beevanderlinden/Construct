@@ -45,5 +45,9 @@ namespace Construct.Domain.Entities.Parts
         /// </summary>
         [JsonIgnore]
         public BetonContext? Beton => Material as BetonContext;
+
+
+
+
     }
 }

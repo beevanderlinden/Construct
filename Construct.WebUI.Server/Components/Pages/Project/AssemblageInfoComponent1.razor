@@ -30,6 +30,12 @@ else
             <FluentTextField @bind-Value="@Model.Naam" style="width: 100%" />
         </KaskonInputContainer>
 
+        <KaskonInputContainer Label="omschrijving">
+            <FluentTextArea @bind-Value="@Model.Omschrijving" style="width: 100%" />
+        </KaskonInputContainer>
+
+
+
         <KaskonInputContainer Label="type">
             <FluentSelectEnum LabelPosition="LabelPosition.Top"
                               TEnum="AssemblageEntity.AssemblageTypeEnum"
@@ -37,6 +43,8 @@ else
                               @bind-EnumSelectedValue="Model.AssemblageType">
             </FluentSelectEnum>
         </KaskonInputContainer>
+
+
 
 
         @if(Model.Materiaal is BetonContext beton)

@@ -69,21 +69,26 @@
     </KaskonInputContainer> *@
 
 
-    <KaskonInputContainer Label="schildikte">
+   @*  <KaskonInputContainer Label="schildikte">
         <KitInputNumber T="double" Min="60" Max="400" Step="10" @bind-Value="SteekTrap.ProfielSchil.Hoogte" Unit="mm" OnValueChanged="OnModelChanged"/>
 
-       @*  <input type="number"
-               class="form-control"
-               @bind="SteekTrap.ProfielSchil.Hoogte"
-               @bind:after="OnModelChanged"
-               step=10
-               min=60
-               max=400> *@
-    </KaskonInputContainer>
+      
+    </KaskonInputContainer> *@
 
-    <KaskonInputContainer>
-        <div class="form-control-text">@SteekTrap.Slankheid.EffectieveDikte</div>
-    </KaskonInputContainer>
+    @if(SteekTrap.MainSlab != null)
+    {
+        <KaskonInputContainer Label="schildikte">
+            <KitInputNumber T="double" Min="60" Max="400" Step="10" @bind-Value="SteekTrap.MainSlab.Dikte" Unit="mm" OnValueChanged="OnModelChanged" />
+        </KaskonInputContainer>
+
+
+        <KaskonInputContainer Label="adviesdikte">
+           <div>@SteekTrap.AdviesSchildikteMin mm</div>
+        </KaskonInputContainer>
+    }
+   
+   
+    
 
 
     <KaskonInputContainer Label="breedte [mm]">
