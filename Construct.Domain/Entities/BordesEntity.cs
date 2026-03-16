@@ -49,9 +49,11 @@ namespace Construct.Domain.Entities
                 Belastingen.BelastingGevallen,
                 Belastingen.CombinatiesTypes);
 
-            Trap1 = new VerbindingAansluitendElement(this);
-            Trap2 = new VerbindingAansluitendElement(this);
-            Trap2.Gespiegeld = true;
+            Trap1 = new(this);
+            Trap2 = new(this)
+            {
+                Gespiegeld = true
+            };
 
             TandOplegging = new() { };
             Tand = new TandOplegging(this, this.TandOplegging) ;
@@ -66,26 +68,32 @@ namespace Construct.Domain.Entities
 
             var qbasis = -10;
 
-            var basis = new StrookEntity();
-            basis.Father = this;
-            basis.Profiel = _basisStrook?.Profiel?? new();
+            var basis = new StrookEntity
+            {
+                Father = this,
+                Profiel = _basisStrook?.Profiel ?? new()
+            };
             basis.Beam.Length = this.Lengte * 1e-3;
             basis.Beam.StartSupport = Mechanica.SimpleBeam.SupportType.Pin;
             basis.Beam.EndSupport = Mechanica.SimpleBeam.SupportType.Pin;
 
-            var dl1 = new DistributedLoad(0, basis.Beam.Length, qbasis);
-            dl1.LoadCase = Belastingen.BelastingGevallen[0];
-            
+            var dl1 = new DistributedLoad(0, basis.Beam.Length, qbasis)
+            {
+                LoadCase = Belastingen.BelastingGevallen[0]
+            };
+
 
             basis.Beam.Loads.Add(dl1);
             basis.Naam = "basisstrook";
 
             this.AddStrook(basis);
 
-            var vs = new StrookEntity();
-            vs.Naam = "versterkte strook";
-            vs.Father = this;
-            vs.Profiel = new(Breedte, Hoogte);
+            var vs = new StrookEntity
+            {
+                Naam = "versterkte strook",
+                Father = this,
+                Profiel = new(Breedte, Hoogte)
+            };
             vs.Beam.Length = this.Lengte * 1e-3;
             var q1 = vs.Profiel.B / 1000 * qbasis;
             vs.Beam.Loads.Add(new DistributedLoad(0, vs.Beam.Length, q1, q1));
@@ -322,7 +330,7 @@ namespace Construct.Domain.Entities
         {
             get
             {
-                return PlaatDekking.Onder.DekkingToe + PlaatDekking.Boven.DekkingToe + 7 * DetailWapeningConstraint.DiameterMin ?? 8;
+                return PlaatDekking.Onder.DekkingToe + PlaatDekking.Boven.DekkingToe + 7 * PlaatWapening?.Onder?.VerdeelWapening?.GrootsteDiameter ?? 8.0;
             }
         }
 
@@ -333,26 +341,26 @@ namespace Construct.Domain.Entities
         /// Wapening constraints voor berekeningen.
         /// OBSOLETE: Gebruik WapeningContext.TekstOndergrens in plaats van constraints.
         /// </summary>
-        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Onder.BasisWapening.TekstOndergrens = \"8-150\"")]
-        public WapeningConstraint BijlegBovenConstraint { get; set; } = new(8, 2, null);
+        //[Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Onder.BasisWapening.TekstOndergrens = \"8-150\"")]
+        //public WapeningConstraint BijlegBovenConstraint { get; set; } = new(8, 2, null);
         
-        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Onder.BasisWapening.TekstOndergrens = \"8-150\"")]
-        public WapeningConstraint BijlegOnderConstraint { get; set; } = new(8, 2, null);
+        //[Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Onder.BasisWapening.TekstOndergrens = \"8-150\"")]
+        //public WapeningConstraint BijlegOnderConstraint { get; set; } = new(8, 2, null);
         
-        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: Tand.WapeningAlgemeen.TekstOndergrens = \"6-125\"")]
-        public WapeningConstraint DetailWapeningConstraint { get; set; } = new(6, null, 125);
+        //[Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: Tand.WapeningAlgemeen.TekstOndergrens = \"6-125\"")]
+        //public WapeningConstraint DetailWapeningConstraint { get; set; } = new(6, null, 125);
         
-        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Onder.BasisWapening.TekstOndergrens = \"6-150\"")]
-        public WapeningConstraint OnderHoofdConstraint { get; set; } = new(6, null, 150);
+        //[Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Onder.BasisWapening.TekstOndergrens = \"6-150\"")]
+        //public WapeningConstraint OnderHoofdConstraint { get; set; } = new(6, null, 150);
         
-        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Onder.VerdeelWapening.TekstOndergrens = \"6-250\"")]
-        public WapeningConstraint OnderVerdeelConstraint { get; set; } = new(6, null, 250);
+        //[Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Onder.VerdeelWapening.TekstOndergrens = \"6-250\"")]
+        //public WapeningConstraint OnderVerdeelConstraint { get; set; } = new(6, null, 250);
         
-        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Boven.BasisWapening.TekstOndergrens = \"6-150\"")]
-        public WapeningConstraint BovenHoofdConstraint { get; set; } = new(6, null, 150);
+        //[Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Boven.BasisWapening.TekstOndergrens = \"6-150\"")]
+        //public WapeningConstraint BovenHoofdConstraint { get; set; } = new(6, null, 150);
         
-        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Boven.VerdeelWapening.TekstOndergrens = \"6-250\"")]
-        public WapeningConstraint BovenVerdeelConstraint { get; set; } = new(6, null, 250);
+        //[Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Boven.VerdeelWapening.TekstOndergrens = \"6-250\"")]
+        //public WapeningConstraint BovenVerdeelConstraint { get; set; } = new(6, null, 250);
         
         /// <summary>
         /// Berekende/huidige diameter detailwapening
@@ -366,7 +374,6 @@ namespace Construct.Domain.Entities
 
         // helpers
         private BendingResults? _basisStrook; // todo generieke strook class maken.
-        private BendingResults? _versterkteStrook;
 
         private void UpdateStrook1()
         {
@@ -375,7 +382,7 @@ namespace Construct.Domain.Entities
             strook.Beam.Length = this.Lengte * 1e-3;
             strook.Beam.Materiaal = this.Materiaal;
             strook.Beam.Profiel = strook.Profiel;
-            strook.PlaatWapening = this.PlaatWapening; // Geen Clone() nodig. Deze strook gebruikt dezelfde PlaatWapening als de assemblage, dus we willen dat ze dezelfde reference delen. Wijzigingen in de assemblage moeten direct doorwerken in de strook.
+            strook.PlaatWapening = this.PlaatWapening!; // Geen Clone() nodig. Deze strook gebruikt dezelfde PlaatWapening als de assemblage, dus we willen dat ze dezelfde reference delen. Wijzigingen in de assemblage moeten direct doorwerken in de strook.
 
             // ✅ NIEUWE AANPAK: Pas ondergrenzen toe op alle wapeningen
             // (Dit vervangt de oude constraint-checking logica)
@@ -429,24 +436,31 @@ namespace Construct.Domain.Entities
                 strook.Beam.Loads.Add(dl1g);
 
                 var veranderlijk = Belastingen.BelastingGevallen[1];
-                var dl1q = new DistributedLoad(veranderlijk, "L1~Qk~", 0, LengteM, -veranderlijk.OpgelegdeBelastingen.Vlaklast);
-                dl1q.Description = "opgelegde belasting vlaklast";
+                var dl1q = new DistributedLoad(veranderlijk, "L1~Qk~", 0, LengteM, -veranderlijk.OpgelegdeBelastingen.Vlaklast)
+                {
+                    Description = "opgelegde belasting vlaklast"
+                };
                 strook.Beam.Loads.Add(dl1q);
 
-                var pl = new MovingPointLoad(LengteM/2.12, 10 * -veranderlijk.OpgelegdeBelastingen.Puntlast) { 
+                var pl = new MovingPointLoad(LengteM / 2.12, 10 * -veranderlijk.OpgelegdeBelastingen.Puntlast)
+                {
                     StartPos = 0.05,
                     EndPos = LengteM - 0.05,
                     Name = "P1",
                     LoadCase = veranderlijk,
+                    Description = "opgelegde belasting puntlast"
                 };
-                pl.Description = "opgelegde belasting puntlast";
             }
 
             if (Belastingen.BelastingGevallen.Count > 2)
             {
                 var bg3 = Belastingen.BelastingGevallen[2];
-                var p1 = new PointLoad(-bg3.OpgelegdeBelastingen.Puntlast, bg3) { Position = LengteM / 2, Name = "P1"};
-                p1.Description = "opgelegde belasting puntlast";
+                var p1 = new PointLoad(-bg3.OpgelegdeBelastingen.Puntlast, bg3)
+                {
+                    Position = LengteM / 2,
+                    Name = "P1",
+                    Description = "opgelegde belasting puntlast"
+                };
                 strook.Beam.Loads.Add(p1);
             }
 
@@ -481,7 +495,7 @@ namespace Construct.Domain.Entities
                     {
                         // ✅ Herbereken AsRequired bij diameter wijziging (nuttige hoogte wijzigt!)
                         // Update tijdelijk de wapening om nieuwe As te berekenen
-                        this.PlaatWapening.Onder.BasisWapening.Tekst = $"r{nieuweD:0}-{currentHoh:0}";
+                        this.PlaatWapening!.Onder!.BasisWapening.Tekst = $"r{nieuweD:0}-{currentHoh:0}";
                         this.PlaatWapening.Onder.BasisWapening.SetZRef();
                         strook.Profiel.Hoogte = this.Dikte;
                         strook.BerekenStrook();
@@ -492,7 +506,7 @@ namespace Construct.Domain.Entities
                 );
                 
                 // Update wapening met resultaat
-                this.PlaatWapening.Onder.BasisWapening.Tekst = resultaat.tekst;
+                this.PlaatWapening!.Onder!.BasisWapening.Tekst = resultaat.tekst;
                 this.PlaatWapening.Onder.BasisWapening.SetZRef();
                 
                 // ✅ Pas ondergrens toe
@@ -539,13 +553,13 @@ namespace Construct.Domain.Entities
             }
 
             // Haal reacties op van trap1 en trap2
-            var r1 = this.Trap1.Reacties;
+            var (G, Q) = this.Trap1.Reacties;
             var r2 = this.Trap2.Reacties;
 
             var belastingCombinaties = this.Belastingen.BelastingCombinaties;
 
             // Bereken maximale fundamentele waarde voor Trap1
-            double maxTrap1 = BerekenMaximaleFundamenteleWaarde(r1.G, r1.Q, belastingCombinaties);
+            double maxTrap1 = BerekenMaximaleFundamenteleWaarde(G, Q, belastingCombinaties);
 
             // Bereken maximale fundamentele waarde voor Trap2
             double maxTrap2 = BerekenMaximaleFundamenteleWaarde(r2.G, r2.Q, belastingCombinaties);
@@ -566,7 +580,7 @@ namespace Construct.Domain.Entities
             
             // ✅ LEES constraints (maar wijzig ze NOOIT!)
             double constraintDiameter = DetailWapeningDiameterMin ?? 8.0;
-            double constraintMaxHoh = DetailWapeningHoh ?? 150;
+            double constraintMaxHoh = DetailWapeningHohMax ?? 150;
             
             // Bereken met constraint waarden
             double currentDiameter = constraintDiameter;
@@ -687,7 +701,7 @@ namespace Construct.Domain.Entities
         /// Berekent de maximale fundamentele waarde (Gk × factorG + Qk × factorQ) 
         /// voor alle fundamentele belastingcombinaties (Type A en B).
         /// </summary>
-        public double BerekenMaximaleFundamenteleWaarde(double gk, double qk, List<BelastingCombinatie> combinaties)
+        public static double BerekenMaximaleFundamenteleWaarde(double gk, double qk, List<BelastingCombinatie> combinaties)
         {
             double maxWaarde = 0;
 
@@ -835,7 +849,8 @@ namespace Construct.Domain.Entities
                 var resultaatOnder = WapeningOptimizer.BepaalBijlegWapening(
                     bijlegReqOnder,
                     belastingBreedteMM,
-                    constraint: BijlegOnderConstraint,
+                    dMin: 6, // todo parse constraints uit PlaatWapening.Onder.BasisWapening.TekstOndergrens
+                    nMin: 2, // todo parse constraints uit PlaatWapening.Onder.BasisWapening.TekstOndergrens
                     dGemiddeld: strook.PlaatWapening.Onder?.BasisWapening.GemiddeldeDiameter ?? 6,
                     dNuttig: rMin.D
                 );
@@ -865,7 +880,8 @@ namespace Construct.Domain.Entities
                 var resultaatBoven = WapeningOptimizer.BepaalBijlegWapening(
                     bijlegReqBoven,
                     belastingBreedteMM,
-                    constraint: BijlegBovenConstraint,
+                    dMin: 8, // todo parse constraints uit PlaatWapening.Boven.BasisWapening.TekstOndergrens
+                    nMin: 2, // todo parse constraints uit PlaatWapening.Boven.BasisWapening.TekstOndergrens
                     dGemiddeld: strook.PlaatWapening.Boven?.BasisWapening.GemiddeldeDiameter ?? 6,
                     dNuttig: 170 // Schatting voor boven (minder kritisch)
                 );
@@ -1179,64 +1195,16 @@ namespace Construct.Domain.Entities
             }
         }
 
-        /// <summary>
-        /// Reset alle wapening constraints en plaatwapening naar standaard waarden
-        /// </summary>
-        public void ResetConstraintsToDefault()
-        {
-            // Reset constraints
-            BijlegBovenConstraint = new(8, 2, null);
-            BijlegOnderConstraint = new(8, 2, null);
-            DetailWapeningConstraint = new(6, null, 125);
-            OnderHoofdConstraint = new(6, null, 150);
-            OnderVerdeelConstraint = new(6, null, 250);
-            BovenHoofdConstraint = new(6, null, 150);
-            BovenVerdeelConstraint = new(6, null, 250);
-            
-            // Reset plaatwapening naar defaults
-            if (PlaatWapening != null)
-            {
-                if (PlaatWapening.Onder?.BasisWapening != null)
-                {
-                    PlaatWapening.Onder.BasisWapening.Tekst = "r6-150";
-                    Console.WriteLine("[RESET] Onder.BasisWapening -> r6-150");
-                }
-                
-                if (PlaatWapening.Onder?.VerdeelWapening != null)
-                {
-                    PlaatWapening.Onder.VerdeelWapening.Tekst = "r6-250";
-                    Console.WriteLine("[RESET] Onder.VerdeelWapening -> r6-250");
-                }
-                
-                if (PlaatWapening.Boven?.BasisWapening != null)
-                {
-                    PlaatWapening.Boven.BasisWapening.Tekst = "r6-150";
-                    Console.WriteLine("[RESET] Boven.BasisWapening -> r6-150");
-                }
-                
-                if (PlaatWapening.Boven?.VerdeelWapening != null)
-                {
-                    PlaatWapening.Boven.VerdeelWapening.Tekst = "r6-250";
-                    Console.WriteLine("[RESET] Boven.VerdeelWapening -> r6-250");
-                }
-            }
-            
-            // Reset bijlegwapening
-            BijlegWapeningOnder = null;
-            BijlegWapeningBoven = null;
-            
-            Console.WriteLine("[RESET] Constraints en plaatwapening teruggezet naar defaults");
-        }
+        
 
 
 
         protected void Bereken()
         {
-            // TODO: Functie nalopen
             double tempM = 0.125 * -10 * Math.Pow(Lengte * 0.001, 2);
             UpdateBasisStrook(tempM, 1000);
 
-            var wap = _basisStrook.Wapening;
+            var wap = _basisStrook!.Wapening;
 
             // Als basiswapening al voldoende is → geen bijleg nodig
             if (_basisStrook.AsRequired <= wap.AsBasis)
@@ -1292,7 +1260,7 @@ namespace Construct.Domain.Entities
         }
 
         // Helper: eenvoudige doorsnede berekening voor bijleg (mm → mm^2)
-        private double BerekenAsBijleg(int aantal, double diameterMm)
+        private static double BerekenAsBijleg(int aantal, double diameterMm)
         {
             // doorsnede per staaf = π * d^2 / 4
             // diameter wordt in mm gegeven; As in mm^2
@@ -1400,11 +1368,7 @@ namespace Construct.Domain.Entities
             set => SetNestedProperty(ref _bijlegWapeningBoven, value);
         }
 
-        // ✅ Gebruikersopgave voor bijlegwapening - NU VIA CONSTRAINTS
-        private int? _bijlegAantalOnder;
-        private double? _bijlegDiameterOnder;
-        private int? _bijlegAantalBoven;
-        private double? _bijlegDiameterBoven;
+       
 
         /// <summary>
         /// Minimale diameters voor plaatwapening constraints - DEPRECATED: gebruik Constraints
@@ -1419,40 +1383,19 @@ namespace Construct.Domain.Entities
         public double? BovenVerdeelDiameterMin { get; set; } = 6.0;
 
         // Backwards compatibility properties
-        public int? BijlegAantalOnder
-        {
-            get => BijlegOnderConstraint.AantalMin;
-            set => BijlegOnderConstraint.AantalMin = value;
-        }
 
-        public double? BijlegDiameterOnder
-        {
-            get => BijlegOnderConstraint.DiameterMin;
-            set => BijlegOnderConstraint.DiameterMin = value;
-        }
-
-        public int? BijlegAantalBoven
-        {
-            get => BijlegBovenConstraint.AantalMin;
-            set => BijlegBovenConstraint.AantalMin = value;
-        }
-
-        public double? BijlegDiameterBoven
-        {
-            get => BijlegBovenConstraint.DiameterMin;
-            set => BijlegBovenConstraint.DiameterMin = value;
-        }
-
+        public double? _detailWapeningDiameterMin = 6;
         public double? DetailWapeningDiameterMin
         {
-            get => DetailWapeningConstraint.DiameterMin;
-            set => DetailWapeningConstraint.DiameterMin = value;
+            get => _detailWapeningDiameterMin;
+            set => _detailWapeningDiameterMin = value;
         }
 
-        public double? DetailWapeningHoh
+        public double? _detailWapeningHohMax = 100;
+        public double? DetailWapeningHohMax
         {
-            get => DetailWapeningConstraint.HohMax;
-            set => DetailWapeningConstraint.HohMax = value;
+            get => _detailWapeningHohMax;
+            set => _detailWapeningHohMax = value;
         }
 
 
@@ -1545,7 +1488,8 @@ namespace Construct.Domain.Entities
             _basisStrook.Snedekrachten??= new();
             _basisStrook.Snedekrachten.My = moment;
 
-            _basisStrook.Wapening.Breedte = breedte; 
+            //_basisStrook.Wapening.Breedte = breedte;
+            _basisStrook.Wapening.ReferentieLengte = breedte;
 
 
 

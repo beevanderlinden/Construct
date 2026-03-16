@@ -292,16 +292,17 @@ namespace Construct.Domain.Helpers
         public static (string tekst, int aantal, double diameter, double asProvided) BepaalBijlegWapening(
             double asRequired,
             double strookBreedte,
-            WapeningConstraint? constraint = null,
             double dGemiddeld = 6,
+            double dMin = 8,
+            int nMin = 2,
             double dNuttig = 170)
         {
             // Beschikbare diameters voor bijleg
             List<double> diameters = [8, 10, 12, 16, 20, 25];
-            
+
             // Haal constraints op
-            double minDiameter = constraint?.DiameterMin ?? 8.0;
-            int minAantal = constraint?.AantalMin ?? 0;
+            double minDiameter = dMin;
+            int minAantal = nMin;
             
             // Bereken automatisch aantal staven op basis van strookbreedte
             // Vuistregel: 1 staaf per 100mm
@@ -360,7 +361,7 @@ namespace Construct.Domain.Helpers
             string huidigeWapening,
             double factor,
             double beschikbareBreedte = 1000,
-            WapeningConstraint? constraint = null)
+            string ondergrens = "6-150")
         {
             // Parse huidige wapening
             var parsed = ParseWapeningTekst(huidigeWapening);
@@ -382,7 +383,10 @@ namespace Construct.Domain.Helpers
             
             // Beschikbare diameters
             List<double> diameters = [6, 8, 10, 12, 16, 20];
-            double minDiameter = constraint?.DiameterMin ?? huidigeDiameter;
+
+            var ondergrensParsed = ParseWapeningTekst(ondergrens);
+
+            double minDiameter = ondergrensParsed?.diameter ?? 6;
             double minHoh = 75; // Minimale hart-op-hart afstand
             
             // ===================================

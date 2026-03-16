@@ -178,11 +178,11 @@ namespace Construct.Domain.Entities
             // ✅ Check of Father een BetonAssemblageEntity is (alleen beton heeft PlaatDekking)
             if (Father is BetonAssemblageEntity betonFather)
             {
-                WapBoven.ReferentieDekking = betonFather.PlaatDekking.Boven.DekkingToe;
-                WapBoven.Tekst = "r6-150";
+                //WapBoven.ReferentieDekking = betonFather.PlaatDekking.Boven.DekkingToe;
+                //WapBoven.Tekst = "r6-150";
                 
-                WapOnder.ReferentieDekking = betonFather.PlaatDekking.Onder.DekkingToe;
-                WapOnder.Tekst = "r8-150";
+                //WapOnder.ReferentieDekking = betonFather.PlaatDekking.Onder.DekkingToe;
+                //WapOnder.Tekst = "r8-150";
             }
 
             PlaatWapening.Boven ??= new();

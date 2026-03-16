@@ -121,14 +121,15 @@ namespace Construct.Domain.Entities
         {
             ProjectInfo = projectInfo; // projectinfo + grondslagen
 
-            Belastingen = new(grondslagen: ProjectInfo.Grondslagen); // Als null, nieuwe aanmaken
-
-            // herstel de parent-relatie (indien uit json geladen, moet dit opnieuw aangemaakt worden)
-            Belastingen.Grondslagen = ProjectInfo.Grondslagen;
+            Belastingen = new(grondslagen: ProjectInfo.Grondslagen)
+            {
+                // herstel de parent-relatie (indien uit json geladen, moet dit opnieuw aangemaakt worden)
+                Grondslagen = ProjectInfo.Grondslagen
+            }; // Als null, nieuwe aanmaken
 
             // ⚠️ CRITICAL FIX: Zet GEEN nieuw Materiaal als het al is ingesteld via RestoreReferencesAfterDeserialization!
             // Materiaal ??= new BetonContext();  // ❌ REMOVED - Dit overwrites JSON values!
-            
+
             // Nur initialize materiaal if BOTH null: Materiaal AND MateriaalId
             if (Materiaal == null) // && !MateriaalId.HasValue) // <-- Safety check: als null is, altijd herstellen
             {
@@ -218,12 +219,12 @@ namespace Construct.Domain.Entities
             {
                 Beton = beton ?? new(),
                 Profiel = ProfielSchil,
-                Wapening = WapeningSchil,
+                Wapening = WapeningSchil!,
                 Snedekrachten = SnedekrachtenBGT
             };
 
 
-            WapeningSchil = new(this.WapeningSchil?.Tekst ?? "8-150", 30);
+            //WapeningSchil = new(this.WapeningSchil?.Tekst ?? "8-150", 30);
 
 
 
@@ -234,7 +235,7 @@ namespace Construct.Domain.Entities
                 Name = MomentSchil?.Name ?? "schil",
                 Beton = beton ?? new(),
                 Profiel = ProfielSchil,
-                Wapening = WapeningSchil,
+                Wapening = WapeningSchil!,
                 Snedekrachten = Snedekrachten,
                 ConstructiefModel = Schematisering.ConstructiefModelEnum.Plaat,
             };
@@ -274,7 +275,7 @@ namespace Construct.Domain.Entities
                 new DoorbuigingCombinatieContext(){CombinatieType = BelastingCombinatieTypeEnum.QuasiBlijvend, Lijnlast = Krachten?.qEqp ?? 0},
                 new DoorbuigingCombinatieContext(){CombinatieType = BelastingCombinatieTypeEnum.Frequent, Lijnlast = Krachten?.qEfr ?? 0},
             ];
-            DoorbuigingValidatie = new(beton ?? new(), MainSlab?.Profiel ?? ProfielSchil, WapeningSchil, LengteSchuin, DoorbuigingCombinatieContexts);
+            DoorbuigingValidatie = new(beton ?? new(), MainSlab?.Profiel ?? ProfielSchil, WapeningSchil!, LengteSchuin, DoorbuigingCombinatieContexts);
             DoorbuigingValidatie.Init();
 
             //Doorbuiging = new(DoorbuigingContext)
@@ -284,7 +285,7 @@ namespace Construct.Domain.Entities
             //};
 
 
-            Scheurwijdte = new(SnedekrachtenBGT, beton ?? new(), PlaatDekking.Onder, MainSlab?.Profiel ?? ProfielSchil, WapeningSchil, ProjectInfo.Grondslagen.NationaleBijlage ?? Eurocode.Grondslagen.NationaleBijlageEnum.EU)
+            Scheurwijdte = new(SnedekrachtenBGT, beton ?? new(), PlaatDekking.Onder, MainSlab?.Profiel ?? ProfielSchil, WapeningSchil!, ProjectInfo.Grondslagen.NationaleBijlage ?? Eurocode.Grondslagen.NationaleBijlageEnum.EU)
             {
                 Heading = "Scheurwijdte schil"
             };
@@ -645,7 +646,7 @@ namespace Construct.Domain.Entities
             PasOndergrenzenToe();
 
             // We weten nu de voor sterkte benodigde en toegepaste wapening
-            var asProvided_UGT = PlaatWapening.Onder.BasisWapening.As;
+            //var asProvided_UGT = PlaatWapening?.Onder?.BasisWapening.As;
             
 
             Scheurwijdte.BerekenEnValideer();
@@ -660,7 +661,9 @@ namespace Construct.Domain.Entities
                 const double maxVerhoging = 2.0;
                 
                 // Haal huidige wapening tekst op
-                string huidigeWapeningTekst = WapeningSchil?.Tekst ?? "r8-150";
+                string huidigeWapeningTekst = 
+                    PlaatWapening?.Onder?.BasisWapening?.Tekst ??
+                    WapeningSchil?.Tekst ?? "r8-150";
                 
                 while (!Scheurwijdte.IsValidated && verhoging < maxVerhoging)
                 {
@@ -671,19 +674,18 @@ namespace Construct.Domain.Entities
                         huidigeWapeningTekst,
                         factor: verhoging,
                         beschikbareBreedte: 1000,
-                        constraint: OnderHoofdConstraint
+                        ondergrens: PlaatWapening?.Onder?.BasisWapening?.TekstOndergrens ?? "6-200" // Gebruik ondergrens van huidige wapening als constraint
                     );
                     
                     // Update wapening
-                    WapeningSchil.Tekst = resultaat.tekst;
                     if (PlaatWapening?.Onder?.BasisWapening != null)
                     {
                         PlaatWapening.Onder.BasisWapening.Tekst = resultaat.tekst;
                         PlaatDekking.Onder.WapeningDiameterGelijkwaardig = PlaatWapening.Onder.BasisWapening.GemiddeldeDiameter;
+                        Scheurwijdte.Wapening = PlaatWapening.Onder.BasisWapening;
                     }
                     
                     // Herbereken scheurwijdte met nieuwe wapening
-                    Scheurwijdte.Wapening = WapeningSchil;
                     Scheurwijdte.BerekenEnValideer();
                     
                     Console.WriteLine($"   Verhoging {verhoging:P0}: {resultaat.tekst} (As={resultaat.asProvided:0}mm²) → SW valid={Scheurwijdte.IsValidated}");
@@ -695,7 +697,7 @@ namespace Construct.Domain.Entities
                 }
             }
 
-            var huidigeAsProvided = PlaatWapening.Onder.BasisWapening.As;
+            //var huidigeAsProvided = PlaatWapening.Onder.BasisWapening.As;
 
             DoorbuigingBijwerken();
 
@@ -712,7 +714,9 @@ namespace Construct.Domain.Entities
                 const double maxVerhoging = 2.0;
                 
                 // Haal huidige wapening tekst op
-                string huidigeWapeningTekst = WapeningSchil?.Tekst ?? "r8-150";
+                string huidigeWapeningTekst =
+                    PlaatWapening?.Onder?.BasisWapening?.Tekst ??
+                    WapeningSchil?.Tekst ?? "r8-150";
                 
                 while (!DoorbuigingValidatie.IsValidated && verhoging < maxVerhoging)
                 {
@@ -722,12 +726,14 @@ namespace Construct.Domain.Entities
                     var resultaat = WapeningOptimizer.VerschaalPlaatWapening(
                         huidigeWapeningTekst,
                         factor: verhoging,
-                        beschikbareBreedte: 1000,
-                        constraint: OnderHoofdConstraint
+                        beschikbareBreedte: 1000
+                        
                     );
                     
                     // Update wapening
-                    WapeningSchil.Tekst = resultaat.tekst;
+                    if (WapeningSchil != null)
+                        WapeningSchil.Tekst = resultaat.tekst;
+
                     if (PlaatWapening?.Onder?.BasisWapening != null)
                     {
                         PlaatWapening.Onder.BasisWapening.Tekst = resultaat.tekst;
@@ -786,7 +792,7 @@ namespace Construct.Domain.Entities
             // Gebruik WapeningOptimizer voor automatische bepaling (vanaf scratch)
             var resultaat = WapeningOptimizer.BepaalPlaatWapening(
                 asRequired,
-                PlaatWapening.Onder.BasisWapening
+                PlaatWapening!.Onder!.BasisWapening
             );
             
             // Update WapeningSchil
@@ -1292,27 +1298,9 @@ namespace Construct.Domain.Entities
         /// Eurocode2 Betonconstructies
         /// </summary>
         //public Eurocode.BetonConstructies.BetonContext Beton;
-
         public WapeningContext WapeningSchil { get; set; }
         
-        /// <summary>
-        /// Wapening constraints voor trap schil berekeningen.
-        /// OBSOLETE: Gebruik WapeningContext.TekstOndergrens in plaats van constraints.
-        /// </summary>
-        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Onder.BasisWapening.TekstOndergrens = \"8-150\"")]
-        public WapeningConstraint OnderHoofdConstraint { get; set; } = new(8, null, 150);
         
-        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Onder.VerdeelWapening.TekstOndergrens = \"6-250\"")]
-        public WapeningConstraint OnderVerdeelConstraint { get; set; } = new(6, null, 250);
-        
-        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Boven.BasisWapening.TekstOndergrens = \"6-150\"")]
-        public WapeningConstraint BovenHoofdConstraint { get; set; } = new(6, null, 150);
-        
-        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: PlaatWapening.Boven.VerdeelWapening.TekstOndergrens = \"6-250\"")]
-        public WapeningConstraint BovenVerdeelConstraint { get; set; } = new(6, null, 250);
-        
-        [Obsolete("Gebruik WapeningContext.TekstOndergrens. Bijvoorbeeld: TandOpleggingBovenzijde.WapeningAlgemeen.TekstOndergrens = \"6-100\"")]
-        public WapeningConstraint TandConstraint { get; set; } = new(6, null, 100);
 
         /// <summary>
         /// ✅ NIEUW: Plaatwapening voor trap schil (delegeert naar MainPlate).
