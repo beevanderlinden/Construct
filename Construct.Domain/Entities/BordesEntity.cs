@@ -152,6 +152,28 @@ namespace Construct.Domain.Entities
             // ✅ Gebruik centrale methode om PlaatDekking te initialiseren
             InitializePlaatDekking();
 
+            // ✅ FIX: Controleer of Boven en Onder BasisWapening dezelfde referentie delen (na deserialisatie)
+            // Dit kan gebeuren door ReferenceHandler.IgnoreCycles bij JSON serialisatie
+            if (PlaatWapening?.Boven?.BasisWapening != null && 
+                PlaatWapening?.Onder?.BasisWapening != null &&
+                ReferenceEquals(PlaatWapening.Boven.BasisWapening, PlaatWapening.Onder.BasisWapening))
+            {
+                Console.WriteLine($"⚠️ [BordesEntity] PROBLEEM: Boven.BasisWapening en Onder.BasisWapening zijn hetzelfde object! Maak kopie...");
+                // Maak een diepe kopie van Onder.BasisWapening
+                PlaatWapening.Onder.BasisWapening = PlaatWapening.Onder.BasisWapening.Clone();
+                Console.WriteLine($"✅ [BordesEntity] Onder.BasisWapening gekloond. Nu zijn het verschillende objecten.");
+            }
+
+            // ✅ FIX: Hetzelfde voor VerdeelWapening
+            if (PlaatWapening?.Boven?.VerdeelWapening != null && 
+                PlaatWapening?.Onder?.VerdeelWapening != null &&
+                ReferenceEquals(PlaatWapening.Boven.VerdeelWapening, PlaatWapening.Onder.VerdeelWapening))
+            {
+                Console.WriteLine($"⚠️ [BordesEntity] PROBLEEM: Boven.VerdeelWapening en Onder.VerdeelWapening zijn hetzelfde object! Maak kopie...");
+                PlaatWapening.Onder.VerdeelWapening = PlaatWapening.Onder.VerdeelWapening.Clone();
+                Console.WriteLine($"✅ [BordesEntity] Onder.VerdeelWapening gekloond.");
+            }
+
             // Create basiswapening without direct call to the ReferentieDekking setter (use reflection)
             var hoofdwapOnder = new WapeningContext()
             {
@@ -235,6 +257,13 @@ namespace Construct.Domain.Entities
                     DiameterVerdeel = 8,
                 },
             };
+
+            // ✅ DEBUG: Controleer of de WapeningContext objecten uniek zijn
+            Console.WriteLine($"[BordesEntity.RestoreReferences] hoofdwapBoven HashCode: {hoofdwapBoven.GetHashCode()}");
+            Console.WriteLine($"[BordesEntity.RestoreReferences] hoofdwapOnder HashCode: {hoofdwapOnder.GetHashCode()}");
+            Console.WriteLine($"[BordesEntity.RestoreReferences] Boven.BasisWapening HashCode: {PlaatWapening?.Boven?.BasisWapening.GetHashCode()}");
+            Console.WriteLine($"[BordesEntity.RestoreReferences] Onder.BasisWapening HashCode: {PlaatWapening?.Onder?.BasisWapening.GetHashCode()}");
+            Console.WriteLine($"[BordesEntity.RestoreReferences] Zijn ze hetzelfde? {ReferenceEquals(PlaatWapening?.Boven?.BasisWapening, PlaatWapening?.Onder?.BasisWapening)}");
         }
 
         /// <summary>
@@ -348,141 +377,40 @@ namespace Construct.Domain.Entities
             strook.Beam.Profiel = strook.Profiel;
             strook.PlaatWapening = this.PlaatWapening; // Geen Clone() nodig. Deze strook gebruikt dezelfde PlaatWapening als de assemblage, dus we willen dat ze dezelfde reference delen. Wijzigingen in de assemblage moeten direct doorwerken in de strook.
 
-            // Pas constraints toe ALLEEN indien huidige waarden de constraints schenden
+            // ✅ NIEUWE AANPAK: Pas ondergrenzen toe op alle wapeningen
+            // (Dit vervangt de oude constraint-checking logica)
             if (strook.PlaatWapening != null)
             {
-                // ONDER: BasisWapening (hoofdwapening)
+                // Onder - Hoofd
                 if (strook.PlaatWapening.Onder?.BasisWapening != null)
                 {
-                    var parsed = WapeningOptimizer.ParseWapeningTekst(strook.PlaatWapening.Onder.BasisWapening.Tekst);
-                    if (parsed.HasValue)
-                    {
-                        double diameter = parsed.Value.diameter;
-                        double hoh = parsed.Value.hoh;
-                        bool aangepast = false;
-                        
-                        // Check DiameterMin constraint
-                        double minDiam = OnderHoofdConstraint?.DiameterMin ?? 0;
-                        if (minDiam > 0 && diameter < minDiam)
-                        {
-                            Console.WriteLine($"[CONSTRAINT] Onder.BasisWap: diameter {diameter}→{minDiam}");
-                            diameter = minDiam;
-                            aangepast = true;
-                        }
-                        
-                        // Check HohMax constraint
-                        double maxHoh = OnderHoofdConstraint?.HohMax ?? 9999;
-                        if (maxHoh < 9999 && hoh > maxHoh)
-                        {
-                            Console.WriteLine($"[CONSTRAINT] Onder.BasisWap: hoh {hoh}→{maxHoh}");
-                            hoh = maxHoh;
-                            aangepast = true;
-                        }
-                        
-                        if (aangepast)
-                        {
-                            strook.PlaatWapening.Onder.BasisWapening.Tekst = $"r{diameter:0}-{hoh:0}";
-                        }
-                    }
+                    var wap = strook.PlaatWapening.Onder.BasisWapening;
+                    wap.Tekst = string.IsNullOrWhiteSpace(wap.TekstOndergrens) ? "r6-150" : wap.TekstOndergrens;
+                    wap.SetZRef();
                 }
                 
-                // ONDER: VerdeelWapening
+                // Onder - Verdeel
                 if (strook.PlaatWapening.Onder?.VerdeelWapening != null)
                 {
-                    var parsed = WapeningOptimizer.ParseWapeningTekst(strook.PlaatWapening.Onder.VerdeelWapening.Tekst);
-                    if (parsed.HasValue)
-                    {
-                        double diameter = parsed.Value.diameter;
-                        double hoh = parsed.Value.hoh;
-                        bool aangepast = false;
-                        
-                        double minDiam = OnderVerdeelConstraint?.DiameterMin ?? 0;
-                        if (minDiam > 0 && diameter < minDiam)
-                        {
-                            Console.WriteLine($"[CONSTRAINT] Onder.VerdeelWap: diameter {diameter}→{minDiam}");
-                            diameter = minDiam;
-                            aangepast = true;
-                        }
-                        
-                        double maxHoh = OnderVerdeelConstraint?.HohMax ?? 9999;
-                        if (maxHoh < 9999 && hoh > maxHoh)
-                        {
-                            Console.WriteLine($"[CONSTRAINT] Onder.VerdeelWap: hoh {hoh}→{maxHoh}");
-                            hoh = maxHoh;
-                            aangepast = true;
-                        }
-                        
-                        if (aangepast)
-                        {
-                            strook.PlaatWapening.Onder.VerdeelWapening.Tekst = $"r{diameter:0}-{hoh:0}";
-                        }
-                    }
+                    var wap = strook.PlaatWapening.Onder.VerdeelWapening;
+                    wap.Tekst = string.IsNullOrWhiteSpace(wap.TekstOndergrens) ? "r6-300" : wap.TekstOndergrens;
+                    wap.SetZRef();
                 }
                 
-                // BOVEN: BasisWapening
+                // Boven - Hoofd
                 if (strook.PlaatWapening.Boven?.BasisWapening != null)
                 {
-                    var parsed = WapeningOptimizer.ParseWapeningTekst(strook.PlaatWapening.Boven.BasisWapening.Tekst);
-                    if (parsed.HasValue)
-                    {
-                        double diameter = parsed.Value.diameter;
-                        double hoh = parsed.Value.hoh;
-                        bool aangepast = false;
-                        
-                        double minDiam = BovenHoofdConstraint?.DiameterMin ?? 0;
-                        if (minDiam > 0 && diameter < minDiam)
-                        {
-                            Console.WriteLine($"[CONSTRAINT] Boven.BasisWap: diameter {diameter}→{minDiam}");
-                            diameter = minDiam;
-                            aangepast = true;
-                        }
-                        
-                        double maxHoh = BovenHoofdConstraint?.HohMax ?? 9999;
-                        if (maxHoh < 9999 && hoh > maxHoh)
-                        {
-                            Console.WriteLine($"[CONSTRAINT] Boven.BasisWap: hoh {hoh}→{maxHoh}");
-                            hoh = maxHoh;
-                            aangepast = true;
-                        }
-                        
-                        if (aangepast)
-                        {
-                            strook.PlaatWapening.Boven.BasisWapening.Tekst = $"r{diameter:0}-{hoh:0}";
-                        }
-                    }
+                    var wap = strook.PlaatWapening.Boven.BasisWapening;
+                    wap.Tekst = string.IsNullOrWhiteSpace(wap.TekstOndergrens) ? "r6-300" : wap.TekstOndergrens;
+                    wap.SetZRef();
                 }
                 
-                // BOVEN: VerdeelWapening
+                // Boven - Verdeel
                 if (strook.PlaatWapening.Boven?.VerdeelWapening != null)
                 {
-                    var parsed = WapeningOptimizer.ParseWapeningTekst(strook.PlaatWapening.Boven.VerdeelWapening.Tekst);
-                    if (parsed.HasValue)
-                    {
-                        double diameter = parsed.Value.diameter;
-                        double hoh = parsed.Value.hoh;
-                        bool aangepast = false;
-                        
-                        double minDiam = BovenVerdeelConstraint?.DiameterMin ?? 0;
-                        if (minDiam > 0 && diameter < minDiam)
-                        {
-                            Console.WriteLine($"[CONSTRAINT] Boven.VerdeelWap: diameter {diameter}→{minDiam}");
-                            diameter = minDiam;
-                            aangepast = true;
-                        }
-                        
-                        double maxHoh = BovenVerdeelConstraint?.HohMax ?? 9999;
-                        if (maxHoh < 9999 && hoh > maxHoh)
-                        {
-                            Console.WriteLine($"[CONSTRAINT] Boven.VerdeelWap: hoh {hoh}→{maxHoh}");
-                            hoh = maxHoh;
-                            aangepast = true;
-                        }
-                        
-                        if (aangepast)
-                        {
-                            strook.PlaatWapening.Boven.VerdeelWapening.Tekst = $"r{diameter:0}-{hoh:0}";
-                        }
-                    }
+                    var wap = strook.PlaatWapening.Boven.VerdeelWapening;
+                    wap.Tekst = string.IsNullOrWhiteSpace(wap.TekstOndergrens) ? "r6-300" : wap.TekstOndergrens;
+                    wap.SetZRef();
                 }
             }
             
@@ -549,7 +477,6 @@ namespace Construct.Domain.Entities
                     asRequired,
                     fixedHoh: currentHoh,
                     currentDiameter: currentDiameter,
-                    constraint: OnderHoofdConstraint,
                     herberekening: (nieuweD) =>
                     {
                         // ✅ Herbereken AsRequired bij diameter wijziging (nuttige hoogte wijzigt!)
@@ -878,24 +805,18 @@ namespace Construct.Domain.Entities
                 strook.PlaatWapening.Onder.DekkingBuitensteLaag = this.PlaatDekking.Onder;
             }
             
-            Console.WriteLine($"[DEBUG] NA Clone - Onder.LaagHoofdwapening: {strook.PlaatWapening.Onder?.LaagHoofdwapening}");
-            Console.WriteLine($"[DEBUG] NA Clone - Onder.BasisWapening.ReferentieDekking: {strook.PlaatWapening.Onder?.BasisWapening?.ReferentieDekking}");
-            Console.WriteLine($"[DEBUG] NA Clone - Onder.VerdeelWapening.ReferentieDekking: {strook.PlaatWapening.Onder?.VerdeelWapening?.ReferentieDekking}");
 
             
             var strookbreedte = belastingBreedteMM;
             strook.PlaatWapening.Onder!.BasisWapening.ReferentieLengte = strookbreedte;
-            Console.WriteLine($"[DEBUG] NA ReferentieLengte zetten - Onder.BasisWapening.ReferentieDekking: {strook.PlaatWapening.Onder?.BasisWapening?.ReferentieDekking}");
             
             strook.PlaatWapening.Boven!.BasisWapening.ReferentieLengte = strookbreedte;
 
             strook.Beam.PlaatWapening = strook.PlaatWapening;
-            Console.WriteLine($"[DEBUG] NA Beam.PlaatWapening toewijzing - Onder.BasisWapening.ReferentieDekking: {strook.PlaatWapening.Onder?.BasisWapening?.ReferentieDekking}");
             
             strook.Beam.EI = 1e-9 * strook.Beam.Profiel?.Iy * strook.Beam.Materiaal?.E ?? 1;
 
             strook.BerekenStrook();
-            Console.WriteLine($"[DEBUG] NA BerekenStrook - Onder.BasisWapening.ReferentieDekking: {strook.PlaatWapening.Onder?.BasisWapening?.ReferentieDekking}");
 
 
             // ========================================================================
@@ -966,18 +887,18 @@ namespace Construct.Domain.Entities
                 
                 strook.Beam.PlaatWapening.Boven.BasisWapening.Tekst += $"+{BijlegWapeningBoven.Tekst}";
                 
-                Console.WriteLine($"✅ Bijlegwapening boven: {definitieveBijlegBoven} (As={resultaatBoven.asProvided:0}mm², benodigd={bijlegReqBoven:0}mm²)");
+                //Console.WriteLine($"✅ Bijlegwapening boven: {definitieveBijlegBoven} (As={resultaatBoven.asProvided:0}mm², benodigd={bijlegReqBoven:0}mm²)");
                 
                 // ✅ HERBEREKEN met bijlegwapening (anders blijft D verkeerd in tabel!)
                 strook.BerekenStrook();
-                Console.WriteLine($"[DEBUG] NA bijleg toevoegen en herberekenen - D = {strook.BendingResults.OrderBy(r => r.Moment).First().D:0.#}mm");
+                //Console.WriteLine($"[DEBUG] NA bijleg toevoegen en herberekenen - D = {strook.BendingResults.OrderBy(r => r.Moment).First().D:0.#}mm");
             }
             else
             {
                 // Geen bijleg nodig
                 BijlegWapeningOnder = null;
                 BijlegWapeningBoven = null;
-                Console.WriteLine("[INFO] Geen bijlegwapening nodig");
+                //Console.WriteLine("[INFO] Geen bijlegwapening nodig");
             }
 
 
@@ -1575,7 +1496,7 @@ namespace Construct.Domain.Entities
             {
                 Heading = "plaatwapening onder",
                 DekkingBuitensteLaag = PlaatDekking.Onder,
-                BasisWapening = _basisStrook.Wapening,
+                BasisWapening = _basisStrook.Wapening.Clone(), // ✅ Clone om gedeelde referentie te voorkomen
                 VerdeelWapening = new WapeningContext()
                 {
                     Tekst = "r6-250",
@@ -1590,7 +1511,7 @@ namespace Construct.Domain.Entities
             {
                 Heading = "plaatwapening boven",
                 DekkingBuitensteLaag = PlaatDekking.Boven,
-                BasisWapening = _basisStrook.Wapening,
+                BasisWapening = _basisStrook.Wapening.Clone(), // ✅ Clone om gedeelde referentie te voorkomen
                 VerdeelWapening = new WapeningContext()
                 {
                     Tekst = "r6-250",
@@ -1600,6 +1521,13 @@ namespace Construct.Domain.Entities
                 LaagHoofdwapening = 2,
                 DiameterVerdeel = 8,
             };
+
+            Console.WriteLine($"✅ [BordesEntity.InitBasisStrook] PlaatWapening geïnitialiseerd");
+            Console.WriteLine($"   _basisStrook.Wapening HashCode: {_basisStrook.Wapening.GetHashCode()}");
+            Console.WriteLine($"   Onder.BasisWapening HashCode: {_plaatWapening.Onder.BasisWapening.GetHashCode()}");
+            Console.WriteLine($"   Boven.BasisWapening HashCode: {_plaatWapening.Boven.BasisWapening.GetHashCode()}");
+            Console.WriteLine($"   Zijn Boven en Onder hetzelfde? {ReferenceEquals(_plaatWapening.Boven.BasisWapening, _plaatWapening.Onder.BasisWapening)}");
+
 
 
         }

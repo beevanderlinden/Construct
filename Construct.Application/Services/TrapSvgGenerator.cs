@@ -3234,16 +3234,8 @@
             List<SvgText> returnList = [];
 
 
-            var x1 = trap.LengteTotaal / 2;
-            var x2 = x1 + trap.AantredeMaat;
-            var y1 = -trap.HoogteTotaal / 2;
-            var y2 = y1 - trap.OptredeMaat;
-            var txt = new SvgText($"\r\n{trap.WapeningSchil}", x1, y1, x2, y2);
-            {
-
-            }
-            ;
-            txt.AddToBoundingBox(bb, scale);
+           
+           
 
             //returnList.Add(txt);
 
@@ -3270,14 +3262,39 @@
             if (toonWapTekst)
             {
                 // toon wapeningstekst bij de trap
-                
-                var wapTekst = new SvgText($"\r\n{trap.MainSlab?.PlaatWapening.Onder.BasisWapening.SanitizedTekst()}", x1, y1, x2, y2)
+                var x1 = trap.LengteTotaal / 2;
+                var y1 = -trap.HoogteTotaal / 2 + 2 * trap.SchilDikte;
+                var dy = 12 / scale;
+
+                var wapTekstBoven = new SvgText($"boven : {trap.MainSlab?.PlaatWapening.Boven.BasisWapening.SanitizedTekst()}", x1, y1)
                 {
                     Fill = "var(--accent-foreground-rest, black)",
-                    Anchor = "middle",
-                    DominantBaseLine = "middle"
+                    FontFamily = "consolas",
+                    Anchor = "left",
+                    DominantBaseLine = "hanging"
+                };
+                returnList.Add(wapTekstBoven);
+                
+                y1 += dy;
+                var wapTekst = new SvgText($"onder : {trap.MainSlab?.PlaatWapening.Onder.BasisWapening.SanitizedTekst()}", x1, y1)
+                {
+                    FontFamily = "consolas",
+                    Fill = "var(--accent-foreground-rest, black)",
+                    Anchor = "left",
+                    DominantBaseLine = "hanging"
                 };
                 returnList.Add(wapTekst);
+
+                y1 += dy;
+                var wapTekstDetails = new SvgText($"details : HS{trap.TandOpleggingBovenzijde?.WapeningAlgemeen.SanitizedTekst()}", x1, y1)
+                {
+                    Fill = "var(--accent-foreground-rest, black)",
+                    FontFamily = "consolas",
+                    Anchor = "left",
+                    DominantBaseLine = "hanging"
+                };
+                returnList.Add(wapTekstDetails);
+
             }
 
 

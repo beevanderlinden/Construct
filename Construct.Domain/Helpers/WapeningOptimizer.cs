@@ -17,7 +17,7 @@ namespace Construct.Domain.Helpers
         public static (string tekst, double asProvided) BepaalPlaatWapening(double asRequired, WapeningContext wap)
         {
             double startDiameter = 6;
-            double startHoh = 400;
+            double startHoh = 150;
             var ondergrens = ParseWapeningTekst(wap.TekstOndergrens);
             if (ondergrens != null)
             {
@@ -229,14 +229,13 @@ namespace Construct.Domain.Helpers
             double asRequired,
             double fixedHoh,
             double currentDiameter,
-            WapeningConstraint? constraint = null,
             Func<double, double>? herberekening = null)
         {
             // Beschikbare diameters
-            List<double> diameters = [6, 8, 10, 12];
+            List<double> diameters = [6, 8, 10, 12, 16, 20, 25, 32];
             
             // Haal constraints op
-            double minDiameter = constraint?.DiameterMin ?? 6.0;
+            double minDiameter = currentDiameter;
             
             // Filter diameters >= minDiameter en > currentDiameter
             var beschikbareDiameters = diameters

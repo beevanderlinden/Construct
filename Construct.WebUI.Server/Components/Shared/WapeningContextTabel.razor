@@ -19,16 +19,17 @@ else
             <tbody>
                 @foreach (var item in WapeningContexten)
                 {
+                    var currentItem = item; // Lokale kopie voor closure
                     <tr>
-                        <td>@item.Label</td>
-                        <td>@item.Context?.DekkingToegepast</td>
+                        <td>@currentItem.Label</td>
+                        <td>@currentItem.Context?.DekkingToegepast</td>
                         <td>
-                            @item.Context?.SanitizedTekst()
+                            @currentItem.Context?.SanitizedTekst()
                            
                         </td>
                         <td>
-                            <FluentTextField Value="@(item.Context?.TekstOndergrens ?? string.Empty)" 
-                                           ValueChanged="@(v => OnTekstOndergrensChanged(item.Context, v))" 
+                            <FluentTextField Value="@(currentItem.Context?.TekstOndergrens ?? string.Empty)" 
+                                           ValueChanged="@(v => OnTekstOndergrensChanged(currentItem.Context, v))" 
                                            Style="min-width: 120px;" 
                                            Placeholder="nvt" />
                         </td>
@@ -86,6 +87,7 @@ else
                     Context = PlaatWapening.Boven.BasisWapening,
                     Dekking = PlaatWapening.Boven.DekkingLaag1
                 });
+                Console.WriteLine($"[WapeningContextTabel] Boven.BasisWapening HashCode: {PlaatWapening.Boven.BasisWapening.GetHashCode()}, TekstOndergrens: '{PlaatWapening.Boven.BasisWapening.TekstOndergrens}'");
             }
 
             if (PlaatWapening.Boven.VerdeelWapening != null)
@@ -109,6 +111,7 @@ else
                     Context = PlaatWapening.Onder.BasisWapening,
                     Dekking = PlaatWapening.Onder.DekkingLaag1
                 });
+                Console.WriteLine($"[WapeningContextTabel] Onder.BasisWapening HashCode: {PlaatWapening.Onder.BasisWapening.GetHashCode()}, TekstOndergrens: '{PlaatWapening.Onder.BasisWapening.TekstOndergrens}'");
             }
 
             if (PlaatWapening.Onder.VerdeelWapening != null)
@@ -133,6 +136,13 @@ else
             });
         }
 
+        // ?? CONTROLE: Zijn Boven en Onder BasisWapening hetzelfde object?
+        if (PlaatWapening?.Boven?.BasisWapening != null && PlaatWapening?.Onder?.BasisWapening != null)
+        {
+            bool zelfdeObject = ReferenceEquals(PlaatWapening.Boven.BasisWapening, PlaatWapening.Onder.BasisWapening);
+            Console.WriteLine($"[WapeningContextTabel] ?? PROBLEEM GEVONDEN: Boven.BasisWapening en Onder.BasisWapening zijn HETZELFDE object: {zelfdeObject}");
+        }
+
         return lijst;
     }
 
@@ -149,7 +159,12 @@ else
     {
         if (context == null) return;
         
+        Console.WriteLine($"[WapeningContextTabel] OnTekstOndergrensChanged aangeroepen - HashCode: {context.GetHashCode()}, Oude waarde: '{context.TekstOndergrens}', Nieuwe waarde: '{nieuweWaarde}'");
+        
         context.TekstOndergrens = nieuweWaarde;
+        
+        Console.WriteLine($"[WapeningContextTabel] Na update - TekstOndergrens: '{context.TekstOndergrens}'");
+        
         OnChanged.InvokeAsync();
     }
 

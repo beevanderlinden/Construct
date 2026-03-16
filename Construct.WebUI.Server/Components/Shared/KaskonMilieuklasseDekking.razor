@@ -5,7 +5,9 @@
 <KaskonInputContainer Label="milieuklasse | dekking">
     @if (
         Boven?.MilieuklassenUserFriendlyName == Onder?.MilieuklassenUserFriendlyName &&
-        Boven?.DekkingToe == Onder?.DekkingToe)
+        Boven?.DekkingToe == Onder?.DekkingToe &&
+        Boven?.DekkingNom == Onder?.DekkingNom
+    )
     {
         <div>
             <div class="form-control-text">

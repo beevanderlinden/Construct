@@ -93,10 +93,17 @@
                                         }
                                        
 
-                                        <PlaatProfielVisualisatie Wapening="@slab.PlaatWapening"
-                                                                  Breedte="1000"
-                                                                  Hoogte="@slab.Dikte"
-                                                                  MaxDisplayHeight="300" />
+                                        @if (slab.PlaatWapening != null)
+                                        {
+                                            <PlaatProfielVisualisatie Wapening="@slab.PlaatWapening"
+                                                                      Breedte="1000"
+                                                                      Hoogte="@slab.Dikte"
+                                                                      MaxDisplayHeight="300" />
+                                        }
+                                        else
+                                        {
+                                            <p>Geen plaatwapening gedefinieerd</p>
+                                        }
 
                                        
 
@@ -137,14 +144,9 @@
                                             ShowPreset="true" />
                                      </KaskonInputContainer>
 
-                                 
-
-                                     
-
                                     <!-- Resultaten sectie -->
                                     @if (bordes.BijlegWapeningOnder != null || bordes.BijlegWapeningBoven != null || bordes.Tand?.WapeningAlgemeen != null)
                                     {
-
                                         <div style="margin-top: 0.1rem; padding: 1rem; background: var(--neutral-layer-2); border-radius: 4px;">
                                             <h3 style="margin-top: 0; margin-bottom: 1rem; color: var(--accent-fill-rest);">Samenvatting wapening</h3>
                                             
@@ -174,44 +176,47 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    @foreach(var s in bordes.Stroken)
+                                                    @if (bordes.Stroken != null)
                                                     {
-                                                        var brMax = s.BendingResults.OrderBy(br => br.Moment).LastOrDefault();
-                                                        @if (brMax != null)
+                                                        @foreach(var s in bordes.Stroken)
                                                         {
-                                                            <tr>
-                                                                <td>@s.Naam (boven)</td>
-                                                                <td>@brMax.AsRequired.ToString("0")</td>
-                                                                <td>@brMax.AsApplied.ToString("0")</td>
-                                                                <td>@brMax.AsProvidedText</td>
-                                                                <td>@brMax.D.ToString("0.#")</td>
-                                                                <td>@brMax.XuD.ToString("0.000")</td>
-                                                                <td>@brMax.UnityCheck.ToString("0.00")</td>
-                                                            </tr>
-                                                        }
-                                                        var brMin = s.BendingResults.OrderBy(br => br.Moment).FirstOrDefault();
-                                                        @if (brMin != null)
-                                                        {
-                                                            <tr>
-                                                                <td>@s.Naam (onder)</td>
-                                                                <td>@brMin.AsRequired.ToString("0")</td>
-                                                                <td>@brMin.AsApplied.ToString("0")</td>
-                                                                <td>@brMin.AsProvidedText</td>
-                                                                <td>@brMin.D.ToString("0.#")</td>
-                                                                <td>@brMin.XuD.ToString("0.000")</td>
-                                                                <td>@brMin.UnityCheck.ToString("0.00")</td>
+                                                            var brMax = s.BendingResults?.OrderBy(br => br.Moment).LastOrDefault();
+                                                            @if (brMax != null)
+                                                            {
+                                                                <tr>
+                                                                    <td>@s.Naam (boven)</td>
+                                                                    <td>@brMax.AsRequired.ToString("0")</td>
+                                                                    <td>@brMax.AsApplied.ToString("0")</td>
+                                                                    <td>@brMax.AsProvidedText</td>
+                                                                    <td>@brMax.D.ToString("0.#")</td>
+                                                                    <td>@brMax.XuD.ToString("0.000")</td>
+                                                                    <td>@brMax.UnityCheck.ToString("0.00")</td>
+                                                                </tr>
+                                                            }
+                                                            var brMin = s.BendingResults?.OrderBy(br => br.Moment).FirstOrDefault();
+                                                            @if (brMin != null)
+                                                            {
+                                                                <tr>
+                                                                    <td>@s.Naam (onder)</td>
+                                                                    <td>@brMin.AsRequired.ToString("0")</td>
+                                                                    <td>@brMin.AsApplied.ToString("0")</td>
+                                                                    <td>@brMin.AsProvidedText</td>
+                                                                    <td>@brMin.D.ToString("0.#")</td>
+                                                                    <td>@brMin.XuD.ToString("0.000")</td>
+                                                                    <td>@brMin.UnityCheck.ToString("0.00")</td>
 
-                                                            </tr>
-                                                        }
+                                                                </tr>
+                                                            }
 
                                                         
 
                                                        
+                                                        }
                                                     }
 
                                                     @{
                                                         var tand = bordes.Tand;
-                                                        if (tand != null)
+                                                        if (tand != null && tand.WapeningAlgemeen != null)
                                                         {
                                                             <tr>
                                                                 <td>tand</td>
@@ -235,18 +240,25 @@
                                     }
 
 
+
                                     <h3>Plaatwapening</h3>
-                                    <PlaatWapeningTabelPosComponent @bind-Model="@bordes.PlaatWapening" />
-
                                     <h3 style="margin-top: 2rem;">Wapening details en ondergrenzen</h3>
-                                    <WapeningContextTabel PlaatWapening="@bordes.PlaatWapening" 
-                                                         TandWapening="@bordes.Tand?.WapeningAlgemeen"
-                                                         OnChanged="@(() => StateHasChanged())" />
+                                    
+                                    @if (bordes.PlaatWapening != null)
+                                    {
+                                        <WapeningContextTabel PlaatWapening="@bordes.PlaatWapening" 
+                                                             TandWapening="@bordes.Tand?.WapeningAlgemeen"
+                                                             OnChanged="@(() => StateHasChanged())" />
 
-                                    <PlaatProfielVisualisatie Wapening="@bordes.PlaatWapening"
-                                                              Breedte="500"
-                                                              Hoogte="@bordes.Hoogte"
-                                                              MaxDisplayHeight="300" />
+                                        <PlaatProfielVisualisatie Wapening="@bordes.PlaatWapening"
+                                                                  Breedte="500"
+                                                                  Hoogte="@bordes.Hoogte"
+                                                                  MaxDisplayHeight="300" />
+                                    }
+                                    else
+                                    {
+                                        <p>Geen plaatwapening gedefinieerd voor dit bordes</p>
+                                    }
                                   
                                   
                                 </Content>
@@ -280,7 +292,7 @@
                             </FluentTab>
                         }
 
-                        @if (Model.Toetsen.Any())
+                        @if (Model.Toetsen != null && Model.Toetsen.Any())
                         {
                             <FluentTab Id="tab-toetsen" Label="toetsen">
                                 <Header>
@@ -342,44 +354,50 @@
                                     }
 
                                     @* Bestaande toetsen *@
-                                    <div style="margin-top: 1rem;">
-                                        <h3>Toetsen overzicht</h3>
-                                        @foreach (var t in Model.Toetsen)
-                                        {
-                                            <KaskonInputContainer Label="@t.Heading">
-                                                <div style="display: flex; align-items: center; justify-content: space-between;">
-                                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                                        @if (t.IsValidated)
-                                                        {
-                                                            <span>✅</span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span>Let op:</span>
-                                                            @foreach (var melding in t.Meldingen)
+                                    @if (Model.Toetsen != null && Model.Toetsen.Any())
+                                    {
+                                        <div style="margin-top: 1rem;">
+                                            <h3>Toetsen overzicht</h3>
+                                            @foreach (var t in Model.Toetsen)
+                                            {
+                                                <KaskonInputContainer Label="@t.Heading">
+                                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                            @if (t.IsValidated)
                                                             {
-                                                                @((MarkupString)
-                                                                melding.Bericht)
+                                                                <span>✅</span>
                                                             }
-                                                        }
+                                                            else
+                                                            {
+                                                                <span>Let op:</span>
+                                                                @if (t.Meldingen != null)
+                                                                {
+                                                                    @foreach (var melding in t.Meldingen)
+                                                                    {
+                                                                        @((MarkupString)
+                                                                        melding.Bericht)
+                                                                    }
+                                                                }
+                                                            }
+                                                            
+                                                        </div>
                                                         
+                                                        <FluentButton Appearance="Appearance.Lightweight"
+                                                                      IconStart="@(new Icons.Regular.Size20.MoreHorizontal())"
+                                                                      OnClick="() => ShowToetsDetails(t)"
+                                                                      Title="Toon details">
+                                                        </FluentButton>
                                                     </div>
-                                                    
-                                                    <FluentButton Appearance="Appearance.Lightweight"
-                                                                  IconStart="@(new Icons.Regular.Size20.MoreHorizontal())"
-                                                                  OnClick="() => ShowToetsDetails(t)"
-                                                                  Title="Toon details">
-                                                    </FluentButton>
-                                                </div>
-                                            </KaskonInputContainer>
-                                        }
-                                    </div>
+                                                </KaskonInputContainer>
+                                            }
+                                        </div>
+                                    }
                                 </Content>
                             </FluentTab>
                            
                         }
 
-                        @if (Model.Stroken.Any())
+                        @if (Model.Stroken != null && Model.Stroken.Any())
                         {
                             <FluentTab Label="stroken">
                                 <Header> <FluentIcon Value="@(new Icons.Regular.Size20.LineHorizontal3())" />stroken</Header>
@@ -505,7 +523,7 @@
     private void HandleOnAccordionItemChange(FluentAccordionItem item)
     {
         changed = item;
-        SelectedStrook = Model?.Stroken.FirstOrDefault(s => s.Id == item.Id);
+        SelectedStrook = Model?.Stroken?.FirstOrDefault(s => s.Id == item.Id);
     }
 
 

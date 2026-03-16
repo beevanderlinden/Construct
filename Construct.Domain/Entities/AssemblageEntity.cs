@@ -252,9 +252,72 @@ namespace Construct.Domain.Entities
         /// <param name="project">Het project met alle beschikbare materialen</param>
         protected void RestoreMaterialReference(ProjectEntity project)
         {
+            Console.WriteLine($"[RestoreMaterialReference] {GetType().Name} '{Merk}'");
+            Console.WriteLine($"  MateriaalId: {MateriaalId}");
+            Console.WriteLine($"  Materiaal BEFORE: {Materiaal?.Naam ?? "NULL"}");
+            Console.WriteLine($"  project.Materialen.Count: {project.Materialen?.Count ?? 0}");
+            
+            // ✅ NIEUW: Bewaar het oude materiaal als hint voor fallback
+            var oudMateriaal = Materiaal;
+            
+            if (MateriaalId.HasValue)
+            {
+                bool exists = project.Materialen.ContainsKey(MateriaalId.Value);
+                Console.WriteLine($"  MateriaalId exists in dictionary? {exists}");
+                if (exists)
+                {
+                    Console.WriteLine($"  Dictionary value: {project.Materialen[MateriaalId.Value]?.Naam ?? "NULL"}");
+                }
+            }
+            
             _materiaalRef.Restore(
                 guid => project.Materialen.TryGetValue(guid, out var mat) ? mat : null
             );
+            
+            Console.WriteLine($"  Materiaal AFTER: {Materiaal?.Naam ?? "NULL"}");
+            
+            // ✅ INTELLIGENTE FALLBACK: Als restore faalt, zoek een vergelijkbaar materiaal
+            if (Materiaal == null && MateriaalId.HasValue)
+            {
+                Console.WriteLine($"  ⚠️ RESTORE FAILED - Materiaal is still NULL!");
+                Console.WriteLine($"  🔍 Probeer vergelijkbaar materiaal te vinden...");
+                
+                // Gebruik het oude materiaal (uit JSON) als hint
+                if (oudMateriaal is BetonContext oudBeton)
+                {
+                    // Zoek eerst naar exact dezelfde betonsterkteklasse
+                    var vergelijkbaar = project.Materialen.Values
+                        .OfType<BetonContext>()
+                        .FirstOrDefault(b => b.Betonsterkteklasse == oudBeton.Betonsterkteklasse);
+                    
+                    if (vergelijkbaar != null)
+                    {
+                        Console.WriteLine($"  ✅ Vergelijkbaar materiaal gevonden: {vergelijkbaar.Naam}");
+                        Materiaal = vergelijkbaar;
+                        MateriaalId = vergelijkbaar.Id;
+                        return;
+                    }
+                    
+                    // Anders: neem het eerste beschikbare beton
+                    var eersteBeton = project.Materialen.Values.OfType<BetonContext>().FirstOrDefault();
+                    if (eersteBeton != null)
+                    {
+                        Console.WriteLine($"  ✅ Eerste beschikbare beton gebruikt: {eersteBeton.Naam}");
+                        Materiaal = eersteBeton;
+                        MateriaalId = eersteBeton.Id;
+                        return;
+                    }
+                }
+                
+                // Laatste fallback: maak het oude materiaal opnieuw aan
+                if (oudMateriaal != null)
+                {
+                    Console.WriteLine($"  ⚠️ Geen vergelijkbaar materiaal gevonden. Voeg oud materiaal ({oudMateriaal.Naam}) toe aan project.");
+                    Materiaal = oudMateriaal;
+                    MateriaalId = oudMateriaal.Id;
+                    project.Materialen[oudMateriaal.Id] = oudMateriaal;
+                }
+            }
         }
 
         /// <summary>

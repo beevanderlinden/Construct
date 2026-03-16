@@ -34,14 +34,7 @@
         EditorClosed="WizardSteekTrapClosed"></EditAssemblage>
 }
 
-@if (_geselecteerdeAssemblage != null &&
-_geselecteerdeAssemblage is SteekTrapEntity
-)
-{
-    <EditSteekTrap Visible="_wizardVisible"
-                   @bind-SteekTrap="@GeselecteerdeSteekTrap"
-                   WizardClosed="WizardSteekTrapClosed"></EditSteekTrap>
-}
+
 
 
 <DataGridAssemblages 

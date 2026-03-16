@@ -7,17 +7,22 @@
     {
         <svg viewBox="@GetViewBox()" 
              preserveAspectRatio="xMidYMid meet" 
-             style="width: 100%; max-height: @(MaxDisplayHeight)px; height: auto; border: 1px solid #ddd; background: white;">
+             class="plaat-profiel-svg"
+             style="width: 100%; max-height: @(MaxDisplayHeight)px; height: auto; border: 1px solid var(--neutral-stroke-rest);">
             
             <defs>
-                <pattern id="concrete" patternUnits="userSpaceOnUse" width="4" height="4">
+                @* ✅ Unieke IDs per component instance *@
+                <pattern id="concrete-@_instanceId" patternUnits="userSpaceOnUse" width="4" height="4">
                     <rect width="4" height="4" fill="#f5f5f5"/>
                 </pattern>
-                <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                <pattern id="concrete-dark-@_instanceId" patternUnits="userSpaceOnUse" width="4" height="4">
+                    <rect width="4" height="4" fill="#2a2a2a"/>
+                </pattern>
+                <marker id="arrowhead-@_instanceId" markerWidth="10" markerHeight="7" 
                         refX="9" refY="3.5" orient="auto-start-reverse">
                     <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
                 </marker>
-                <marker id="arrowhead" markerWidth="8" markerHeight="8" 
+                <marker id="dimension-@_instanceId" markerWidth="8" markerHeight="8" 
                         refX="4" refY="4" orient="auto">
                     <circle cx="4" cy="4" r="3" fill="none" stroke="#666" stroke-width="1"/>
                     <line x1="1" y1="4" x2="7" y2="4" stroke="#666" stroke-width="1"/>
@@ -43,9 +48,13 @@
     [Parameter] public double Hoogte { get; set; } = 200;
     [Parameter] public double MaxDisplayHeight { get; set; } = 300;
 
+
     private double Marge => 80;
     private double Scale => 0.8;
     private double Pts => 12;
+    
+    // ✅ Unieke ID per component instance
+    private string _instanceId = Guid.NewGuid().ToString("N").Substring(0, 8);
 
     private string GetViewBox()
     {
@@ -65,7 +74,7 @@
             Y = Marge,
             Width = Breedte,
             Height = Hoogte,
-            Fill = "url(#concrete)",
+            Fill = $"url(#concrete-{_instanceId})",
             Stroke = "#999",
             StrokeWidth = 1
         });
@@ -176,8 +185,8 @@
                 StrokeWidth = 0.8,
                 Scale = Scale,
                 StringFormat = "0.#",
-                MarkerStart = "arrowhead",
-                MarkerEnd = "arrowhead"
+                MarkerStart = $"arrowhead-{_instanceId}",
+                MarkerEnd = $"arrowhead-{_instanceId}"
             };
             elements.Add(dimLineLinksTotaal);
 
@@ -293,8 +302,8 @@
                 StrokeWidth = 0.8,
                 Scale = Scale,
                 StringFormat = "0.#",
-                MarkerStart = "arrowhead",
-                MarkerEnd = "arrowhead"
+                MarkerStart = $"arrowhead-{_instanceId}",
+                MarkerEnd = $"arrowhead-{_instanceId}"
             };
             elements.Add(dimLineRechtsTotaal);
 
@@ -312,8 +321,8 @@
                 StrokeWidth = 0.8,
                 Scale = Scale,
                 StringFormat = "0.#",
-                MarkerStart = "arrowhead",
-                MarkerEnd = "arrowhead"
+                MarkerStart = $"arrowhead-{_instanceId}",
+                MarkerEnd = $"arrowhead-{_instanceId}"
             };
             //elements.Add(dimRechtsDeelOnder);
 
@@ -334,8 +343,8 @@
             StrokeWidth = 1,
             Scale = Scale,
             Text = $"{Hoogte:F0}",
-            MarkerStart = "arrowhead",
-            MarkerEnd = "arrowhead"
+            MarkerStart = $"arrowhead-{_instanceId}",
+            MarkerEnd = $"arrowhead-{_instanceId}"
         };
         elements.Add(dimHoogte);
 
@@ -353,8 +362,8 @@
             StrokeWidth = 1,
             Scale = Scale,
             Text = $"{Breedte:F0}",
-            MarkerStart = "arrowhead",
-            MarkerEnd = "arrowhead"
+            MarkerStart = $"arrowhead-{_instanceId}",
+            MarkerEnd = $"arrowhead-{_instanceId}"
         };
         //elements.Add(dimBreedte);
 

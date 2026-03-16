@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boekje Effect Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            padding: 20px;
+        }
+
+        /* Preview Container */
+        .preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            align-content: flex-start;
+            background: #e8e8e8;
+            padding: 0;
+            padding-right: 25px;
+            gap: 4.95mm; /* Gap tussen boekjes */
+            box-sizing: border-box;
+            border: 2px solid #999;
+            padding: 10px;
+        }
+
+        /* ? Boekje wrapper - houdt 2 pagina's bij elkaar */
+        .boekje-wrapper {
+            display: flex;
+            gap: 0; /* Geen gap tussen de 2 pagina's van een boekje */
+            flex-shrink: 0; /* Voorkom dat boekje gekrompen wordt */
+        }
+
+        /* E�n A4-pagina */
+        .preview-container .ec-panel {
+            --panel-width: 210mm;
+            --panel-height: 297mm;
+            color: black;
+            width: var(--panel-width);
+            height: var(--panel-height);
+            background: white;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.25);
+            box-sizing: border-box;
+            position: relative;
+            margin: 0; /* Geen margin - gap wordt geregeld door container */
+            padding: 20mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0; /* Voorkom dat pagina gekrompen wordt */
+        }
+
+        /* ? BOEKJE EFFECT: Eerste pagina (cover) blijft wit */
+        .preview-container .ec-panel:first-child {
+            background: white;
+        }
+
+        /* ? LINKERPAGINA's van elk boekje (even: 2, 4, 6, etc.) - binding aan RECHTERKANT */
+        .boekje-wrapper .ec-panel:nth-child(1) {
+            background: linear-gradient(
+                to left,
+                #d8d8d8 0%,      /* Rechterrand donkerder (binding aan binnenkant) */
+                #e8e8e8 5%,      /* Snelle overgang */
+                #f5f5f5 15%,     /* Naar lichtgrijs */
+                #ffffff 30%      /* Rest volledig wit */
+            );
+        }
+
+        /* ? RECHTERPAGINA's van elk boekje (tweede kind in wrapper) - binding aan LINKERKANT */
+        .boekje-wrapper .ec-panel:nth-child(2) {
+            background: linear-gradient(
+                to right,
+                #d8d8d8 0%,      /* Linkerrand donkerder (binding aan binnenkant) */
+                #e8e8e8 5%,      /* Snelle overgang */
+                #f5f5f5 15%,     /* Naar lichtgrijs */
+                #ffffff 30%      /* Rest volledig wit */
+            );
+        }
+
+        /* ? BOEKJE SPACING: niet meer nodig - gap wordt geregeld door preview-container */
+
+        /* Styling voor de content */
+        .ec-panel h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .ec-panel h2 {
+            font-size: 36px;
+            color: #006a6a;
+            margin-bottom: 10px;
+        }
+
+        .ec-panel p {
+            font-size: 18px;
+            color: #333;
+        }
+
+        /* Page numbering */
+        .page-number {
+            position: absolute;
+            bottom: 15mm;
+            right: 15mm;
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* Info box */
+        .info-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 4px;
+        }
+
+        .info-box h3 {
+            margin-bottom: 10px;
+            color: #856404;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+        }
+
+        .info-box li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="info-box">
+        <h3>?? Boekje Effect Demo</h3>
+        <p><strong>Verwachte layout:</strong></p>
+        <ul>
+            <li><strong>Pagina 1</strong> (Voorblad) - wit, geen gradient ? <strong>GAP</strong></li>
+            <li><strong>Pagina 2|Pagina 3</strong> - Linker (binding RECHTS) | Rechter (binding LINKS) ? <strong>GAP</strong></li>
+            <li><strong>Pagina 4|Pagina 5</strong> - Linker (binding RECHTS) | Rechter (binding LINKS) ? <strong>GAP</strong></li>
+            <li><strong>Pagina 6</strong> - Linker (binding RECHTS)</li>
+        </ul>
+        <p><strong>Let op:</strong> De gap zit tussen de boekjes. Elk boekje (2 pagina's) blijft altijd bij elkaar!</p>
+        <p><strong>Binding:</strong> Bij een echt boekje zit de binding altijd aan de <em>binnenkant</em> (rug van het boek):</p>
+        <ul>
+            <li>Linkerpagina's (1e pagina in wrapper) ? binding aan <strong>RECHTERKANT</strong> ? gradient van rechts</li>
+            <li>Rechterpagina's (2e pagina in wrapper) ? binding aan <strong>LINKERKANT</strong> ? gradient van links</li>
+        </ul>
+        <p><strong>? Nieuw:</strong> De boekjes worden nooit uit elkaar getrokken! De rug zit nooit aan de rand van het scherm.</p>
+    </div>
+
+    <div class="preview-container">
+        <!-- Pagina 1: Voorblad - ALLEEN -->
+        <div class="ec-panel">
+            <h1>Voorblad</h1>
+            <h2>Pagina 1</h2>
+            <p>Dit is het voorblad (wit, geen gradient)</p>
+            <div class="page-number">Pagina 1</div>
+        </div>
+
+        <!-- Boekje 1: Pagina 2 en 3 -->
+        <div class="boekje-wrapper">
+            <!-- Pagina 2: Linkerpagina -->
+            <div class="ec-panel">
+                <h2>Pagina 2</h2>
+                <p>LINKERPAGINA - gradient van RECHTS<br>
+                (binding aan RECHTERKANT/binnenkant)</p>
+                <div class="page-number">Pagina 2</div>
+            </div>
+
+            <!-- Pagina 3: Rechterpagina -->
+            <div class="ec-panel">
+                <h2>Pagina 3</h2>
+                <p>RECHTERPAGINA - gradient van LINKS<br>
+                (binding aan LINKERKANT/binnenkant)</p>
+                <div class="page-number">Pagina 3</div>
+            </div>
+        </div>
+
+        <!-- Boekje 2: Pagina 4 en 5 -->
+        <div class="boekje-wrapper">
+            <!-- Pagina 4: Linkerpagina -->
+            <div class="ec-panel">
+                <h2>Pagina 4</h2>
+                <p>LINKERPAGINA - gradient van RECHTS<br>
+                (binding aan RECHTERKANT/binnenkant)</p>
+                <div class="page-number">Pagina 4</div>
+            </div>
+
+            <!-- Pagina 5: Rechterpagina -->
+            <div class="ec-panel">
+                <h2>Pagina 5</h2>
+                <p>RECHTERPAGINA - gradient van LINKS<br>
+                (binding aan LINKERKANT/binnenkant)</p>
+                <div class="page-number">Pagina 5</div>
+            </div>
+        </div>
+
+        <!-- Boekje 3: Pagina 6 (onvolledig boekje - alleen linkerpagina) -->
+        <div class="boekje-wrapper">
+            <!-- Pagina 6: Linkerpagina -->
+            <div class="ec-panel">
+                <h2>Pagina 6</h2>
+                <p>LINKERPAGINA - gradient van RECHTS<br>
+                (binding aan RECHTERKANT/binnenkant)<br>
+                <strong>Laatste pagina - onvolledig boekje</strong></p>
+                <div class="page-number">Pagina 6</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-box" style="margin-top: 20px;">
+        <h3>?? Wat te controleren:</h3>
+        <ul>
+            <li>? Pagina 1 moet volledig wit zijn zonder gradient</li>
+            <li>? Eerste pagina van elk boekje (linkerpagina) moet gradient hebben van RECHTS (binding rechts)</li>
+            <li>? Tweede pagina van elk boekje (rechterpagina) moet gradient hebben van LINKS (binding links)</li>
+            <li>? Gap tussen boekjes (tussen voorblad en eerste boekje, tussen boekjes onderling)</li>
+            <li>? Geen gap BINNEN een boekje (tussen de 2 pagina's)</li>
+            <li>? Layout moet zijn: [1] GAP [2+3] GAP [4+5] GAP [6]</li>
+            <li>? Binding moet altijd aan de BINNENKANT zitten (donkerder grijs)</li>
+            <li>? <strong>NIEUW:</strong> Boekjes blijven altijd bij elkaar, ook bij schermgrootte verandering!</li>
+            <li>? De rug van een boekje zit NOOIT aan de rand van het scherm</li>
+        </ul>
+    </div>
+</body>
+</html>

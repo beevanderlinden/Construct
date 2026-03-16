@@ -37,6 +37,7 @@
         protected override void ApplyAttributes()
         {
             Set("d", D);
+            Set("class", Class);
             Set("stroke", Stroke);
             Set("stroke-width", StrokeWidth);
             Set("fill", Fill);

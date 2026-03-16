@@ -1355,7 +1355,14 @@ else
             SetUitgangspunten(content, proj.ProjectInfo.Grondslagen, proj.Assemblages);
 
 
-            foreach (AssemblageEntity a in proj.Assemblages.OrderBy(a=>a.Merk))
+            // ✅ Custom sort: eerst op merk-prefix, dan alfabetisch binnen prefix
+            var orderedAssemblages = proj.Assemblages
+                .OrderBy(a => GetMerkSortPriority(a.Merk))
+                .ThenBy(a => a.Merk)
+                .ToList();
+
+
+            foreach (AssemblageEntity a in orderedAssemblages)
             {
                 // haal zoveel mogelijk uit de base
                 if (a != null)
@@ -1726,20 +1733,20 @@ else
                 {
 
                     // afbeelding
-                    double widthMM = 100; // breedte van de svg
-                    double widthPx = widthMM * 96 / 25.4;
+                    //double widthMM = 100; // breedte van de svg
+                    //double widthPx = widthMM * 96 / 25.4;
 
-                    par = new ParagraphContent();
-                    Construct.Domain.Entities.BoundingBox boundingBox = new();
+                    //par = new ParagraphContent();
+                    //Construct.Domain.Entities.BoundingBox boundingBox = new();
 
-                    string svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; top: 0mm; width:{widthMM:0}mm; height: auto;";
+                    //string svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; top: 0mm; width:{widthMM:0}mm; height: auto;";
 
 
 
-                    var (svgXml, base64Png) = 
-                    TrapSvgGenerator.GenerateTrapSvgXmlWithPng(steekTrap, boundingBox, widthPx, 9999, svgStyle);
-                    par.Markdown = svgXml;
-                    section.Elements.Add(par);
+                    //var (svgXml, base64Png) = 
+                    //TrapSvgGenerator.GenerateTrapSvgXmlWithPng(steekTrap, boundingBox, widthPx, 9999, svgStyle);
+                    //par.Markdown = svgXml;
+                    //section.Elements.Add(par);
 
 
                     //  BELASTINGEN
@@ -1769,50 +1776,7 @@ else
                     // BELASTINGCOMBINATIES
                     //steekTrap.Belastingen.BelastingCombinaties.AddToSection(section, false, "Belastingcombinaties", "Kop 3");
 
-                    // schil
-                    section.AddParagraph("Berekening schil", "Kop 3");
-
-                    //section.AddParagraph("Krachten", "Kop 4");
-                    var tblSchil = new TableContent();
-                    tblSchil.Headers = [
-                        new() { CellContent=new("geval/combinatie", MigraDoc.DocumentObjectModel.Unit.FromCentimeter(6))},
-                    new() { CellContent = new("*M~y~* [kNm]", "6cm")},
-                    new() { CellContent = new("*V~z~* [kN]", "6cm")},
-    ];
-
-
-
-                    tblSchil.Rows.Add(new() { new("Permanent (BG1)", "6cm"), new($"{steekTrap.Krachten.Mk1:0.0}", "2cm"), new($"{steekTrap.Krachten.Vk1:0.0}", "6cm") });
-                    tblSchil.Rows.Add(new() { new("Veranderlijk (BG2)"), new($"{Math.Max(steekTrap.Krachten.Mk2, steekTrap.Krachten.Mk3):0.0}", "6cm"), new($"{steekTrap.Krachten.Vk2:0.0}", "6cm") });
-
-                    tblSchil.Rows.Add(new() { new($"Quasi-blijvend"), new($"{steekTrap.Krachten.Mqp:0.0}", "6cm"), new($"{steekTrap.Krachten.Vqp:0.0}", "6cm"), });
-                    tblSchil.Rows.Add(new() { new($"Frequent"), new($"{steekTrap.Krachten.Mfreq:0.0}", "6cm"), new($"{steekTrap.Krachten.Vfreq:0.0}", "6cm"), });
-                    tblSchil.Rows.Add(new() { new($"Fundamenteel"), new($"**{steekTrap.Krachten.MEd:0.0}**", "6cm"), new($"**{steekTrap.Krachten.VEd:0.0}**", "6cm") });
-
-
-
-                    //tblSchil.Rows.Add(new(){new("omhullende")});
-
-
-                    //tblSchil.Rows.Add(new() { new($"{steekTrap.Krachten.MaatgevendeCombinatieKarakteristiek?.Naam ?? "not found"}"), new($"{steekTrap.Krachten.Mk:0.0}"),new(), new("omhullekarakteristiek~")});
-                    //tblSchil.Rows.Add(new() { new($"{steekTrap.Krachten.MaatgevendeCombinatieFrequent?.Naam ?? "not found"}"), new($"{steekTrap.Krachten.Mfreq:0.0}"), new(),new("M~Ed,frequent~") });
-                    //tblSchil.Rows.Add(new() { new($"{steekTrap.Krachten.MaatgevendeCombinatieFundamenteel?.Naam ?? "not found"}"), new($"{steekTrap.Krachten.MEd:0.0}"), new(),new("M~Ed,fundamenteel~") });
-                    section.Elements.Add(tblSchil);
-
-                    section.AddParagraph("Oplegreacties", "Kop 3");
-
-                    var tblReacties = new TableContent();
-                    tblReacties.Headers = [
-                        new(new("reacties", "6cm")),
-                    new(new("*R~z,Gk~* [kN/m¹]", "6cm"){Style = new(){Alignment = MigraDoc.DocumentObjectModel.ParagraphAlignment.Center}}),
-                    new(new("*R~z,Qk~* [kN/m¹]", "6cm"){Style = new(){Alignment = MigraDoc.DocumentObjectModel.ParagraphAlignment.Center}}),
-                    //new()
-    ];
-
-                    //tblOmhullende.Rows.Add(new() { new($"{steekTrap.Krachten.MaatgevendeCombinatieKarakteristiek?.Naam ?? "not found"}"), new($"{steekTrap.Krachten.Mk:0.0}"), new(), new("omhullekarakteristiek~") });
-                    tblReacties.Rows.Add(new() { new($"onder/boven"), new($"{steekTrap.Krachten.Vk1:0.0}", "6cm"), new($"{Math.Max(steekTrap.Krachten.Vk2, steekTrap.Krachten.Vk3):0.0}", "6cm"), });
-                    section.Elements.Add(tblReacties);
-
+                   
 
 
                     // PAGE BREAK (maak een heading 1, dan gaat het automatisch...)
@@ -1820,6 +1784,41 @@ else
 
                     section.Elements.Add(new HeadingContent(title, 1));
                     section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
+
+
+                    // schil
+                    section.AddParagraph("Berekening schil", "Kop 3");
+
+                    //section.AddParagraph("Krachten", "Kop 4");
+                    var tblSchil = new TableContent();
+                    tblSchil.Headers =
+                    [
+                        new() { CellContent=new("geval/combinatie", MigraDoc.DocumentObjectModel.Unit.FromCentimeter(6))},
+                        new() { CellContent = new("*M~y~* [kNm]", "6cm")},
+                        new() { CellContent = new("*V~z~* [kN]", "6cm")},
+                    ];
+
+                    tblSchil.Rows.Add(new() { new("Permanent (BG1)", "6cm"), new($"{steekTrap.Krachten.Mk1:0.0}", "2cm"), new($"{steekTrap.Krachten.Vk1:0.0}", "6cm") });
+                    tblSchil.Rows.Add(new() { new("Veranderlijk (BG2)"), new($"{Math.Max(steekTrap.Krachten.Mk2, steekTrap.Krachten.Mk3):0.0}", "6cm"), new($"{steekTrap.Krachten.Vk2:0.0}", "6cm") });
+                    tblSchil.Rows.Add(new() { new($"Quasi-blijvend"), new($"{steekTrap.Krachten.Mqp:0.0}", "6cm"), new($"{steekTrap.Krachten.Vqp:0.0}", "6cm"), });
+                    tblSchil.Rows.Add(new() { new($"Frequent"), new($"{steekTrap.Krachten.Mfreq:0.0}", "6cm"), new($"{steekTrap.Krachten.Vfreq:0.0}", "6cm"), });
+                    tblSchil.Rows.Add(new() { new($"Fundamenteel"), new($"**{steekTrap.Krachten.MEd:0.0}**", "6cm"), new($"**{steekTrap.Krachten.VEd:0.0}**", "6cm") });
+                    section.Elements.Add(tblSchil);
+
+
+                    section.AddParagraph("Oplegreacties", "Kop 3");
+
+                    var tblReacties = new TableContent();
+                    tblReacties.Headers =
+                    [
+                        new(new("reacties", "6cm")),
+                        new(new("*R~z,Gk~* [kN/m¹]", "6cm"){Style = new(){Alignment = MigraDoc.DocumentObjectModel.ParagraphAlignment.Center}}),
+                        new(new("*R~z,Qk~* [kN/m¹]", "6cm"){Style = new(){Alignment = MigraDoc.DocumentObjectModel.ParagraphAlignment.Center}}),
+                    ];
+
+                    tblReacties.Rows.Add(new() { new($"onder/boven"), new($"{steekTrap.Krachten.Vk1:0.0}", "6cm"), new($"{Math.Max(steekTrap.Krachten.Vk2, steekTrap.Krachten.Vk3):0.0}", "6cm"), });
+                    section.Elements.Add(tblReacties);
+
 
 
                     // toetsen
@@ -2100,6 +2099,32 @@ else
             return document;
         }
     }   
+
+    /// <summary>
+    /// Bepaalt de sorteer-prioriteit op basis van het merk-prefix.
+    /// Lagere waarde = eerder in document.
+    /// </summary>
+    /// <param name="merk">Het merknummer (bijv. "T-1", "B-2", "AT-3")</param>
+    /// <returns>Prioriteit getal voor sortering</returns>
+    private int GetMerkSortPriority(string? merk)
+    {
+        if (string.IsNullOrEmpty(merk))
+            return 9999; // Onbekend/leeg altijd achteraan
+
+        // Haal de prefix uit het merk (alles voor het eerste cijfer of '-')
+        var prefix = new string(merk.TakeWhile(c => !char.IsDigit(c) && c != '-').ToArray()).ToUpperInvariant();
+
+        // ✅ Definieer custom volgorde hier - makkelijk aan te passen!
+        return prefix switch
+        {
+            "TR" => 1,      // Trap elementen eerst
+            "AT" => 2,     // AT elementen daarna
+            "BD" => 3,      // Bordes elementen daarna
+            "L" => 4,      // Ligger elementen
+            "V" => 5,      // Vloer elementen (bijvoorbeeld)
+            _ => 99        // Onbekende prefixes achteraan
+        };
+    }
 
 
 

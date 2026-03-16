@@ -154,9 +154,9 @@ namespace Construct.Domain.Entities
                         {
                             Heading = "schilwapening onder",
                             DekkingBuitensteLaag = this.PlaatDekking.Onder,
-                            BasisWapening = this.WapeningSchil ?? new WapeningContext()
+                            BasisWapening = new WapeningContext()
                             {
-                                Tekst = "r8-150",
+                                Tekst = this.WapeningSchil?.Tekst ?? "r8-150",
                                 ReferentieVlak = ReferentieVlakEnum.Onder,
                                 ReferentieLengte = 1000,
                             },
@@ -189,9 +189,12 @@ namespace Construct.Domain.Entities
                             DiameterVerdeel = 8,
                         },
                     };
+                    
+                    Console.WriteLine($"   Onder.BasisWapening HashCode: {MainSlab.PlaatWapening.Onder.BasisWapening.GetHashCode()}");
+                    Console.WriteLine($"   Boven.BasisWapening HashCode: {MainSlab.PlaatWapening.Boven.BasisWapening.GetHashCode()}");
+                    Console.WriteLine($"   Zijn ze hetzelfde? {ReferenceEquals(MainSlab.PlaatWapening.Boven.BasisWapening, MainSlab.PlaatWapening.Onder.BasisWapening)}");
                 }
                 
-                Console.WriteLine($"✅ [SteekTrapEntity] MainPart gekoppeld aan assemblage eigenschappen (Dikte={MainSlab.Dikte}mm, PlaatWapening={MainSlab.PlaatWapening != null})");
             }
 
             var beton = Materiaal as BetonContext;
@@ -368,6 +371,8 @@ namespace Construct.Domain.Entities
         public bool IsAkkoord()
         {
             Meldingen.Clear();
+            ClearToetsen();
+            
 
             if (HoogteTotaal > 4040)
             {
@@ -471,9 +476,11 @@ namespace Construct.Domain.Entities
             sw.Start();
             ProjectInfo = projectInfo;
             Belastingen = new(grondslagen: ProjectInfo.Grondslagen);
-            //Beton = new("C45/55");
-
-            Materiaal = new BetonContext("C45/55");
+            
+            // ⚠️ VERWIJDERD: Materiaal wordt nu gezet via object initializer in GetSteekTrap()
+            // Dit voorkomt dat een nieuw BetonContext wordt aangemaakt dat niet in project.Materialen staat
+            // Materiaal = new BetonContext("C45/55");  // ❌ REMOVED
+            
             var beton = Materiaal as BetonContext;
 
             // ✅ NIEUW: Creëer MainPart vroeg in constructor
@@ -531,7 +538,8 @@ namespace Construct.Domain.Entities
         /// </summary>
         public override void RestoreReferencesAfterDeserialization(ProjectEntity project)
         {
-            // ✅ EERST: Herstel alle basisreferenties (materiaal, belastingen, etc.)
+            // ✅ EERST: Herstel alle basisreferenties (materiaal, belastingen, MainPart, etc.)
+            // De base class zorgt nu voor intelligente materiaal fallback!
             base.RestoreReferencesAfterDeserialization(project);
 
             // ✅ NIEUW: Migreer oude data naar MainPart indien MainPart null is
@@ -539,35 +547,6 @@ namespace Construct.Domain.Entities
             {
                 Console.WriteLine($"✅ [SteekTrapEntity] Migreer oude data naar MainPart");
                 MainPart = CreateMainPart();
-            }
-
-            // 🔍 BROKEN LINK DETECTION: MateriaalId is gezet, maar materiaal niet gevonden in dictionary
-            // Dit gebeurt als de JSON een MateriaalId bevat die niet (meer) bestaat in project.Materialen
-            if (Materiaal == null && MateriaalId.HasValue)
-            {
-                Console.WriteLine($"⚠️ [SteekTrapEntity] Materiaal met ID {MateriaalId} niet gevonden in project. Zoek bestaand C45/55 materiaal of maak nieuwe aan.");
-                
-                // Probeer eerst een bestaand C45/55 materiaal te vinden
-                var bestaandC45 = project.Materialen.Values
-                    .OfType<BetonContext>()
-                    .FirstOrDefault(b => b.Betonsterkteklasse == BetonsterkteklasseEnum.C45_55);
-                
-                if (bestaandC45 != null)
-                {
-                    Console.WriteLine($"✅ Bestaand C45/55 materiaal gevonden (ID: {bestaandC45.Id}). Gebruik deze.");
-                    Materiaal = bestaandC45;
-                    MateriaalId = bestaandC45.Id; // Update de MateriaalId naar het gevonden materiaal
-                }
-                else
-                {
-                    Console.WriteLine("⚠️ Geen bestaand C45/55 materiaal gevonden. Maak nieuwe aan.");
-                    var nieuwMateriaal = new BetonContext("C45/55"); 
-                    Materiaal = nieuwMateriaal;
-                    MateriaalId = nieuwMateriaal.Id;
-
-                    // Voeg toe aan project zodat het de volgende keer wel gevonden wordt
-                    project.Materialen[nieuwMateriaal.Id] = nieuwMateriaal;
-                }
             }
             
             // ✅ DAARNA: Initialiseer Init() nu MET het echte Materiaal
@@ -846,7 +825,7 @@ namespace Construct.Domain.Entities
             var tand = TandOpleggingBovenzijde;
             
             // ✅ Parse huidige wapening (gebruik constraint als startpunt)
-            double constraintDiameter = 8.0; // Default
+            double constraintDiameter = 6.0; // Default
             double constraintMaxHoh = 150;   // Default
             
             double currentDiameter = constraintDiameter;
@@ -866,9 +845,9 @@ namespace Construct.Domain.Entities
             tand.Bijwerken();
             
             // ✅ Check of wapening voldoende is
-            if (tand.BuigingTand?.AsRequired > tand.WapeningAlgemeen.As)
+            if (tand.TotaleWapeningBenodigd > tand.WapeningAlgemeen.As)
             {
-                Console.WriteLine($"⚠️ [SteekTrapEntity] Tandwapening onvoldoende: AsReq={tand.BuigingTand.AsRequired:0}mm² > AsProv={tand.WapeningAlgemeen.As:0}mm²");
+                Console.WriteLine($"⚠️ [SteekTrapEntity] Tandwapening onvoldoende: AsReq={tand.TotaleWapeningBenodigd:0}mm² > AsProv={tand.WapeningAlgemeen.As:0}mm²");
                 
                 // STAP 1: Probeer hoh te verkleinen (tot 50mm minimum)
                 double minHoh = 50;
@@ -883,7 +862,7 @@ namespace Construct.Domain.Entities
                     tand.WapeningAlgemeen.Tekst = $"Ø{currentDiameter:0.#}-{currentHoh:0}";
                     tand.Bijwerken();
                     
-                    if (tand.BuigingTand.AsRequired <= tand.BuigingTand.AsApplied * targetUtilization)
+                    if (tand.TotaleWapeningBenodigd <= tand.BuigingTand.AsApplied * targetUtilization)
                     {
                         Console.WriteLine($"✅ [SteekTrapEntity] Tandwapening: hoh aangepast naar {currentHoh}mm (Ø{currentDiameter})");
                         return;
@@ -1876,7 +1855,7 @@ namespace Construct.Domain.Entities
     {
         public KrachtenDemo BerekenSteektrap(SteekTrapEntity steekTrap)
         {
-            Console.WriteLine(steekTrap.Merk + " [BerekenSteektrap] krachten worden berekend (statisch bepaald met vergeet-mij-nietjes)");
+            Console.WriteLine($"[BerekenSteektrap] {steekTrap.Merk}");
             KrachtenDemo returnItem = new();
             // belastingen
             double qG = steekTrap.GetPermanenteBelasting();

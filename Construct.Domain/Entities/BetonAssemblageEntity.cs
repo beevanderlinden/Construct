@@ -130,11 +130,38 @@ namespace Construct.Domain.Entities
                 }
             }
 
-            // ✅ Fallback: Als nog steeds geen materiaal, maak C45/55
+            // ✅ INTELLIGENTE FALLBACK: Als materiaal niet gevonden op basis van ID,
+            // zoek dan een bestaand materiaal met dezelfde eigenschappen, of het eerste beschikbare beton
+            if (Materiaal == null && MateriaalId.HasValue)
+            {
+                Console.WriteLine($"⚠️ [{GetType().Name}] Materiaal met ID {MateriaalId} niet gevonden in project.");
+                
+                // Probeer het eerste beschikbare BetonContext te vinden (ongeacht kwaliteit)
+                var eersteBeton = project.Materialen.Values
+                    .OfType<BetonContext>()
+                    .FirstOrDefault();
+                
+                if (eersteBeton != null)
+                {
+                    Console.WriteLine($"✅ Bestaand beton materiaal gevonden ({eersteBeton.Naam}). Gebruik deze.");
+                    Materiaal = eersteBeton;
+                    MateriaalId = eersteBeton.Id;
+                }
+                else
+                {
+                    Console.WriteLine("⚠️ Geen bestaand beton materiaal gevonden. Maak C20/25 aan (conservatief).");
+                    var nieuwBeton = new BetonContext("C20/25"); // Conservatieve keuze
+                    Materiaal = nieuwBeton;
+                    MateriaalId = nieuwBeton.Id;
+                    project.Materialen[nieuwBeton.Id] = nieuwBeton;
+                }
+            }
+            
+            // ✅ EXTRA FALLBACK: Als materiaal nog steeds null (zonder MateriaalId)
             if (Materiaal == null)
             {
-                Console.WriteLine($"⚠️ [{GetType().Name}] Geen betonmateriaal gevonden. Maak C45/55 aan.");
-                var nieuwBeton = new BetonContext("C45/55");
+                Console.WriteLine($"⚠️ [{GetType().Name}] Geen betonmateriaal gevonden. Maak C20/25 aan.");
+                var nieuwBeton = new BetonContext("C20/25");
                 Materiaal = nieuwBeton;
                 MateriaalId = nieuwBeton.Id;
                 project.Materialen[nieuwBeton.Id] = nieuwBeton;
@@ -150,6 +177,28 @@ namespace Construct.Domain.Entities
                 {
                     plate.PlaatDekking = this.PlaatDekking; // Shared reference!
                     Console.WriteLine($"✅ [{GetType().Name}] MainPart referenties hersteld (PlatePart)");
+                    
+                    // ✅ FIX: Controleer of Boven en Onder BasisWapening dezelfde referentie delen (na deserialisatie)
+                    // Dit kan gebeuren door ReferenceHandler.IgnoreCycles bij JSON serialisatie
+                    if (plate.PlaatWapening?.Boven?.BasisWapening != null && 
+                        plate.PlaatWapening?.Onder?.BasisWapening != null &&
+                        ReferenceEquals(plate.PlaatWapening.Boven.BasisWapening, plate.PlaatWapening.Onder.BasisWapening))
+                    {
+                        Console.WriteLine($"⚠️ [{GetType().Name}] PROBLEEM: Boven.BasisWapening en Onder.BasisWapening zijn hetzelfde object! Maak kopie...");
+                        // Maak een diepe kopie van Onder.BasisWapening
+                        plate.PlaatWapening.Onder.BasisWapening = plate.PlaatWapening.Onder.BasisWapening.Clone();
+                        Console.WriteLine($"✅ [{GetType().Name}] Onder.BasisWapening gekloond. Nu zijn het verschillende objecten.");
+                    }
+
+                    // ✅ FIX: Hetzelfde voor VerdeelWapening
+                    if (plate.PlaatWapening?.Boven?.VerdeelWapening != null && 
+                        plate.PlaatWapening?.Onder?.VerdeelWapening != null &&
+                        ReferenceEquals(plate.PlaatWapening.Boven.VerdeelWapening, plate.PlaatWapening.Onder.VerdeelWapening))
+                    {
+                        Console.WriteLine($"⚠️ [{GetType().Name}] PROBLEEM: Boven.VerdeelWapening en Onder.VerdeelWapening zijn hetzelfde object! Maak kopie...");
+                        plate.PlaatWapening.Onder.VerdeelWapening = plate.PlaatWapening.Onder.VerdeelWapening.Clone();
+                        Console.WriteLine($"✅ [{GetType().Name}] Onder.VerdeelWapening gekloond.");
+                    }
                 }
             }
 

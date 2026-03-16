@@ -1,0 +1,54 @@
+@using Eurocode.BetonConstructies
+
+@*
+    BetonBalkDoorsnedeEditor
+    ??????????????????????????????????????????????????????????????????????????
+    Dunne wrapper rondom BetonBalkDoorsnedeVisualisatie die @bind-Breedte en
+    @bind-Hoogte ondersteunt. De interactieve maatlijnen worden afgehandeld
+    door SvgDimLineInput (foreignObject + JS-callback) in de visualisatielaag.
+*@
+
+<BetonBalkDoorsnedeVisualisatie
+Breedte="@Breedte"
+Hoogte="@Hoogte"
+BeugelWapening="@BeugelWapening"
+WapeningBoven="@WapeningBoven"
+WapeningOnder="@WapeningOnder"
+WapeningZijLinks="@WapeningZijLinks"
+WapeningZijRechts="@WapeningZijRechts"
+ToonMaatvoering="true"
+ToonLegenda="@ToonLegenda"
+FocusElement="@FocusElement"
+BreedteChanged="@(InteractieveMaatlijnen ? BreedteChanged : default)"
+BreedteMin="@BreedteMin" BreedteMax="@BreedteMax" BreedteStep="@BreedteStep"
+HoogteChanged="@(InteractieveMaatlijnen ? HoogteChanged : default)"
+HoogteMin="@HoogteMin" HoogteMax="@HoogteMax" HoogteStep="@HoogteStep"
+ToonHoutPatroon="@ToonHoutPatroon" />
+
+@code {
+    [Parameter] public double Breedte { get; set; } = 300;
+    [Parameter] public EventCallback<double> BreedteChanged { get; set; }
+    [Parameter] public double? BreedteMin  { get; set; }
+    [Parameter] public double? BreedteMax  { get; set; }
+    [Parameter] public double? BreedteStep { get; set; }
+
+    [Parameter] public double Hoogte { get; set; } = 400;
+    [Parameter] public EventCallback<double> HoogteChanged { get; set; }
+    [Parameter] public double? HoogteMin  { get; set; }
+    [Parameter] public double? HoogteMax  { get; set; }
+    [Parameter] public double? HoogteStep { get; set; }
+
+    [Parameter] public WapeningContext? WapeningBoven { get; set; }
+    [Parameter] public WapeningContext? WapeningOnder { get; set; }
+    [Parameter] public WapeningContext? WapeningZijLinks { get; set; }
+    [Parameter] public WapeningContext? WapeningZijRechts { get; set; }
+    [Parameter] public BeugelWapeningContext? BeugelWapening { get; set; }
+    [Parameter] public bool ToonLegenda { get; set; } = true;
+    [Parameter] public string FocusElement { get; set; } = "";
+
+    /// <summary>Toon maatlijnen als klikbare inputs (true = interactief, false = statische tekst).</summary>
+    [Parameter] public bool InteractieveMaatlijnen { get; set; } = true;
+
+    /// <summary>Toon hout-arcering op de doorsnede in plaats van de standaard grijze vulling.</summary>
+    [Parameter] public bool ToonHoutPatroon { get; set; } = false;
+}

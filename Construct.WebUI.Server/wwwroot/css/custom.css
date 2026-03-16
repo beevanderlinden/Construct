@@ -147,6 +147,52 @@ nav.sitenav {
     overflow: inherit;
 }
 
+/* ✅ Dark mode support voor table-wrap */
+@media (prefers-color-scheme: dark) {
+    .table-wrap {
+        background: var(--neutral-layer-2);
+        box-shadow: 0 3px 9px rgba(0,0,0,0.5);
+    }
+    
+    /* ✅ UITZONDERING: Tables in preview-container blijven licht (voor print/PDF) */
+    .preview-container .table-wrap {
+        background: transparent;
+        box-shadow: 0 3px 9px rgba(0,0,0,0.12);
+    }
+    
+    .preview-container .ec-table th,
+    .preview-container .ec-table td {
+        border-bottom: 1px solid #eee;
+        color: black;
+    }
+    
+    .preview-container .ec-table.col-head thead tr > *,
+    .preview-container .ec-table.col-head:not(:has(thead)) tbody tr:first-child > *,
+    .preview-container .ec-table.row-head tr > *:first-child {
+        background: var(--head-bg);
+        color: var(--accent);
+    }
+    
+    .preview-container .ec-table.col-foot tfoot tr > *,
+    .preview-container .ec-table.col-foot:not(:has(tfoot)) tbody tr:last-child > *,
+    .preview-container .ec-table.row-foot tr > *:last-child {
+        background: var(--foot-bg);
+        color: var(--accent);
+    }
+    
+    /* Layout-only variant in dark mode */
+    .table-wrap.layout-only {
+        border-color: rgba(255, 255, 255, 0.1);
+        background: transparent;
+    }
+    
+    .table-wrap.layout-only .ec-table th,
+    .table-wrap.layout-only .ec-table td {
+        border-right-color: rgba(255, 255, 255, 0.15);
+        border-bottom-color: rgba(255, 255, 255, 0.15);
+    }
+}
+
 /* ====== TABEL BASIS ====== */
 .ec-table {
     width: 182mm;
@@ -164,6 +210,15 @@ nav.sitenav {
         padding: 0 1mm;
         border-bottom: 1px solid #eee;
         font-weight: 400;
+    }
+
+    /* ✅ Dark mode: border kleur aanpassen */
+    @media (prefers-color-scheme: dark) {
+        .ec-table th,
+        .ec-table td {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--neutral-foreground-rest);
+        }
     }
 
     /* laatste rij: geen border-bottom */
@@ -227,11 +282,28 @@ nav.sitenav {
     color: var(--accent);
 }
 
+/* ✅ Dark mode: header achtergrond aanpassen */
+@media (prefers-color-scheme: dark) {
+    .ec-table.col-head thead tr > *,
+    .ec-table.col-head:not(:has(thead)) tbody tr:first-child > * {
+        background: rgba(0, 106, 106, 0.3);
+        color: #5dd3d3;
+    }
+}
+
 /* row-head = eerste kolom van alle rijen */
 .ec-table.row-head tr > *:first-child {
     background: var(--head-bg);
     font-weight: 400;
     color: var(--accent);
+}
+
+/* ✅ Dark mode: row-head */
+@media (prefers-color-scheme: dark) {
+    .ec-table.row-head tr > *:first-child {
+        background: rgba(0, 106, 106, 0.3);
+        color: #5dd3d3;
+    }
 }
 
 /* corner cel = alleen als beide heads actief */
@@ -253,11 +325,28 @@ nav.sitenav {
     color: var(--accent);
 }
 
+/* ✅ Dark mode: footer achtergrond */
+@media (prefers-color-scheme: dark) {
+    .ec-table.col-foot tfoot tr > *,
+    .ec-table.col-foot:not(:has(tfoot)) tbody tr:last-child > * {
+        background: rgba(0, 106, 106, 0.4);
+        color: #5dd3d3;
+    }
+}
+
 /* row-foot = laatste kolom van alle rijen, wint altijd */
 .ec-table.row-foot tr > *:last-child {
     background: var(--foot-bg) !important;
     font-weight: 600;
     color: var(--accent);
+}
+
+/* ✅ Dark mode: row-foot */
+@media (prefers-color-scheme: dark) {
+    .ec-table.row-foot tr > *:last-child {
+        background: rgba(0, 106, 106, 0.4) !important;
+        color: #5dd3d3;
+    }
 }
 
 
@@ -459,6 +548,115 @@ nav.sitenav {
     transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
 }
 
+/* ✅ Focus state voor form controls */
+.form-control:focus,
+.kaskon-form-control:focus {
+    outline: 0;
+    border-color: var(--accent-fill-rest);
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* ✅ Native number input spinners styling */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    opacity: 1;
+    background: transparent;
+}
+
+/* ✅ Dark mode: input fields leesbaar maken */
+@media (prefers-color-scheme: dark) {
+    .kaskon-form-control,
+    .form-control {
+        background-color: var(--neutral-fill-input-rest);
+        border-color: var(--neutral-stroke-rest);
+        color: var(--neutral-foreground-rest);
+    }
+    
+    .kaskon-form-control:focus,
+    .form-control:focus {
+        background-color: var(--neutral-fill-input-active);
+        border-color: var(--accent-fill-rest);
+        color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(0, 106, 106, 0.25);
+    }
+    
+    /* ✅ Native number input spinners in dark mode - TRANSPARANT */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+        background: transparent !important;
+        background-color: transparent !important;
+        opacity: 1;
+    }
+    
+    /* ✅ Hover state voor spinners */
+    input[type="number"]:hover::-webkit-inner-spin-button,
+    input[type="number"]:hover::-webkit-outer-spin-button {
+        background: rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    /* FluentUI NumberField / TextField in dark mode - VERBETERD */
+    fluent-number-field,
+    fluent-text-field,
+    fluent-text-area {
+        --neutral-fill-input-rest: var(--neutral-layer-3);
+        --neutral-fill-input-hover: var(--neutral-layer-4);
+        --neutral-fill-input-active: var(--neutral-layer-4);
+        --neutral-foreground-rest: #ffffff;
+    }
+    
+    /* Specifiek voor actieve input fields */
+    fluent-number-field::part(control),
+    fluent-text-field::part(control),
+    fluent-text-area::part(control) {
+        background-color: var(--neutral-layer-3);
+        color: var(--neutral-foreground-rest);
+        border-color: var(--neutral-stroke-rest);
+    }
+    
+    fluent-number-field:focus-within::part(control),
+    fluent-text-field:focus-within::part(control),
+    fluent-text-area:focus-within::part(control) {
+        background-color: var(--neutral-layer-4);
+        border-color: var(--accent-fill-rest);
+        color: #ffffff;
+    }
+    
+    /* ✅ NIEUW: Force white text in number fields */
+    fluent-number-field input,
+    fluent-text-field input,
+    fluent-text-area textarea {
+        color: #ffffff !important;
+        background-color: transparent;
+    }
+    
+    /* ✅ NIEUW: Spinner buttons (up/down controls) transparant maken */
+    fluent-number-field::part(controls),
+    fluent-number-field::part(step-up-button),
+    fluent-number-field::part(step-down-button) {
+        background-color: transparent !important;
+        background: transparent !important;
+    }
+    
+    /* Hover state voor spinner buttons */
+    fluent-number-field::part(step-up-button):hover,
+    fluent-number-field::part(step-down-button):hover {
+        background-color: var(--neutral-layer-4) !important;
+    }
+    
+    /* Active state voor spinner buttons */
+    fluent-number-field::part(step-up-button):active,
+    fluent-number-field::part(step-down-button):active {
+        background-color: var(--neutral-layer-3) !important;
+    }
+    
+    /* Labels en placeholders */
+    fluent-number-field::part(label),
+    fluent-text-field::part(label),
+    fluent-text-area::part(label) {
+        color: var(--neutral-foreground-rest);
+    }
+}
+
 .kaskon-form-controlX {
     display: block;
     width: 100%;
@@ -514,10 +712,17 @@ nav.sitenav {
     /*background: none;*/
     padding: 0;
     padding-right: 25px; /* Ruimte voor PrintPageMenu: ingeklapt  */
-    gap: 4.95mm;
+    gap: 4.95mm; /* Gap tussen boekjes */
     box-sizing: border-box; /* Zorg dat padding binnen de breedte blijft */
     /* lichte blauwe lijntjes */
    
+}
+
+/* ✅ Boekje wrapper - houdt 2 pagina's bij elkaar */
+.boekje-wrapper {
+    display: flex;
+    gap: 0; /* Geen gap tussen de 2 pagina's van een boekje */
+    flex-shrink: 0; /* Voorkom dat boekje gekrompen wordt */
 }
 
 
@@ -603,6 +808,135 @@ svg.has-warning line{
     stroke: none;
 }
 
+/* ✅ Dark mode: SVG achtergrond voor visualisaties */
+@media (prefers-color-scheme: dark) {
+    [id^="svgContainer_"] svg {
+        background: transparent;
+    }
+    
+    /* Plaat profiel visualisatie dark mode */
+    .plaat-profiel-svg {
+        background: transparent;
+    }
+    
+    /* SVG elementen zichtbaar maken in dark mode */
+        [id^="svgContainer_"] svg rect,
+        [id^="svgContainer_"] svg path,
+        [id^="svgContainer_"] svg line,
+        [id^="svgContainer_"] svg line,
+        [id^="svgContainer_"] svg polygon,
+        [id^="svgContainer_"] svg circle,
+        .plaat-profiel-svg rect,
+        .plaat-profiel-svg path,
+        .plaat-profiel-svg line,
+        .plaat-profiel-svg circle {
+            stroke: var(--neutral-foreground-rest);
+        }
+    
+    [id^="svgContainer_"] svg rect[fill="white"],
+    [id^="svgContainer_"] svg path[fill="white"],
+    .plaat-profiel-svg rect[fill="white"],
+    .plaat-profiel-svg path[fill="white"] {
+        fill: var(--neutral-layer-3);
+    }
+    
+    /* Grid lijnen zichtbaar maken */
+    [id^="svgContainer_"] svg line[stroke="#ccc"],
+    [id^="svgContainer_"] svg line[stroke="lightgray"],
+    .plaat-profiel-svg line[stroke="#ccc"],
+    .plaat-profiel-svg line[stroke="lightgray"] {
+        stroke: rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Tekst labels in SVG */
+    [id^="svgContainer_"] svg text,
+    .plaat-profiel-svg text {
+        fill: var(--neutral-foreground-rest) !important;
+    }
+    
+    /* Concrete pattern dark mode */
+    .plaat-profiel-svg rect[fill^="url(#concrete-"] {
+        fill: url(#concrete-dark) !important;
+    }
+    
+    /* Match any concrete pattern ID in dark mode */
+    @supports selector(:has(*)) {
+        .plaat-profiel-svg rect[fill*="concrete"] {
+            fill: var(--neutral-layer-3) !important;
+        }
+    }
+}
+
+/* ✅ Dark mode: Form control text en readonly fields */
+@media (prefers-color-scheme: dark) {
+    .form-control-text {
+        color: var(--neutral-foreground-rest);
+        background-color: transparent;
+    }
+    
+    .form-control.readonly-field,
+    .readonly-field {
+        background-color: var(--neutral-layer-2);
+        color: var(--neutral-foreground-rest);
+        border-color: var(--neutral-stroke-rest);
+    }
+    
+    /* ✅ NIEUW: Algemene form-control in dark mode */
+    .form-control {
+        background-color: var(--neutral-fill-input-rest);
+        border-color: var(--neutral-stroke-rest);
+        color: var(--neutral-foreground-rest);
+    }
+    
+    /* Modal backdrop */
+    .modal-backdrop {
+        background-color: rgba(0, 0, 0, 0.7);
+    }
+    
+    .modal-content-base,
+    .modal-content-wide {
+        background-color: var(--neutral-layer-1);
+        color: var(--neutral-foreground-rest);
+        border-color: var(--neutral-stroke-rest);
+    }
+    
+    .modal-header {
+        background-color: var(--neutral-layer-2);
+        border-bottom-color: var(--neutral-stroke-rest);
+        color: var(--neutral-foreground-rest);
+    }
+    
+    .modal-header h1,
+    .modal-header h2,
+    .modal-header h3 {
+        color: var(--neutral-foreground-rest);
+    }
+    
+    .modal-body {
+        background-color: var(--neutral-layer-1);
+        color: var(--neutral-foreground-rest);
+    }
+    
+    .modal-footer {
+        background-color: var(--neutral-layer-2);
+        border-top-color: var(--neutral-stroke-rest);
+    }
+    
+    /* Buttons in modals */
+    .modal-footer .btn,
+    .modal-header .btn {
+        background-color: var(--neutral-layer-3);
+        border-color: var(--neutral-stroke-rest);
+        color: var(--neutral-foreground-rest);
+    }
+    
+    .modal-footer .btn-primary {
+        background-color: var(--accent-fill-rest);
+        border-color: var(--accent-fill-rest);
+        color: white;
+    }
+}
+
     /* Eén A4-pagina */
     .preview-container .ec-panel {
         --panel-width: 210mm;
@@ -620,8 +954,36 @@ svg.has-warning line{
         /* --- HET BELANGRIJKSTE: laat flex de geschaalde afmetingen gebruiken --- */
         /* flex-basis bepaalt hoeveel ruimte een item in de flex-layout inneemt */
         /*flex: 0 0 calc(var(--panel-width) * var(--scale));*/
-        /* reset margins (geen compenserende margin nodig meer) */
-        margin: 0;
+        /* reset margins */
+        margin: 0; /* Geen margin - gap wordt geregeld door container */
+        flex-shrink: 0; /* Voorkom dat pagina gekrompen wordt */
+    }
+
+    /* ✅ BOEKJE EFFECT: Eerste pagina (cover) blijft wit */
+    .preview-container .ec-panel:first-child {
+        background: white;
+    }
+
+    /* ✅ LINKERPAGINA's van elk boekje (eerste kind in wrapper) - binding aan RECHTERKANT */
+    .boekje-wrapper .ec-panel:nth-child(1) {
+        background: linear-gradient(
+            to left,
+            #d8d8d8 0%,      /* Rechterrand donkerder (binding aan binnenkant) */
+            #e8e8e8 5%,      /* Snelle overgang */
+            #f5f5f5 15%,     /* Naar lichtgrijs */
+            #ffffff 30%      /* Rest volledig wit */
+        );
+    }
+
+    /* ✅ RECHTERPAGINA's van elk boekje (tweede kind in wrapper) - binding aan LINKERKANT */
+    .boekje-wrapper .ec-panel:nth-child(2) {
+        background: linear-gradient(
+            to right,
+            #d8d8d8 0%,      /* Linkerrand donkerder (binding aan binnenkant) */
+            #e8e8e8 5%,      /* Snelle overgang */
+            #f5f5f5 15%,     /* Naar lichtgrijs */
+            #ffffff 30%      /* Rest volledig wit */
+        );
     }
 
 .ec-panel {
@@ -636,6 +998,14 @@ svg.has-warning line{
     display: flex;
     flex-direction: column;
     /*font-family: Arial, sans-serif;*/
+}
+
+/* Zorg ervoor dat headings binnen panels zwart zijn */
+.ec-panel .h1,
+.ec-panel .h2,
+.ec-panel .h3,
+.ec-panel .h4 {
+    color: black !important;
 }
 
 .ec-header {
@@ -1155,10 +1525,10 @@ table.borderless {
             }
 
     /* Stel de paginaformaat en marge voor de printer */
-    @page {
+    /*@page {
         size: A4;
         margin: 0;
-    }
+    }*/
 }
         padding-left: 0.0em;
         padding-right: 0.5em;
@@ -1194,7 +1564,7 @@ table.borderless {
 
     h2, h3, h4, h5, h6 {
         font-size: 3.0mm;
-        color: var(--neutral-foreground-rest);
+        /*color: var(--neutral-foreground-rest);*/
         margin-bottom: 0px;
         margin-top: 2mm; /* zelfde als migradoc */
         line-height: var(--line-height);
@@ -1445,7 +1815,6 @@ a.bookmark-link:hover {
 
 @media (prefers-color-scheme: dark) {
     .form-control {
-        background-color: #23272f !important;
         color: #fff;
     }
 }

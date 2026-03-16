@@ -6,7 +6,7 @@
     <div class="dekking-editor">
        
 
-        <table class="table table-sm table-borderless">
+        <table class="tableX table-smX table-borderlessX">
             <thead>
                 <tr>
                     <th style="width: 40%;"></th>
@@ -206,12 +206,15 @@
                 <!-- Dekking nominaal (readonly) -->
                 <tr>
                     <td>Dekking nominaal <i>c<sub>nom</sub></i> [mm]</td>
-                    <td style="text-align: left;">
+                    <td> @DekkingBoven.DekkingNom mm</td>
+                    <td> @DekkingOnder.DekkingNom mm</td>
+
+                   @*  <td style="text-align: left;">
                         <input type="number" class="form-control form-control-sm text-left fw-bold readonly-field" value="@DekkingBoven.DekkingNom" readonly disabled />
                     </td>
                     <td style="text-align: left; font-weight: 600;">
                         <input type="number" class="form-control form-control-sm text-left fw-bold readonly-field" value="@DekkingOnder.DekkingNom" readonly disabled />
-                    </td>
+                    </td> *@
                 </tr>
 
                 <!-- Dekking toegepast -->
@@ -274,34 +277,22 @@
                 <!-- Dekking minimum (readonly) -->
                 <tr>
                     <td>Dekking min. c<sub>min</sub> [mm]</td>
-                    <td style="text-align: left;">
-                        <input type="number" class="form-control form-control-sm text-left readonly-field" value="@DekkingBoven.DekkingMin" readonly disabled />
-                    </td>
-                    <td style="text-align: left;">
-                        <input type="number" class="form-control form-control-sm text-left readonly-field" value="@DekkingOnder.DekkingMin" readonly disabled />
-                    </td>
+                    <td> @DekkingBoven.DekkingMin mm</td>
+                    <td> @DekkingOnder.DekkingMin mm</td>
                 </tr>
 
                 <!-- Dekking min duurzaamheid (readonly) -->
                 <tr>
                     <td>Dekking min. duurz. c<sub>min,dur</sub> [mm]</td>
-                    <td style="text-align: center;">
-                        <input type="number" class="form-control form-control-sm text-left readonly-field" value="@DekkingBoven.DekkingMinDuurzaamheid" readonly disabled />
-                    </td>
-                    <td style="text-align: center;">
-                        <input type="number" class="form-control form-control-sm text-left readonly-field" value="@DekkingOnder.DekkingMinDuurzaamheid" readonly disabled />
-                    </td>
+                    <td> @DekkingBoven.DekkingMinDuurzaamheid mm</td>
+                    <td> @DekkingOnder.DekkingMinDuurzaamheid mm</td>
                 </tr>
 
                 <!-- Dekking min aanhechting (readonly) -->
                 <tr>
                     <td>Dekking min. aanh. c<sub>min,b</sub> [mm]</td>
-                    <td style="text-align: center;">
-                        <input type="number" class="form-control form-control-sm text-left readonly-field" value="@DekkingBoven.DekkingMinAanhechting" readonly disabled />
-                    </td>
-                    <td style="text-align: center;">
-                        <input type="number" class="form-control form-control-sm text-left readonly-field" value="@DekkingOnder.DekkingMinAanhechting" readonly disabled />
-                    </td>
+                    <td> @DekkingBoven.DekkingMinAanhechting mm</td>
+                    <td> @DekkingOnder.DekkingMinAanhechting mm</td>
                 </tr>
             </tbody>
         </table>
@@ -341,6 +332,18 @@
                 </FluentButton>
             </div>
         }
+        @if (OptimizeDekkingMogelijk())
+        {
+            <div class="alert alert-success mt-2 d-flex align-items-center justify-content-between" role="alert">
+                <span>
+                    <strong>✅ Optimalisatie mogelijk:</strong> Pas dekking aan naar nominale waarde (of 20mm).
+                </span>
+                <FluentButton Appearance="Appearance.Accent" OnClick="OptimizeDekking">
+                    Optimaliseer
+                </FluentButton>
+            </div>
+        }
+    )
     </div>
 }
 else
@@ -489,7 +492,7 @@ else
         if (DekkingBoven == null) return;
 
         var list = DekkingBoven.SelectedMilieuklassen?.ToList() ?? new List<MilieuklasseEnum>();
-        
+
         if (isChecked && !list.Contains(mk))
         {
             list.Add(mk);
@@ -500,7 +503,7 @@ else
         }
 
         DekkingBoven.SelectedMilieuklassen = list;
-        
+
         if (DekkingGelijk && DekkingOnder != null)
         {
             DekkingOnder.SelectedMilieuklassen = new List<MilieuklasseEnum>(list);
@@ -516,7 +519,7 @@ else
         if (DekkingOnder == null) return;
 
         var list = DekkingOnder.SelectedMilieuklassen?.ToList() ?? new List<MilieuklasseEnum>();
-        
+
         if (isChecked && !list.Contains(mk))
         {
             list.Add(mk);
@@ -542,7 +545,7 @@ else
             .ToList();
 
         DekkingBoven.SelectedMilieuklassen = selected;
-        
+
         if (DekkingGelijk && DekkingOnder != null)
         {
             DekkingOnder.SelectedMilieuklassen = new List<MilieuklasseEnum>(selected);
@@ -551,7 +554,7 @@ else
         DekkingBoven.BerekenEnValideer();
         DekkingOnder?.BerekenEnValideer();
         OnChanged.InvokeAsync();
-        
+
         _showMilieuSelectBoven = false; // Sluit dropdown na selectie
     }
 
@@ -568,7 +571,7 @@ else
         DekkingOnder.SelectedMilieuklassen = selected;
         DekkingOnder.BerekenEnValideer();
         OnChanged.InvokeAsync();
-        
+
         _showMilieuSelectOnder = false; // Sluit dropdown na selectie
     }
 
@@ -615,9 +618,20 @@ else
     private bool NeedsDekkingCorrection()
     {
         if (DekkingBoven == null || DekkingOnder == null) return false;
-        
+
         return DekkingBoven.DekkingToe < DekkingBoven.DekkingNom || 
                DekkingOnder.DekkingToe < DekkingOnder.DekkingNom;
+    }
+
+    private bool OptimizeDekkingMogelijk()
+    {
+        if (DekkingBoven == null || DekkingOnder == null) return false;
+
+        double ondergrensVoorOptimalisatie = 20; // Stel een ondergrens in voor optimalisatie (bijv. 20 mm)
+
+        // Optimalisatie is mogelijk als de toegepaste dekking groter is dan de minimale vereiste dekking
+        return (DekkingBoven.DekkingToe > Math.Max(DekkingBoven.DekkingNom, ondergrensVoorOptimalisatie)) ||
+               (DekkingOnder.DekkingToe > Math.Max(DekkingOnder.DekkingNom, ondergrensVoorOptimalisatie)) ;
     }
 
     private void FixDekking()
@@ -635,6 +649,15 @@ else
             DekkingOnder.BerekenEnValideer();
         }
 
-        
+
+    }
+
+    private void OptimizeDekking()
+    {
+        double ondergrensVoorOptimalisatie = 20;
+        if (DekkingBoven != null)
+            DekkingBoven.DekkingToe = Math.Max(DekkingBoven.DekkingNom, ondergrensVoorOptimalisatie);
+        if (DekkingOnder != null)
+            DekkingOnder.DekkingToe = Math.Max(DekkingOnder.DekkingNom, ondergrensVoorOptimalisatie);
     }
 }

@@ -193,7 +193,6 @@
 
     private void OnLogUpdated(string message)
     {
-        Console.WriteLine($"[Footer] OnLogUpdated: '{message}'");
         _lastLine = message;
         InvokeAsync(StateHasChanged);
     }

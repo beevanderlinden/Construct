@@ -24,7 +24,12 @@
     {
             <FluentCard AreaRestricted="false" Style="max-width:210mm;">
                 <h1>Grondslagen (EC0)</h1>
-                <Grondslagen Model="@ProjectStateService.CurrentProject.ProjectInfo.Grondslagen" />
+                <Grondslagen Model="@ProjectStateService.CurrentProject.ProjectInfo.Grondslagen"
+                             ShowReadOnlyFields="false"/>
+            
+                <EditGebruiksklasse Project="ProjectStateService.CurrentProject" />
+
+
             <br />
             <FluentButton Appearance="Appearance.Accent"
                           OnClick="() => NavigateTo(urlAssemblages)">

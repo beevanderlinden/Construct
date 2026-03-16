@@ -53,7 +53,7 @@
     <br/>
    
     <KaskonInputContainer Label="trap links">
-        <select class="form-select" @onchange="@((ChangeEventArgs e) => OnKeuze1Changed(int.Parse(e.Value?.ToString() ?? "0")))">
+        <select class="form-select form-control" @onchange="@((ChangeEventArgs e) => OnKeuze1Changed(int.Parse(e.Value?.ToString() ?? "0")))">
             @for (int i = 0; i < _keuzes.Count; i++)
             {
                 var keuze = _keuzes[i];
@@ -73,7 +73,7 @@
 
 
     <KaskonInputContainer Label="trap rechts">
-        <select class="form-select" @onchange="@((ChangeEventArgs e) => OnKeuze2Changed(int.Parse(e.Value?.ToString() ?? "0")))">
+        <select class="form-select form-control" @onchange="@((ChangeEventArgs e) => OnKeuze2Changed(int.Parse(e.Value?.ToString() ?? "0")))">
             @for (int i = 0; i < _keuzes.Count; i++)
             {
                 var keuze = _keuzes[i];
