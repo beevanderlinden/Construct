@@ -28,13 +28,19 @@
     <FluentMenu
         @key="ProjectEntity.Id" 
         @bind-Open="@open" @onmenuchange=OnMenuChange Width="400px" >
-        <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Steektrap</FluentMenuItem>
+        <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Steektrap (half)</FluentMenuItem>
+        <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Steektrap (heel)</FluentMenuItem>
+
         <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Bordes</FluentMenuItem>
         <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Kolom</FluentMenuItem>
         <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Console</FluentMenuItem>
         <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Ligger (beton)</FluentMenuItem>
         <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Ligger (staal)</FluentMenuItem>
         <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Ligger (hout)</FluentMenuItem>
+
+
+        <FluentMenuItem Disabled="false">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>VrijRol</FluentMenuItem>
+
 
     </FluentMenu>
 
@@ -165,7 +171,19 @@
         return kolom;
     }
 
-    private SteekTrapEntity GetSteekTrap()
+
+    private SteekTrapEntity GetSteekTrap(double lengte, double op, double aan, double schil)
+    {
+        var steekTrap = GetSteekTrap(5, schil);
+
+        steekTrap.GebruikEigenLengte = true;
+        steekTrap.LtProjZ = lengte;
+
+        return steekTrap;
+
+    }
+
+    private SteekTrapEntity GetSteekTrap(int aantalTreden, double schildikte)
     {
         var betonMaterialContext = GetOrAddBetonMaterial();
         SteekTrapEntity steekTrap = new(ProjectEntity!.ProjectInfo)
@@ -176,9 +194,13 @@
             Materiaal = betonMaterialContext,  // ✅ Voeg materiaal toe
             MateriaalId = betonMaterialContext.Id,  // ✅ En ID
             Gebruiksklasse = ProjectEntity.DefaultGebruiksklasse,
+            OptredeAantal1 = aantalTreden,
+            SchilDikte = schildikte,
+
         };
 
         steekTrap.Belastingen.GenereerBelastingCombinaties(steekTrap.Belastingen, steekTrap.Belastingen.BelastingGevallen, steekTrap.Belastingen.CombinatiesTypes);
+        steekTrap.LengteBoven = steekTrap.AantredeMaat + steekTrap.WelMaat;
 
         return steekTrap;
     }
@@ -196,6 +218,18 @@
 
             switch (args.Value.ToLower())
             {
+
+                case "vrijrol":
+                    var demoVgm = new VrijRolEntity()
+                    {
+                        Id = Guid.NewGuid(),
+                        ProjectInfo = ProjectEntity.ProjectInfo,
+                        Naam = "vrij rol demo",
+                        Merk = "VR-1",
+                    };
+                    CreateAssemblage(demoVgm);
+                    break;
+
                 case "ligger (staal)":
                     var staalMaterialContext = GetOrAddStaalMaterial();
                     var liggerStaal = new LiggerEntity()
@@ -290,13 +324,18 @@
 
 
 
-                case "steektrap":
-                    var steektrap = GetSteekTrap();
-
-
+                case "steektrap (half)":
+                    var steektrap = GetSteekTrap(1900, 188, 220, 100.0);
                     CreateAssemblage(steektrap);
                     break;
-                case "kolom":
+                case "steektrap (heel)":
+                    var steektrapVerdieping = GetSteekTrap(16, 150.0);
+                    CreateAssemblage(steektrapVerdieping);
+                    break;
+                    
+                    
+                    
+                    case "kolom":
                     // toekomst geef een 'kolom' door als assemblage
                     var kolom = GetKolom();
                     CreateAssemblage(kolom);
@@ -336,13 +375,12 @@
                     var trappen = ProjectState!.CurrentProject!.Assemblages.Where(x => x.Merk!.StartsWith("TR")).ToList();
                     if (trappen.Count == 0)
                     {
-                        var steektrapVoorOpBordes = GetSteekTrap();
+                       
+                        var steektrapVoorOpBordes = GetSteekTrap(8, 100);
                         steektrapVoorOpBordes.OptredeAantal1 = 8;
                         steektrapVoorOpBordes.OptredeMaat = 1500.0 / 8.0;
                         steektrapVoorOpBordes.Breedte = 1275.0;
                         steektrapVoorOpBordes.ProfielSchil.Hoogte = 100;
-                        //steektrapVoorOpBordes.ProfielSchil.Hoogte = 100.0;
-
                         steektrapVoorOpBordes.Bijwerken();
 
                         CreateAssemblage(steektrapVoorOpBordes);

@@ -7,6 +7,7 @@
 @using Construct.Application.Interfaces
 @using Construct.Application.Services
 @using Construct.Domain.Common
+@using Construct.Domain.Entities.Parts
 @using Construct.WebUI.Server.Components.Beam
 @using Construct.WebUI.Server.Components.Pages.Print
 @using Eurocode.HoutConstructies
@@ -118,7 +119,8 @@ else
     {
         if (previewComponent != null)
         {
-            await previewComponent.PrintAsync(fileName);
+            string bestandsNaam = $"{ProjectState?.CurrentProject?.ProjectInfo?.Nummer}_Document_{documentNummer}.pdf";   
+            await previewComponent.PrintAsync(bestandsNaam);
         }
     }
 
@@ -188,10 +190,11 @@ else
         cover.RevisionContent.Revisions = myDocument.Revisions.ToList();
 
         //Projectlabels zijn FIXED
-        if (myDocument.ProjectLabels != null && myDocument.ProjectLabels.Count >= 2)
+        if (myDocument.ProjectLabels != null && myDocument.ProjectLabels.Count >= 3)
         {
             myDocument.ProjectLabels[0].StringValue = ProjectState?.CurrentProject?.ProjectInfo?.Nummer ?? "NULL";
             myDocument.ProjectLabels[1].StringValue = ProjectState?.CurrentProject?.ProjectInfo?.Naam ?? "NULL";
+            myDocument.ProjectLabels[2].StringValue = ProjectState?.CurrentProject?.ProjectInfo?.Plaatsnaam ?? "...";
         }
         var lblDocNr = myDocument.DocumentLabels.FirstOrDefault(l => l.Label.Equals("documentnummer"));
         if (lblDocNr != null)
@@ -210,6 +213,14 @@ else
 
         // afbeeldingen
         cover.CompanyLogoPath = Path.Combine(WebHostEnvironment.WebRootPath, "images", "logos", "kaskon.nl.jpg");
+
+        var svgLogoPath = Path.Combine(WebHostEnvironment.WebRootPath, "images", "LogoKaskon.svg");
+        if (File.Exists(svgLogoPath))
+        {
+            var svgXml = File.ReadAllText(svgLogoPath);
+            svgXml = svgXml.Replace(@"width=""100%""", @"width=""100mm"" class=""no-theme-adapt"" style=""display:block;margin:0 auto""");
+            cover.SvgLogoXml = svgXml;
+        }
 
     }
 
@@ -628,15 +639,52 @@ else
         return table;
     }
 
+
+    public TableContent GetTableFireResistance(SlabPart slab)
+    {
+        var w = 180.0 / 6.0;
+        var width = $"{w:0.000}mm";
+        var h = slab.Dikte.ToString("0");
+        var hReq = slab.GetMinimaleDikteVoorREI(slab.Rei).ToString("0");
+        var a = (slab.PlaatWapening?.Onder?.BasisWapening?.ReferentieAfstand ?? 0).ToString("0.#");
+        var aReq = slab.GetAfstandBenodigdVoorREI(slab.Rei).ToString("0");
+
+
+
+        TableContent table = new();
+        table.Headers.Add(new TableCellHeaderContent() { CellContent = new("brandwerendheid", "3cm") });
+        table.Headers.Add(new TableCellHeaderContent() { CellContent = new("*h~prov~*", "1.5cm") });
+        table.Headers.Add(new TableCellHeaderContent() { CellContent = new("*h~req~*", "1.5cm") });
+
+        table.Headers.Add(new TableCellHeaderContent() { CellContent = new("*a~prov~*", "1.5cm") });
+        table.Headers.Add(new TableCellHeaderContent() { CellContent = new("*a~req~*", "1.5cm") });
+
+        table.Headers.Add(new TableCellHeaderContent() { CellContent = new("artikel", "3cm") });
+
+
+        table.Rows.Add([
+            new() { Markdown = "REI " + slab.Rei.ToString() + " minuten", Width = width },
+            new() { Markdown = h, Width = width },
+            new() { Markdown = hReq, Width = width },
+
+            new() { Markdown = a, Width = width },
+            new() { Markdown = aReq, Width = width },
+
+            new() { Markdown = "EC2 - 2 - tabel 5.8", Width = width}
+        ]);
+        return table;
+
+    }
+
     public TableContent GetTableContentDekkingOpt(DekkingContext dekkingContext)
     {
         string w = "3cm";
 
         TableContent table = new();
         dekkingContext.BerekenEnValideer();
-        table.Headers.Add(new() { CellContent = new("pos", "3cm") });
+        table.Headers.Add(new() { CellContent = new("dekking", "3cm") });
         table.Headers.Add(new() { CellContent = new("milieuklasse(n)", "2cm") });
-        table.Headers.Add(new() { CellContent = new("constructieklasse", "3cm") });
+        table.Headers.Add(new() { CellContent = new("constructiekl.", "2cm") });
         table.Headers.Add(new() { CellContent = new("*c<sub>nom</sub>*", "3cm") });
         table.Headers.Add(new() { CellContent = new("*c<sub>prov</sub>*", "3cm") });
         table.Headers.Add(new() { CellContent = new("opmerking", "3cm") });
@@ -665,7 +713,7 @@ else
                     [
                         new(pos, "15mm"),
                         new(d.MilieuklassenUserFriendlyName, "25mm"),
-                        new(d.ConstructieklasseUserFriendlyName, w),
+                        new(d.ConstructieklasseUserFriendlyName, "20mm"),
                         new(d.DekkingNom.ToString("0 mm"), "15mm"),
                         new(d.DekkingToe.ToString("0 mm"),"15mm"),
                         new(string.Join(", ", opm),"50mm")
@@ -732,7 +780,7 @@ else
 
         table.Rows.Add([
             new() { Markdown = "lengte L<sub>t,proj.Z</sub> :", Width = width },
-            new() { Markdown = t.LengteTotaal.ToString("0 mm"), Width = width },
+            new() { Markdown = t.LtProjZ.ToString("0 mm"), Width = width },
             new() { Markdown = "lengte L<sub>t,schuin</sub> :", Width = width },
             new() { Markdown = t.LengteSchuin.ToString("0 mm"), Width = width },
             new() { Markdown = "hoogte :", Width = width },
@@ -805,15 +853,25 @@ else
 
             };
 
+        var doc = proj.Documenten.FirstOrDefault();
+
+        string headerLogoSvg = "";
+        var svgLogoPathForHeader = Path.Combine(WebHostEnvironment.WebRootPath, "images", "LogoKaskon.svg");
+        if (File.Exists(svgLogoPathForHeader))
+        {
+            var svgXml = File.ReadAllText(svgLogoPathForHeader);
+            svgXml = svgXml.Replace(@"width=""100%""", @"height=""4mm"" width=""20mm"" class=""no-theme-adapt header-logo"" style=""display:inline;vertical-align:middle;transform:translateY(-1mm)""");
+            svgXml = svgXml.Replace("\r\n", "").Replace("\r", "").Replace("\n", "");
+            headerLogoSvg = svgXml;
+        }
+
         content.PageHeader = new()
             {
+                SvgLogo = headerLogoSvg,
                 Text1 = proj.ProjectInfo.Nummer ?? "....",
                 Text2 = "is pagina nummer",
-                Text3 = proj.ProjectInfo.Naam ?? "",
+                Text3 = $"{proj.ProjectInfo.Nummer} | {doc?.DocumentNumber}",
             };
-
-
-        var doc = proj.Documenten.FirstOrDefault();
 
         content.PageFooter = new()
             {
@@ -868,7 +926,8 @@ else
 
     public string GetHeaderHtml(PageHeaderContent header, int pageNr)
     {
-        return GetHeaderHtml(header.Text1, $"pag.{pageNr}", header.Text3);
+        var left = !string.IsNullOrEmpty(header.SvgLogo) ? header.SvgLogo : header.Text1;
+        return GetHeaderHtml(left, $"pag. {pageNr}", header.Text3);
     }
 
     public string GetHeaderHtml(string? left, string? center, string? right)
@@ -1011,7 +1070,7 @@ else
 
 
         // check alle assemblages voor gelijke materialen
-        section.Elements.Add(new ParagraphContent("Project materialen", "Kop 3"));
+        //section.Elements.Add(new ParagraphContent("Project materialen", "Kop 3"));
         var projectMaterialen = ProjectState?.CurrentProject.Materialen.Values.ToList();
         section.Elements.Add(GetTableContentMaterialen(projectMaterialen));
 
@@ -1050,7 +1109,7 @@ else
         {
             var linkHtml = $@"<div style='display: flex; align-items: flex-end; margin-bottom: 2mm;'>
 <a href='#{bookmark.Id}' onclick=""scrollToBookmark('{bookmark.Id}'); return false;"" class='bookmark-link'>{bookmark.Title}</a>
-<span style='flex: 1; border-bottom: 1px dotted #999; margin: 0 5px 2px;'></span>
+<span style='flex: 1; border-bottom: 1px dotted rgba(0,0,0,0.22); margin: 0 6px 3px;'></span>
 <span style='white-space: nowrap;'>pag. {bookmark.PageNumber}</span>
 </div>";
             section.Elements.Add(new ParagraphContent(linkHtml));
@@ -1268,6 +1327,7 @@ else
 
     private void ClickedPrimary(ToastResult? result)
     {
+        if (result is null) return;
         var assemblage = result.Data as AssemblageEntity;
         if (result.Data is AssemblageEntity assembly)
         {
@@ -1421,17 +1481,17 @@ else
                         par.Markdown = svgXml;
                         section.Elements.Add(par);
 
-                        
+
                     }
 
 
 
 
-                    a.Belastingen.BelastingGevallen.AddToSection(section, isDraaiTabel: !true, "Belastinggevallen", "Kop 3");
-                    a.Belastingen.BelastingCombinaties.AddToSection(section, isDraaiTabel: !true, "Belastingcombinaties", "Kop 3");
+                    a.Belastingen.BelastingGevallen.AddToSection(section, isDraaiTabel: !true);
+                    a.Belastingen.BelastingCombinaties.AddToSection(section, isDraaiTabel: !true);
 
 
-                    section.AddParagraph("Materialen", "Kop 3");
+                    //section.AddParagraph("Materialen", "Kop 3");
                     var materialen = new List<BaseMateriaal>() { a.Materiaal };
                     section.Elements.Add(GetTableContentMaterialen(materialen));
 
@@ -1440,13 +1500,25 @@ else
                     if (a.AssemblageType == AssemblageEntity.AssemblageTypeEnum.BetonAssemblage)
                     {
                         // dekking en duurzaamheid
-                        section.AddParagraph("Dekking en duurzaamheid", "Kop 3");
+                        //section.AddParagraph("Dekking en duurzaamheid", "Kop 3");
 
                         // ✅ Cast naar BetonAssemblageEntity om PlaatDekking te kunnen gebruiken
                         if (a is BetonAssemblageEntity betonAssemblage)
                         {
                             section.Elements.Add(GetTableContentDekkingOpt(betonAssemblage.PlaatDekking));
+
+                            if (betonAssemblage.MainPart is SlabPart slab)
+                            {
+                                 // ✅ Brandwerendheid
+                                //section.AddParagraph("Brandwerendheid", "Kop 3");
+                                section.Elements.Add(GetTableFireResistance(slab));
+                            }
+
                         }
+
+                       
+                        
+
                     }
 
                     // als het een ligger is dan specifieke ligger data
@@ -1470,7 +1542,7 @@ else
 
                         svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; width: {svgWidthPixels:0}; height: 30mm;";
 
-                        var svgDocs = ligger.Beam.ToSvgDocumentsOpt((int)svgWidthPixels, 9999, svgStyle, ligger.Beam.LoadContext?.BelastingGevallen, [(Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A | Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B)], []);
+                        var svgDocs = ligger.Beam.ToSvgDocumentsOpt((int)svgWidthPixels, 9999, svgStyle, ligger.Beam.LoadContext?.BelastingGevallen, [(Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A | Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B)]);
 
                         foreach (var svgDoc in svgDocs)
                         {
@@ -1556,7 +1628,7 @@ else
                         section.AddParagraph(strook.Naam.ToUpperInvariant(), "Kop 3");
 
 
-                        var svgDocs = strook.Beam.ToSvgDocumentsOpt((int)svgWidthPixels, 9999, svgStyle, a.Belastingen.BelastingGevallen, [(Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A | Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B)], []);
+                        var svgDocs = strook.Beam.ToSvgDocumentsOpt((int)svgWidthPixels, 9999, svgStyle, a.Belastingen.BelastingGevallen, [(Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A | Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B)]);
 
                         foreach (var svgDoc in svgDocs)
                         {
@@ -1638,7 +1710,7 @@ else
                         var t1 = bordes.Trap1;
                         var t2 = bordes.Trap2;
                         double maxTrap1 = BordesEntity.BerekenMaximaleFundamenteleWaarde(t1.Reacties.G, t1.Reacties.Q, bordes.Belastingen.BelastingCombinaties);
-                        double maxTrap2 = BordesEntity.BerekenMaximaleFundamenteleWaarde(t1.Reacties.G, t1.Reacties.Q, bordes.Belastingen.BelastingCombinaties);
+                        double maxTrap2 = BordesEntity.BerekenMaximaleFundamenteleWaarde(t2.Reacties.G, t2.Reacties.Q, bordes.Belastingen.BelastingCombinaties);
 
                         var maatgevend = maxTrap1 > maxTrap2 ? t1 : t2;
                         section.AddParagraph("Berekening en wapening is **per strekkende meter**");

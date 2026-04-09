@@ -77,7 +77,7 @@
             var path = await GetDefaultSavePathAsync();
             if (string.IsNullOrWhiteSpace(path)) return [];
 
-            return Directory.GetFiles(path, "*.cprj").ToList();
+            return [.. Directory.GetFiles(path, "*.cprj")];
         }
 
     }

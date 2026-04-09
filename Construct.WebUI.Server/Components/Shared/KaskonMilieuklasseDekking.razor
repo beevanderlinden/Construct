@@ -56,13 +56,13 @@
     <KaskonInputContainer Label="meldingen">
         @foreach (var melding in Boven?.Meldingen ?? new List<dynamic>())
         {
-            <div class="form-control readonly-field mb-1">
+            <div>
                 boven: @((MarkupString)melding.Bericht)
             </div>
         }
         @foreach (var melding in Onder?.Meldingen ?? new List<dynamic>())
         {
-            <div class="form-control readonly-field mb-1">
+            <div>
                 onder: @((MarkupString)melding.Bericht)
             </div>
         }

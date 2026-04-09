@@ -79,8 +79,26 @@ namespace Construct.Domain.Entities
         /// Permanente afwerking in kN/m² voor bijvoorbeeld vloerafwerking, hekwerk etcetera.
         /// </summary>
         public double AfwerkingVlaklast { get; set; }
+
+        /// <summary>
+        /// Alleen het gedeelte zonder afwerking in kN/m²
+        /// </summary>
         public virtual double EigenGewichtPerM2 { get; set; }
-        public double PermanenteBelastingPerM2 => EigenGewichtPerM2 + AfwerkingVlaklast;
+
+        /// <summary>
+        /// E.G. + afwerking in kN/m²
+        /// </summary>
+        public double PermanenteBelastingPerM2 => Math.Round(EigenGewichtPerM2 + AfwerkingVlaklast, 2);
+
+
+
+        private BelastingGeval? BG1 => Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Naam == "BG1");
+        private BelastingGeval? BG2 => Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Naam == "BG2");
+
+        public double VeranderlijkeBelastingPerM2 => BG2?.OpgelegdeBelastingen.Vlaklast ?? 0;
+        public double VeranderlijkeBelastingPuntlast => BG2?.OpgelegdeBelastingen.Puntlast ?? 0;
+
+
 
         protected virtual void OnGrondslagenPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {

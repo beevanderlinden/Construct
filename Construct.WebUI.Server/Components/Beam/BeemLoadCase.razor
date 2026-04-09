@@ -158,6 +158,7 @@ else
 
     private void AddDistLoad()
     {
+        if (Beam is null || LoadCase is null) return;
         DistributedLoad distLoad = new(LoadCase, "?", 0, Beam.Length, -10);
 
         Beam.Loads.Add(distLoad);

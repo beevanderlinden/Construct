@@ -7,20 +7,56 @@
 }
 else
 {
-    <KaskonInputContainer Label="gebruiksklasse">
-        <FluentSelectEnum LabelPosition="LabelPosition.Top"
-                          TEnum="Eurocode.Belastingen.GebruiksklasseEnum"
-                          @bind-EnumSelectedValue="Model.Gebruiksklasse"></FluentSelectEnum>
+
+    <KaskonInputContainer Label="<b>permanent</b>"/>
+
+    @if (Model is SteekTrapEntity _trap)
+    {
+        <KaskonInputContainer Label="bepaal e.g.">
+            <FluentSwitch @bind-Value="_trap.GebruikEigenGewicht" CheckedMessage="opgave gebruiker" UncheckedMessage="auto"></FluentSwitch>
+        </KaskonInputContainer>
+        @if (_trap.GebruikEigenGewicht)
+        {
+            <KaskonInputContainer Label="eigen gewicht">
+                <KitInputNumber T="double" @bind-Value="_trap.EigenGewichtPerM2" Min="0" Max="20" Step="0.1" Unit="kN/m²" />
+            </KaskonInputContainer>
+        }
+        else
+        {
+            <KaskonInputContainer Label="eigen gewicht">
+                <KitInputNumber T="double" Value="_trap.EigenGewichtPerM2" Unit="kN/m²" Step="0.1" Disabled=true />
+
+            </KaskonInputContainer>
+        }
+    }
+    else
+    {
+        <KaskonInputContainer Label="eigen gewicht">
+            <KitInputNumber T="double" Value="Model.EigenGewichtPerM2" Unit="kN/m²" Step="0.1" Disabled=true />
+        </KaskonInputContainer>
+    }
+
+
+
+      <KaskonInputContainer Label="afwerking">
+        <KitInputNumber T="double" @bind-Value="Model.AfwerkingVlaklast" Min="0" Max="5" Step="0.1" Unit="kN/m²" />
     </KaskonInputContainer>
 
-    <KaskonInputContainer Label="afwerking">
-        <KitInputNumber T="double" @bind-Value="Model.AfwerkingVlaklast" Min="0" Max="5" Step="0.1" Unit="kN/m²" />
+    <KaskonInputContainer Label="perm. totaal">
+        <KitInputNumber T="double" Value="Model.PermanenteBelastingPerM2" Unit="kN/m²" Step="0.1" Disabled=true />
+
     </KaskonInputContainer>
 
     <br />
 
+     <KaskonInputContainer Label="<b>veranderlijk</b>"/>
+
+
+
     <KaskonInputContainer Label="gebruiksklasse">
-        <div class="form-control-text">@Model.GebruiksklasseUserFriendlyName</div>
+        <FluentSelectEnum LabelPosition="LabelPosition.Top"
+                          TEnum="Eurocode.Belastingen.GebruiksklasseEnum"
+                          @bind-EnumSelectedValue="Model.Gebruiksklasse"></FluentSelectEnum>
     </KaskonInputContainer>
 
     <KaskonInputContainer Label="momentaan factoren">
@@ -48,25 +84,47 @@ else
    
     <br />
 
-    <KaskonInputContainer Label="eigen gewicht">
-        <div class="form-control-text">
-            @Model.EigenGewichtPerM2.ToString("0.0#") kN/m²
-        </div>
-    </KaskonInputContainer>
+    @if (Model is SteekTrapEntity _trap2)
+    {
+        var krachten = _trap2.Krachten;
 
-    <KaskonInputContainer Label="afwerking">
-        <div class="form-control-text">
-            @Model.AfwerkingVlaklast.ToString("0.0#") kN/m²
-        </div>
-    </KaskonInputContainer>
+        <KaskonInputContainer Label="G q<sub>G,z,loc</sub>">
+            <div class="form-control-text">
+                <i>q<sub>z,loc</sub></i> = @((_trap2.EigenGewichtPerM2* Math.Pow(_trap2.AantredeMaat / _trap2.SchuineMaat, 2)).ToString("0.00")) kN/m²
+            </div>
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="Q q<sub>Q,z,loc</sub>">
+            <div class="form-control-text">
+                <i>q<sub>z,loc</sub></i> = @((_trap2.VeranderlijkeBelastingPerM2 * Math.Pow(_trap2.AantredeMaat / _trap2.SchuineMaat,2)).ToString("0.00")) kN/m²
+            </div>
+        </KaskonInputContainer>
+
+
+        <KaskonInputContainer Label="Quasi blijvend q<sub>E,qp,z,loc</sub>">
+            <div class="form-control-text">
+                <i>q<sub>z,loc</sub></i> = @( (krachten.qEqp * Math.Pow(_trap2.AantredeMaat / _trap2.SchuineMaat, 2)).ToString("0.00")) kN/m²
+            </div>
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="Frequent q<sub>E,freq,z,loc</sub>">
+            <div class="form-control-text">
+                <i>q<sub>z,loc</sub></i> = @( (krachten.qEfr* Math.Pow(_trap2.AantredeMaat / _trap2.SchuineMaat, 2)).ToString("0.00")) kN/m²
+                
+            </div>
+
+        </KaskonInputContainer>
+
+
+
+
+        <br />
+        
+    }
+
+    
 
    
-
-    <KaskonInputContainer Label="permanent totaal">
-        <div class="form-control-text">
-            @Model.PermanenteBelastingPerM2.ToString("0.0#") kN/m²
-        </div>
-    </KaskonInputContainer>
 
 
    

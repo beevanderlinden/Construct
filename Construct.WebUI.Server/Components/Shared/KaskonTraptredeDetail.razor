@@ -1,0 +1,1414 @@
+@using Construct.Domain.Entities
+@using Construct.Application.Services
+@using Construct.WebUI.Server.Components.Pages.File
+
+<KaskonInputContainer Label="details">
+    <div class="form-control-text">
+        
+        <FluentButton Appearance="Appearance.Stealth"
+                      Title="Bewerk trededetail"
+                      OnClick="OpenPopup"
+                      IconStart="@(new Icons.Regular.Size28.MoreHorizontal())">
+        </FluentButton>
+    </div>
+</KaskonInputContainer>
+
+@if (!_hidden && SteekTrap is SteekTrapEntity trap)
+{
+    <div class="modal-backdrop custom-blur" @onclick="ClosePopup">
+        <div class="modal-content-base" style="width: 95vw; height: 90vh;" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Trededetail</h3>
+                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ClosePopup">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; gap: 24px; align-items: flex-start;">
+
+                    <div style="flex: 0 0 200px; container-type: inline-size; container-name: leftcol;">
+
+                        <div class="d-flex gap-1 mb-2">
+                            <button type="button" class="btn btn-sm @(_activeTab == ActiveTab.Onder ? "btn-primary" : "btn-outline-secondary")" @onclick="() => _activeTab = ActiveTab.Onder">onder</button>
+                            <button type="button" class="btn btn-sm @(_activeTab == ActiveTab.Trede ? "btn-primary" : "btn-outline-secondary")" @onclick="() => _activeTab = ActiveTab.Trede">trede</button>
+                            <button type="button" class="btn btn-sm @(_activeTab == ActiveTab.Boven ? "btn-primary" : "btn-outline-secondary")" @onclick="() => _activeTab = ActiveTab.Boven">boven</button>
+                            <button type="button" class="btn btn-sm @(_activeTab == ActiveTab.Schema ? "btn-primary" : "btn-outline-secondary")" @onclick="() => _activeTab = ActiveTab.Schema">schema</button>
+
+                        </div>
+
+                        @if (_activeTab == ActiveTab.Trede)
+                        {
+
+                        <KaskonInputContainer Label="type">
+                            <select class="form-select form-select-sm" value="@((int)_trededetailType)" @onchange="OnTypeChanged">
+                                <option value="0">rechte trede</option>
+                                <option value="1">wel type 1</option>
+                                <option value="2">wel type 2</option>
+                                <option value="3">eigen opgave</option>
+                            </select>
+                        </KaskonInputContainer>
+
+                        <KaskonInputContainer Label="optrede ↕">
+                            <KitInputNumber T="double" Min="100" Max="500" Unit="mm"
+                                            @bind-Value="SteekTrap.OptredeMaat"
+                                            OnValueChanged="OnChanged" />
+                        </KaskonInputContainer>
+
+                        <KaskonInputContainer Label="aantrede ↔">
+                            <KitInputNumber T="double" Min="180" Max="800" Unit="mm"
+                                            @bind-Value="SteekTrap.AantredeMaat"
+                                            OnValueChanged="OnChanged" />
+                        </KaskonInputContainer>
+
+                        @if (SteekTrap.MainSlab != null)
+                        {
+                            <KaskonInputContainer Label="schildikte">
+                                <KitInputNumber T="double" Min="80" Max="250" Step="10" Unit="mm"
+                                                @bind-Value="SteekTrap.MainSlab.Dikte"
+                                                OnValueChanged="OnChanged" />
+                            </KaskonInputContainer>
+                        }
+                      
+
+
+                        @if (_trededetailType != TrededetailType.RechteTrede)
+                        {
+                            <KaskonInputContainer Label="wel vertikaal ↕">
+                                @if (_trededetailType == TrededetailType.StandaardWel ||
+                                _trededetailType == TrededetailType.Wel2)
+                                {
+                                    <div class="form-control-text">@SteekTrap.WelMaatVertikaal.ToString("0") mm</div>
+                                }
+                                else
+                                {
+                                    <KitInputNumber T="double" Min="0" Max="100" Step="5" Unit="mm"
+                                                    @bind-Value="SteekTrap.WelMaatVertikaal"
+                                                    OnValueChanged="OnChanged" />
+                                }
+                            </KaskonInputContainer>
+
+                            <KaskonInputContainer Label="wel opgave">
+                                @if (_trededetailType == TrededetailType.StandaardWel || 
+                                _trededetailType == TrededetailType.Wel2)
+                                {
+                                    <div class="form-control-text">hoek opgave</div>
+                                }
+                                else
+                                {
+                                    <FluentSwitch @bind-Value="SteekTrap.GebruikWelHoek"
+                                                  CheckedMessage="hoek opgave"
+                                                  UncheckedMessage="maat opgave"
+                                                  @bind-Value:after="OnGebruikWelHoekChanged" />
+                                }
+                            </KaskonInputContainer>
+
+                            @if (SteekTrap.GebruikWelHoek)
+                            {
+                                <KaskonInputContainer Label="hoek wel °">
+                                    @if (
+                                        _trededetailType == TrededetailType.StandaardWel || 
+                                        _trededetailType == TrededetailType.Wel2)
+                                    {
+                                        <div class="form-control-text">@SteekTrap.WelOpgaveHoek.ToString("0") °</div>
+                                    }
+                                    else
+                                    {
+                                        <KitInputNumber T="double" Min="0" Max="30" Step="5" Unit="°"
+                                                        @bind-Value="SteekTrap.WelOpgaveHoek"
+                                                        OnValueChanged="OnChanged" />
+                                    }
+                                </KaskonInputContainer>
+
+                                <KaskonInputContainer Label="wel hor. ↔">
+                                    <div class="form-control-text">@SteekTrap.WelMaat.ToString("0.#") mm</div>
+                                </KaskonInputContainer>
+                            }
+                            else
+                            {
+                                <KaskonInputContainer Label="wel hor. ↔">
+                                    <KitInputNumber T="double" Min="0" Max="@SteekTrap.WelMaatMax" Step="5" Unit="mm"
+                                                    @bind-Value="SteekTrap.WelMaat"
+                                                    OnValueChanged="OnChanged" />
+                                </KaskonInputContainer>
+                            }
+                        }
+
+                        <KaskonInputContainer Label="oppervlakte (per trede)">
+                            <div class="form-control-text">@((SteekTrap.GetDsnOppTrede() / 100).ToString("0.#")) cm²</div>
+                        </KaskonInputContainer>
+
+                        <KaskonInputContainer Label="volume per m²">
+                            <div class="form-control-text">@((SteekTrap.GetDsnOppTrede() / 1000 * (1000/SteekTrap.AantredeMaat) / 1000).ToString("0.###")) m³/m²</div>
+                        </KaskonInputContainer>
+
+                        <KaskonInputContainer Label="gemiddelde dikte">
+                            <div class="form-control-text">@((SteekTrap.GetDsnOppTrede() / 1000 * (1000 / SteekTrap.AantredeMaat) ).ToString("0")) mm</div>
+                        </KaskonInputContainer>
+
+                        <KaskonInputContainer Label="eigen gewicht">
+                            <div class="form-control-text">@(SteekTrap.GetGk().ToString("0.##")) kN/m²</div>
+                        </KaskonInputContainer>
+
+                            @if (SteekTrap.AfwerkingVlaklast > 0)
+                            {
+                                <KaskonInputContainer Label="q~g,totaal~">
+                                    <div class="form-control-text">@((SteekTrap.GetGk()+SteekTrap.AfwerkingVlaklast).ToString("0.##")) kN/m²</div>
+                                </KaskonInputContainer>
+                            }
+                           
+
+                            <KaskonInputContainer Label="afwerking">
+                                <KitInputNumber T="double" Min="0" Max="10" Step="0.5" Unit="kN/m²"
+                                                @bind-Value="SteekTrap.AfwerkingVlaklast"
+                                                OnValueChanged="OnChanged" />
+                            </KaskonInputContainer>
+
+
+                        }
+
+                        @if (_activeTab == ActiveTab.Onder)
+                        {
+                            <KaskonInputContainer Label="aansluiting">
+                                <select class="form-select form-select-sm" value="@((int)(SteekTrap?.OnderType ?? TredeOnderType.OpVloer))" @onchange="OnTypeOnderChangeed">
+                                    <option value="0">op vloer</option>
+                                    <option value="1">op bordes</option>
+                                    <option value="2">in bordes</option>
+                                </select>
+                            </KaskonInputContainer>
+                            @if (SteekTrap?.OnderType == TredeOnderType.IsBordes)
+                            {
+                                <KaskonInputContainer Label="lengte bordes ↔">
+                                    <KitInputNumber T="double" Min="0" Max="2000" Unit="mm"
+                                                    @bind-Value="LengteOnderValue"
+                                                    OnValueChanged="OnChanged" />
+                                </KaskonInputContainer>
+                                <KaskonInputContainer Label="dikte bordes ↕">
+                                    <KitInputNumber T="double" Min="80" Max="500" Unit="mm"
+                                                    @bind-Value="DikteOnderValue"
+                                                    OnValueChanged="OnChanged" />
+                                </KaskonInputContainer>
+                            }
+                        }
+
+                        @if (_activeTab == ActiveTab.Boven)
+                        {
+                        <KaskonInputContainer Label="lengte boven">
+                            <div class="d-flex flex-column" style="gap:2px; margin-bottom:4px;">
+                                <label style="cursor:pointer; display:flex; align-items:center; gap:4px;"><input type="radio" name="lbmode" checked="@(_lengteBovenMode == LengteBovenMode.AantredePlusWel)" @onchange="@(async () => await SetLengteBovenMode(LengteBovenMode.AantredePlusWel))" /> aan+wel</label>
+                                <label style="cursor:pointer; display:flex; align-items:center; gap:4px;"><input type="radio" name="lbmode" checked="@(_lengteBovenMode == LengteBovenMode.Aantrede)" @onchange="@(async () => await SetLengteBovenMode(LengteBovenMode.Aantrede))" /> aantrede</label>
+                                <label style="cursor:pointer; display:flex; align-items:center; gap:4px;"><input type="radio" name="lbmode" checked="@(_lengteBovenMode == LengteBovenMode.Opgave)" @onchange="@(async () => await SetLengteBovenMode(LengteBovenMode.Opgave))" /> opgave</label>
+                            </div>
+                            @if (_lengteBovenMode == LengteBovenMode.Opgave)
+                            {
+                                <KitInputNumber T="double" Min="100" Max="1500" Unit="mm"
+                                                @bind-Value="LengteBovenValue"
+                                                OnValueChanged="OnChanged" />
+                            }
+                            else
+                            {
+                                <div class="form-control-text">@LengteBovenValue.ToString("0") mm</div>
+                            }
+                        </KaskonInputContainer>
+                        <KaskonInputContainer Label="dikte boven">
+                            <KitInputNumber T="double" Min="80" Max="500" Unit="mm"
+                                            @bind-Value="DikteBovenValue"
+                                            OnValueChanged="OnChanged" />
+                        </KaskonInputContainer>
+                        <KaskonInputContainer Label="tand">
+                            <FluentSwitch @bind-Value="SteekTrap.HeeftBoventand"
+                                          CheckedMessage="ja" UncheckedMessage="nee"
+                                          @bind-Value:after="OnHeeftBoventandChanged" />
+                        </KaskonInputContainer>
+                        @if (SteekTrap.TandOpleggingBovenzijde != null)
+                        {
+                            <KaskonInputContainer Label="tandhoogte ↕">
+                                <KitInputNumber T="double" Min="50" Max="400" Unit="mm"
+                                                @bind-Value="SteekTrap.TandOpleggingBovenzijde.TandHoogte"
+                                                OnValueChanged="OnChanged" />
+                            </KaskonInputContainer>
+                            <KaskonInputContainer Label="tandlengte ↔">
+                                <KitInputNumber T="double" Min="30" Max="@SteekTrap.MaximaleTandLengte" Unit="mm"
+                                                @bind-Value="SteekTrap.TandOpleggingBovenzijde.TandLengte"
+                                                OnValueChanged="OnChanged" />
+                            </KaskonInputContainer>
+                            <KaskonInputContainer Label="halsdikte">
+                                <div class="form-control-text">@(SteekTrap.TandOpleggingBovenzijde.BerekenHalsDikte(SteekTrap.LengteBovenNetto).ToString("0")) mm</div>
+                            </KaskonInputContainer>
+                        }
+                        }
+
+                        @if (_activeTab == ActiveTab.Schema)
+                        {
+                            var krachten = SteekTrap!.GetKrachten();
+
+                            <SteekTrapResultaten SteekTrap="SteekTrap" />
+
+
+                            <KaskonInputContainer Label="systeemlengte">
+                                <div class="form-control">
+                                    @trap.LtProjZ.ToString("0") mm
+                                </div>
+                                          
+                            </KaskonInputContainer>
+
+
+
+
+                            <div class="alert alert-info">
+                                Schematisering is afgeleid van doorsnede.
+                                U heeft de mogelijkheid om de systeemlengte aan te passen.
+
+                            </div>
+                        }
+    
+
+                    </div>
+
+                    <div style="flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center;">
+                        <svg viewBox="@TredeViewBox" style="width: 100%; max-height: calc(90vh - 220px); display: block;">
+                            <defs>
+                                <marker id="circle-cross" viewBox="0 0 8 8"
+                                        markerUnits="strokeWidth" markerWidth="8" markerHeight="8"
+                                        refX="4" refY="4" orient="auto">
+                                    <circle cx="4" cy="4" r="1" fill="none" stroke="#444" stroke-width="0.5" />
+                                    <line x1="2" y1="4" x2="6" y2="4" stroke="#444" stroke-width="0.5" />
+                                    <line x1="4" y1="2" x2="4" y2="6" stroke="#444" stroke-width="0.5" />
+                                </marker>
+                            </defs>
+                            @* <polygon points="@TredeLinksOnderPoints"
+                                     fill="@(_activeTab == ActiveTab.Onder ? "#d4d0c8" : "none")"
+                                     stroke="#444"
+                                     stroke-width="@(_activeTab == ActiveTab.Onder ? "3" : "0.5")"
+                                     stroke-dasharray="@(_activeTab == ActiveTab.Onder ? "none" : "15,10")" /> *@
+                           @*  <polygon points="@TredeRechtsBovenPoints"
+                                     fill="@(_activeTab == ActiveTab.Boven ? "#d4d0c8" : "none")"
+                                     stroke="#444"
+                                     stroke-width="@(_activeTab == ActiveTab.Boven ? "3" : "0.5")"
+                                     stroke-dasharray="@(_activeTab == ActiveTab.Boven ? "none" : "15,10")" /> *@
+                            <polygon points="@TredePolygonPoints"
+                                     fill="@(_activeTab == ActiveTab.Trede ? "#d4d0c8" : "none")"
+                                     stroke="#444"
+                                     stroke-width="@(_activeTab == ActiveTab.Trede ? "3" : "0.5")"
+                                     stroke-dasharray="@(_activeTab == ActiveTab.Trede ? "none" : "15,10")" />
+                            @if (_activeTab == ActiveTab.Onder || 
+                            _activeTab == ActiveTab.Trede || 
+                            _activeTab == ActiveTab.Boven)
+                            {
+                                <polygon points="@DetailPolygonPointsSvg()"
+                                         fill="rgba(0,80,160,0.2)"
+                                         stroke="navy"
+                                         stroke-width="2" />
+
+
+                            }
+                            @if (_activeTab == ActiveTab.Trede)
+                            {
+                                @((MarkupString)RenderPointLabels(TredePolygonPoints, SvgScale, "navy"))
+                            }
+                            @if (_activeTab == ActiveTab.Boven)
+                            {
+                                @((MarkupString)RenderPointLabels(TredeRechtsBovenPoints, SvgScale, "darkred"))
+                            }
+                            @((MarkupString)DimLines)
+                        </svg>
+                    </div>
+
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" @onclick="ClosePopup">Sluiten</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public SteekTrapEntity? SteekTrap { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private enum TrededetailType { RechteTrede, StandaardWel, Wel2, EigenOpgave }
+    private enum ActiveTab { Onder, Trede, Boven, Schema }
+    private enum LengteBovenMode { AantredePlusWel, Aantrede, Opgave }
+
+    private bool _hidden = true;
+    private TrededetailType _trededetailType;
+    private ActiveTab _activeTab = ActiveTab.Trede;
+    private LengteBovenMode _lengteBovenMode = LengteBovenMode.AantredePlusWel;
+
+
+    private void OpenPopup()
+    {
+        _trededetailType = InferType();
+        _lengteBovenMode = InferLengteBovenMode();
+        _hidden = false;
+    }
+
+    private TrededetailType InferType()
+    {
+        if (SteekTrap == null) 
+            return TrededetailType.EigenOpgave;
+        if (SteekTrap.WelMaat == 0 && SteekTrap.WelMaatVertikaal == 0)
+            return TrededetailType.RechteTrede;
+        if (SteekTrap.GebruikWelHoek && SteekTrap.WelOpgaveHoek == 15 && SteekTrap.WelMaatVertikaal == 60)
+            return TrededetailType.StandaardWel;
+        if (SteekTrap.GebruikWelHoek && SteekTrap.WelOpgaveHoek == 15 && SteekTrap.WelMaatVertikaal == 0)
+            return TrededetailType.Wel2;
+        return TrededetailType.EigenOpgave;
+    }
+
+    private async Task OnTypeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int v))
+        {
+            _trededetailType = (TrededetailType)v;
+            await ApplyType();
+        }
+    }
+
+    private async Task OnTypeOnderChangeed(ChangeEventArgs e)
+    {
+        if (SteekTrap == null) return;
+        if (int.TryParse(e.Value?.ToString(), out int v))
+        {
+            SteekTrap.OnderType = (TredeOnderType)v;
+            await OnChanged.InvokeAsync();
+        }
+    }
+
+    private async Task ApplyType()
+    {
+        if (SteekTrap == null) return;
+        switch (_trededetailType)
+        {
+            case TrededetailType.RechteTrede:
+                SteekTrap.WelMaat = 0;
+                SteekTrap.WelMaatVertikaal = 0;
+                SteekTrap.GebruikWelHoek = false;
+                await OnChanged.InvokeAsync();
+                break;
+            case TrededetailType.StandaardWel:
+                SteekTrap.GebruikWelHoek = true;
+                SteekTrap.WelOpgaveHoek = 15;
+                SteekTrap.WelMaatVertikaal = 60;
+                await OnChanged.InvokeAsync();
+                break;
+            case TrededetailType.Wel2:
+                SteekTrap.GebruikWelHoek = true;
+                SteekTrap.WelOpgaveHoek = 15;
+                SteekTrap.WelMaatVertikaal = 0;
+                await OnChanged.InvokeAsync();
+                break;
+        }
+    }
+
+    private async Task OnGebruikWelHoekChanged() => await OnChanged.InvokeAsync();
+
+    private async Task ClosePopup()
+    {
+        _hidden = true;
+        SteekTrap?.Bijwerken();
+        await OnChanged.InvokeAsync();
+    }
+
+    private LengteBovenMode InferLengteBovenMode()
+    {
+        if (SteekTrap?.LengteBoven is not double lb) return LengteBovenMode.AantredePlusWel;
+        if (Math.Abs(lb - (SteekTrap.AantredeMaat + SteekTrap.WelMaat)) < 0.5) return LengteBovenMode.AantredePlusWel;
+        if (Math.Abs(lb - SteekTrap.AantredeMaat) < 0.5) return LengteBovenMode.Aantrede;
+        return LengteBovenMode.Opgave;
+    }
+
+    private async Task SetLengteBovenMode(LengteBovenMode mode)
+    {
+        _lengteBovenMode = mode;
+        if (SteekTrap == null) return;
+        switch (mode)
+        {
+            case LengteBovenMode.AantredePlusWel:
+                SteekTrap.LengteBoven = SteekTrap.AantredeMaat + SteekTrap.WelMaat;
+                break;
+            case LengteBovenMode.Aantrede:
+                SteekTrap.LengteBoven = SteekTrap.AantredeMaat;
+                break;
+        }
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task OnHeeftBoventandChanged()
+    {
+        if (SteekTrap == null) return;
+        SteekTrap.Init(SteekTrap.ProjectInfo);
+        await OnChanged.InvokeAsync();
+    }
+
+    // schilVert
+    private double SchilVert => SteekTrap is null ? 0 :
+        SteekTrap.SchilDikte * Math.Sqrt(SteekTrap.AantredeMaat * SteekTrap.AantredeMaat + SteekTrap.OptredeMaat * SteekTrap.OptredeMaat) / SteekTrap.AantredeMaat;
+
+    // schilVertEff = schilVert + welHor×op/aan: zorgt dat P2 (onderkant neus) exact SchilDikte loodrecht op soffit heeft
+    private double SchilVertEff => SteekTrap is null ? 0 :
+        SchilVert + SteekTrap.WelMaat * SteekTrap.OptredeMaat / SteekTrap.AantredeMaat;
+
+    private double LengteBovenValue
+    {
+        get => SteekTrap is null ? 0 : (SteekTrap.LengteBoven ?? SteekTrap.AantredeMaat);
+        set { if (SteekTrap != null) SteekTrap.LengteBoven = value; }
+    }
+
+    private double DikteBovenValue
+    {
+        get => SteekTrap is null ? 0 : (SteekTrap.DikteBoven ?? SteekTrap.SchilDikte);
+        set { if (SteekTrap != null) SteekTrap.DikteBoven = value; }
+    }
+
+    private double LengteOnderValue
+    {
+        get => SteekTrap is null ? 0 : (SteekTrap.LengteOnder ?? SteekTrap.AantredeMaat);
+        set { if (SteekTrap != null) SteekTrap.LengteOnder = value; }
+    }
+
+    private double DikteOnderValue
+    {
+        get => SteekTrap is null ? 0 : (SteekTrap.DikteOnder ?? SteekTrap.SchilDikte);
+        set { if (SteekTrap != null) SteekTrap.DikteOnder = value; }
+    }
+
+    private double TredeMargin => SteekTrap is null ? 10 : 100;
+
+
+    private string BuildDetailPolygonPoints(SteekTrapEntity t)
+    {
+        if (SteekTrap == null) return "";
+
+        double aan  = t.AantredeMaat;
+
+        double op   = t.OptredeMaat;
+        double wHor = t.WelMaat;
+        double wVer = t.WelMaatVertikaal;
+        double d    = t.MainSlab?.Dikte ?? t.SchilDikte;
+        double hyp  = Math.Sqrt(aan * aan + op * op);
+        double sinA = op / hyp;
+        double cosA = aan / hyp;
+        double baseY = t.BaseY;
+        double aanTot = aan + wHor;
+        double op1 = op - wVer;
+        double lBov = t.LengteBoven ?? aanTot;
+        double thBov = t.TandOpleggingBovenzijde?.TandHoogte ?? 0;
+        double tlBov = t.TandOpleggingBovenzijde?.TandLengte ?? 0;
+        double lOnder = t.LengteOnder ?? 0;
+        double thOnder = t.TandOpleggingOnderzijde?.TandHoogte ?? 0;
+        double tlOnder = t.TandOpleggingOnderzijde?.TandLengte ?? 0;
+
+        // hulppunten oksel
+        var p1  = new Punt(aan + wHor, op);                         // oksel
+        var p2  = p1.AddX(cosA * d).AddY(-sinA * d);               // soffit bij oksel
+        var p3  = new Punt(p2.X + aan, p2.Y + op);                 // soffit richting (hulp)
+        var p4a = new Punt(0, baseY);                               // basis voor
+        var p4b = new Punt(1, baseY);                               // basis richting (hulp)
+        var sp1 = LineIntersect(p2, p3, p4a, p4b);                 // snijpunt soffit / basis
+
+
+        var points = new List<Punt>
+        {
+
+        };
+
+
+        // BEGIN ALTIJD BIJ SNIJPUNT SCHIL ONDER!
+        if (sp1 is Punt sp)
+        {
+            points.Add(sp);     // P4: snijpunt soffit / basis
+
+
+            switch (t.OnderType)
+            {
+                case TredeOnderType.OpVloer:
+                    var p6A = new Punt(wHor, baseY);          // P6: schilVert omhoog achter
+                    var p7A = new Punt(0, op - wVer);            // P7: schilVert omhoog voor
+                    var p8A = new Punt(0, op);            // P8: onderzijde voor
+
+
+
+                    points.AddRange(new[] {
+                    p6A, p7A, p8A                 
+                });
+                    break;
+
+                case TredeOnderType.OpBordes:
+                    var p6B = new Punt(0, baseY);          // P9: schilVert omhoog achter
+                    var p7B = new Punt(0, 0);            // P10: schilVert omhoog voor
+                    var p8B = new Punt(wHor, 0);            // P11: onderzijde voor
+                    var p9B = new Punt(0, op - wVer);            // P7: schilVert omhoog voor
+                    var p10B = new Punt(0, op);            // P8: onderzijde voor
+
+                    points.AddRange(new[] {
+                    p6B, p7B, p8B, p9B, p10B                 
+                });
+
+
+
+
+
+
+
+
+                    break;
+
+
+                case TredeOnderType.IsBordes:
+                    var pB = new Punt(-lOnder +tlOnder, sp.Y);
+                    points.Add(pB);                    
+                    pB = new Punt(points.Last().X, points.Last().Y + thOnder);
+                    points.Add(pB);
+                    pB = new Punt(points.Last().X - tlOnder, points.Last().Y);
+                    points.Add(pB);
+                    pB = new Punt(points.Last().X, 0);
+                    points.Add(pB);
+
+
+
+                    pB = new Punt(t.WelMaat, points.Last().Y);
+                    points.Add(pB);
+                    pB = new Punt(points.Last().X - wHor, points.Last().Y + op1);
+                    points.Add(pB);
+                    pB = new Punt(points.Last().X, points.Last().Y + wVer);
+                    points.Add(pB);
+
+
+
+                    break;
+            }
+
+
+
+
+        }
+
+
+
+
+        var p = new Punt();
+
+        // punten trede tussen
+        int aantalTredenInDetail = 2;
+        for (int i = 0; i < aantalTredenInDetail; i++)
+        {
+            p = new Punt(points.Last().X + aanTot, points.Last().Y);
+            points.Add(p);
+            p = new Punt(points.Last().X - wHor, points.Last().Y + op1);
+            points.Add(p);
+            p = new Punt(points.Last().X, points.Last().Y + wVer);
+            points.Add(p);
+        }
+
+
+
+
+
+
+
+
+        // punten bovenste trede
+        p = new Punt(points.Last().X + lBov, points.Last().Y);
+        points.Add(p);
+        p = new Punt(points.Last().X, points.Last().Y - thBov);
+        points.Add(p);
+        p = new Punt(points.Last().X - tlBov, points.Last().Y);
+        points.Add(p);
+
+        p = new Punt(points.Last().X, points.Last().Y + 1000);
+
+        var spBoven = LineIntersect(p2, p3, points.Last(), p);
+        if (spBoven is Punt punt)
+        {
+            points.Add(punt);
+
+        }
+
+        // y=0 is 3 * aan
+        // y richting is opwaards.
+        // dus y moet *-1 + 3aan;
+        double y0 = 2 * op;
+
+        return string.Join(" ", points.Select(p => $"{p.X:F1},{YworldToSvg(p.Y, y0)}"));
+    }
+
+    public string YworldToSvg(double yWorld, double y0)
+    {
+        return (y0 + yWorld * -1 ).ToString("F1");
+    }
+
+    // Transformeert de punten van BuildDetailPolygonPoints naar SVG-ruimte.
+    private string DetailPolygonPointsSvg()
+    {
+        if (SteekTrap == null) return "";
+        var pts = BuildDetailPolygonPoints(SteekTrap);
+        if (string.IsNullOrEmpty(pts)) return "";
+        double m  = TredeMargin;
+        double d  = SteekTrap.MainSlab?.Dikte ?? SteekTrap.SchilDikte;
+        double tx = m;
+        double ty = SteekTrap.OnderType switch
+        {
+            TredeOnderType.OpBordes => m + SteekTrap.OptredeMaat,
+            TredeOnderType.IsBordes => m + SteekTrap.OptredeMaat,
+            TredeOnderType.OpVloer => m + SteekTrap.OptredeMaat,
+            _                       => m - d
+        };
+        return string.Join(" ", pts.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(pair =>
+            {
+                var parts = pair.Split(',');
+                if (parts.Length != 2) return pair;
+                if (!double.TryParse(parts[0], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double x)) return pair;
+                if (!double.TryParse(parts[1], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double y)) return pair;
+                return $"{(x + tx):F1},{(y + ty):F1}";
+            }));
+    }
+
+
+    // Bouwt 7 polygoonpunten
+    // Stappen: (0,-d) | (+welHor,0) | (-welHor,-(op-welVert)) | (0,-welVert) | (+aan,0) | (0,+d) | sluit via helling
+    // Aansluitregel: P6_n = P0_{n+1}  →  offset per trede = (+aan, -op)
+    private string BuildTredePoints(double p0x, double p0y)
+    {
+        if (SteekTrap == null) return "";
+        double aan     = SteekTrap.AantredeMaat;
+        double op      = SteekTrap.OptredeMaat;
+        double welHor  = SteekTrap.WelMaat;
+        double welVert = SteekTrap.WelMaatVertikaal;
+        double d       = SchilVertEff;
+        return $"{p0x:F1},{p0y:F1} " +                                 // P0: soffit voor
+               $"{p0x:F1},{(p0y - d):F1} " +                           // P1: schilVert omhoog
+               $"{(p0x + welHor):F1},{(p0y - d):F1} " +                // P2: welHor naar rechts
+               $"{p0x:F1},{(p0y - d - op + welVert):F1} " +            // P3: neus onderkant
+               $"{p0x:F1},{(p0y - d - op):F1} " +                      // P4: neuspunt
+               $"{(p0x + aan):F1},{(p0y - d - op):F1} " +              // P5: trede naar rechts
+               $"{(p0x + aan):F1},{(p0y - op):F1}";                    // P6: schilVert omlaag, soffit achter
+    }
+
+    // Eerste (onderste) trede: geometrie afhankelijk van OnderType.
+    private string BuildEersteTredePoints(double p0x, double p0y) =>
+        SteekTrap?.OnderType switch
+        {
+            TredeOnderType.OpBordes => BuildEersteTredeOpBordes(p0x, p0y),
+            TredeOnderType.IsBordes => BuildEersteTredeIsBordes(p0x, p0y),
+            _                       => BuildEersteTredeOpVloer(p0x, p0y)
+        } ?? "";
+
+    // OpVloer: vlakke horizontale onderzijde. d = SchilDikte. Start rechtsboven, loopt kloksgewijs.
+    private string BuildEersteTredeOpVloer(double p0x, double p0y)
+    {
+        if (SteekTrap == null) return "";
+        double aan     = SteekTrap.AantredeMaat;
+        double op      = SteekTrap.OptredeMaat;
+        double welHor  = SteekTrap.WelMaat;
+        double welVert = SteekTrap.WelMaatVertikaal;
+        double d       = SteekTrap.SchilDikte;
+        return $"{(p0x + aan):F1},{(p0y - d - op):F1} " +               // P0: trede rechtsboven
+               $"{(p0x + aan):F1},{p0y:F1} " +                          // P1: onderzijde rechts (omlaag)
+               $"{p0x:F1},{p0y:F1} " +                                  // P2: onderzijde voor (links)
+               $"{p0x:F1},{(p0y - d):F1} " +                            // P3: SchilDikte omhoog
+               $"{(p0x + welHor):F1},{(p0y - d):F1} " +                 // P4: welHor naar rechts
+               $"{p0x:F1},{(p0y - d - op + welVert):F1} " +             // P5: neus onderkant
+               $"{p0x:F1},{(p0y - d - op):F1}";                         // P6: neuspunt (trede linksboven)
+    }
+
+    // OpBordes: schuine soffit (d = SchilVertEff). Start rechtsboven voor duidelijke labeling.
+    // Soffit loopt diagonaal van P1 naar snijpunt met horizontaal op (p0y-d+100), dan 100mm horizontaal als oplegging.
+    private string BuildEersteTredeOpBordes(double p0x, double p0y)
+    {
+        if (SteekTrap == null) return "";
+        double aan     = SteekTrap.AantredeMaat;
+        double op      = SteekTrap.OptredeMaat;
+        double welHor  = SteekTrap.WelMaat;
+        double welVert = SteekTrap.WelMaatVertikaal;
+        double d       = SchilVertEff;
+        const double oplegging = 100.0;                      // diepte oplegging onder soffit voor
+        double p2y = p0y - d + oplegging;                   // 100mm onder soffit voor (P4)
+        double p2x = LineIntersect(p0x, p0y, p0x + aan, p0y - op, 0, p2y, 1, p2y)?.x ?? p0x;
+        return $"{(p0x + aan):F1},{(p0y - d - op):F1} " +   // P0: trede rechtsboven
+               $"{(p0x + aan):F1},{(p0y - op):F1} " +       // P1: soffit achter (rechts omlaag)
+               $"{p2x:F1},{p2y:F1} " +                      // P2: snijpunt diagonaal / horizontaal oplegging
+               $"{p0x:F1},{p2y:F1} " +                      // P3: oplegging linksonder
+               $"{p0x:F1},{(p0y - d):F1} " +                // P4: soffit voor (schilVert omhoog)
+               $"{(p0x + welHor):F1},{(p0y - d):F1} " +     // P5: welHor naar rechts
+               $"{p0x:F1},{(p0y - d - op + welVert):F1} " + // P6: neus onderkant
+               $"{p0x:F1},{(p0y - d - op):F1}";             // P7: neuspunt (trede linksboven)
+    }
+
+    // IsBordes: rechthoekige trede op bordesplaat. Geen wel/neus. d = DikteOnder; plaat loopt LengteOnder naar rechts.
+    // Start rechtsboven, loopt kloksgewijs. 6 punten.
+    private string BuildEersteTredeIsBordes(double p0x, double p0y)
+    {
+        if (SteekTrap == null) return "";
+        double aan = SteekTrap.AantredeMaat;
+        double op  = SteekTrap.OptredeMaat;
+        double d   = DikteOnderValue;
+        double lo  = LengteOnderValue;
+        return $"{(p0x + aan):F1},{(p0y - d - op):F1} " +               // P0: trede rechtsboven
+               $"{(p0x + aan):F1},{(p0y - d):F1} " +                    // P1: bordes rechtsboven (stair edge)
+               $"{(p0x + lo):F1},{(p0y - d):F1} " +                     // P2: bordes rechtsboven uitloop
+               $"{(p0x + lo):F1},{p0y:F1} " +                           // P3: bordes rechtsonder
+               $"{p0x:F1},{p0y:F1} " +                                  // P4: bordes linksonder
+               $"{p0x:F1},{(p0y - d - op):F1}";                         // P5: trede linksboven
+    }
+
+    // Laatste (bovenste) trede: gebruikt LengteBoven als horizontale uitloop.
+    // Soffit rechts volgt de helling, maar wordt bijgesneden op DikteBoven (horizontale opleggingsdikte).
+    // Als de schuine soffit bij het hals-eind boven p8 (tand-onderkant) uitkomt:
+    //   P9  = horizontale soffit op p6.Y + DikteBoven
+    //   P10 = snijpunt schuine soffit (y=p0y−op*(x−p0x)/aan) met horizontaal y=P9.Y
+    private string BuildLaatsteTredePoints(double p0x, double p0y)
+    {
+        if (SteekTrap == null) return "";
+        double aan      = SteekTrap.AantredeMaat;
+        double op       = SteekTrap.OptredeMaat;
+        double welHor   = SteekTrap.WelMaat;
+        double welVert  = SteekTrap.WelMaatVertikaal;
+        double d        = SchilVertEff;
+        double lb       = SteekTrap.LengteBoven ?? aan;
+        double dikteBov = SteekTrap.DikteBoven ?? SteekTrap.SchilDikte;
+
+        // P0–P4: identiek aan normaal
+        string base4 =
+               $"{p0x:F1},{p0y:F1} " +                                    // P0: soffit voor
+               $"{p0x:F1},{(p0y - d):F1} " +                              // P1: schilVert omhoog
+               $"{(p0x + welHor):F1},{(p0y - d):F1} " +                   // P2: welHor naar rechts
+               $"{p0x:F1},{(p0y - d - op + welVert):F1} " +               // P3: neus onderkant
+               $"{p0x:F1},{(p0y - d - op):F1} ";                          // P4: neuspunt
+
+        // Horizontale soffit op DikteBoven onder de bovenzijde (p6.Y + dikteBov)
+        double yHorizSoffit = p0y - d - op + dikteBov;
+        double xSnijpunt = LineIntersect(p0x, p0y, p0x + aan, p0y - op, 0, yHorizSoffit, 1, yHorizSoffit)?.x ?? p0x;
+
+        var tand = SteekTrap.TandOpleggingBovenzijde;
+        if (tand != null)
+        {
+            double halsDikte = lb - tand.TandLengte;
+            double tandH     = tand.TandHoogte;
+            double tandL     = tand.TandLengte;
+
+            double soffitHalsY = p0y - op * halsDikte / aan;   // schuine soffit bij hals-eind
+            double p8Y         = p0y - d - op + tandH;         // tand linksonder
+
+            string tandPts =
+               $"{(p0x + halsDikte):F1},{(p0y - d - op):F1} " +         // P5: top hals eind
+               $"{(p0x + halsDikte + tandL):F1},{(p0y - d - op):F1} " + // P6: tand top rechts
+               $"{(p0x + halsDikte + tandL):F1},{(p0y - d - op + tandH):F1} " + // P7: tand rechtsonder
+               $"{(p0x + halsDikte):F1},{p8Y:F1} ";                     // P8: tand linksonder
+
+            if (soffitHalsY < p8Y)
+            {
+                // Schuine soffit steekt boven tand-onderkant uit → horizontale soffit + snijpunt
+                return base4 + tandPts +
+               $"{(p0x + halsDikte):F1},{yHorizSoffit:F1} " +           // P9:  horizontale soffit hals
+               $"{xSnijpunt:F1},{yHorizSoffit:F1}";                     // P10: snijpunt schuine/horizontale soffit
+            }
+            else
+            {
+                return base4 + tandPts +
+               $"{(p0x + halsDikte):F1},{soffitHalsY:F1}";              // P9: soffit bij hals (helling)
+            }
+        }
+        else
+        {
+            double soffitRechtsY = p0y - op * lb / aan;
+
+            if (soffitRechtsY < p0y - d - op + dikteBov)
+            {
+                // Soffit rechts te hoog → clip naar horizontale soffit + snijpunt
+                return base4 +
+               $"{(p0x + lb):F1},{(p0y - d - op):F1} " +                // P5: trede naar rechts
+               $"{(p0x + lb):F1},{yHorizSoffit:F1} " +                  // P6: horizontale soffit rechts
+               $"{xSnijpunt:F1},{yHorizSoffit:F1}";                     // P7: snijpunt schuine/horizontale soffit
+            }
+            else
+            {
+                return base4 +
+               $"{(p0x + lb):F1},{(p0y - d - op):F1} " +                // P5: trede naar rechts (LengteBoven)
+               $"{(p0x + lb):F1},{soffitRechtsY:F1}";                   // P6: soffit rechts (helling)
+            }
+        }
+    }
+
+    // ViewBox: breedte = max(3×aan, 2×aan+lb) + 2×m,  hoogte = 3×op + d + 2×m
+    private string TredeViewBox
+    {
+        get
+        {
+            if (SteekTrap == null) return "0 0 270 300";
+            double aan    = SteekTrap.AantredeMaat;
+            double op     = SteekTrap.OptredeMaat;
+            double d      = SchilVertEff;
+            double m      = TredeMargin;
+            double lb     = LengteBovenValue;
+            double lo     = SteekTrap.OnderType == TredeOnderType.IsBordes ? LengteOnderValue : 0;
+            double dOnder = SteekTrap.OnderType == TredeOnderType.IsBordes ? DikteOnderValue : 0;
+            double width  = Math.Max(Math.Max(3 * aan, 2 * aan + lb), aan + lo) + 2 * m;
+            double height = Math.Max(3 * op + d, 3 * op + dOnder) + 3 * m;
+            return $"0 {(-m):F1} {width:F1} {height:F1}";
+        }
+    }
+
+    // P0-posities: offset (+aan, −op) per trede zodat P6_cur = P0_rb
+    private string TredePolygonPoints => SteekTrap is null ? "" :
+        DeduplicatePoints(BuildTredePoints(TredeMargin + SteekTrap.AantredeMaat,
+                                          TredeMargin + 2 * SteekTrap.OptredeMaat + SchilVertEff));
+
+    private string TredeLinksOnderPoints
+    {
+        get
+        {
+            if (SteekTrap is null) return "";
+            double m  = TredeMargin;
+            double op = SteekTrap.OptredeMaat;
+            double p0y = SteekTrap.OnderType switch
+            {
+                TredeOnderType.OpVloer => m + 3 * op + SchilVertEff,
+                TredeOnderType.OpBordes => m + 3 * op + SchilVertEff,
+                TredeOnderType.IsBordes => m + 3 * op + DikteOnderValue,
+                _                       => m + 3 * op + SteekTrap.SchilDikte
+            };
+            return DeduplicatePoints(BuildEersteTredePoints(m, p0y));
+        }
+    }
+
+    private string TredeRechtsBovenPoints => SteekTrap is null ? "" :
+        DeduplicatePoints(BuildLaatsteTredePoints(TredeMargin + 2 * SteekTrap.AantredeMaat,
+                                                  TredeMargin + SteekTrap.OptredeMaat + SchilVertEff));
+
+    // scale = pixelBreedte / viewBoxBreedte  →  tekst blijft ~12px ongeacht SVG-grootte
+    private double SvgScale
+    {
+        get
+        {
+            if (SteekTrap is null) return 1.0;
+            double aan = SteekTrap.AantredeMaat;
+            double m   = TredeMargin;
+            double lb  = LengteBovenValue;
+            double lo  = SteekTrap.OnderType == TredeOnderType.IsBordes ? LengteOnderValue : 0;
+            return 400.0 / (Math.Max(Math.Max(3 * aan, 2 * aan + lb), aan + lo) + 2 * m);
+        }
+    }
+
+    private string DimLines => _activeTab switch
+    {
+        ActiveTab.Trede  => DimLinesTrede(),
+        ActiveTab.Boven  => DimLinesBoven(),
+        ActiveTab.Onder  => DimLinesOnder(),
+        ActiveTab.Schema => DimLinesSchema(),
+        _                => ""
+    };
+
+    private string DimLinesTrede()
+    {
+        if (SteekTrap is null) return "";
+        double m   = TredeMargin;
+        double aan = SteekTrap.AantredeMaat;
+        double op  = SteekTrap.OptredeMaat;
+        double a = SteekTrap.Hellingshoek;
+        double wel = SteekTrap.WelMaat;
+        double aRad = a * Math.PI / 180;
+        double dX = Math.Sin(aRad) * SteekTrap.SchilDikte;
+        double dY = Math.Cos(aRad) * SteekTrap.SchilDikte;
+        double schilVert = SteekTrap.SchilDikte / Math.Cos(aRad) + wel * Math.Tan(aRad);
+        double sc  = SvgScale;
+
+        // aantrede: horizontale maatlijn boven de trede (P4 → P5 van de middentrede)
+        var dimAan = new SvgDimLine
+            {
+                Mode        = DimLineMode.Horizontal,
+                X1 = m + aan, Y1 = m + op,
+                X2 = m + 2 * aan, Y2 = m + op,
+                Offset      = 2 * m,
+                StrokeWidth = 1,
+                StrokeColor = "#444",
+            };
+
+        SvgDimLine? dimAanTotaal = null;
+        SvgDimLine? dimWel = null;
+        if (SteekTrap.WelMaat > 0.4)
+        {
+            dimWel = new()
+                    {
+                        Mode = DimLineMode.Horizontal,
+                        X1 = m + 2 * aan,
+                        Y1 = m + op,
+                        X2 = m + 2 * aan + wel,
+                        Y2 = m + op,
+                        Offset = 2 * m,
+                        StrokeWidth = 1,
+                        StrokeColor = "#444",
+                    };
+            dimAanTotaal = new()
+                {
+                    Mode = DimLineMode.Horizontal,
+                    X1 = m + aan,
+                    Y1 = m + op,
+                    X2 = m + 2 * aan + wel,
+                    Y2 = m + op,
+                    Offset = 3 * m,
+                    StrokeWidth = 1,
+                    StrokeColor = "#444",
+                };
+
+
+        }
+
+        SvgDimLineGroup? dlgWelVert = null;
+
+        SvgDimLine? dimWelVert = null;
+        if (SteekTrap.WelMaatVertikaal > 0.4 && SteekTrap.WelMaat > 0.4)
+        {
+            dimWelVert = new()
+                {
+                    Mode = DimLineMode.Vertical,
+                    X1 = m + aan,
+                    Y1 = m + op,
+                    X2 = m + aan,
+                    Y2 = m + op + SteekTrap.WelMaatVertikaal,
+                    Offset = 1 * m,
+                    StrokeWidth = 1,
+                    StrokeColor = "#444",
+                };
+
+            dlgWelVert = new()
+                    {
+                        Mode = DimLineMode.Vertical,
+                        Points = [
+                            new(m+aan,m+op),
+                        new(m+aan, m+op + SteekTrap.WelMaatVertikaal),
+                        new(m+aan, m + 2 * op)
+                        ],
+
+                    };
+        }
+
+
+
+        // optrede: verticale maatlijn links van de optrede-vlak (P4 → P1 van de middentrede)
+        var dimOp = new SvgDimLine
+            {
+                Mode        = DimLineMode.Vertical,
+                X1 = m + aan, Y1 = m + op,
+                X2 = m + aan, Y2 = m + 2 * op,
+                Offset      = 2 * m,
+                StrokeWidth = 1,
+                StrokeColor = "#444",
+            };
+
+        var dimR = new SvgDimLine
+                {
+                    Mode = DimLineMode.Vertical,
+                    X1 = m + 2 * aan,
+                    Y1 = m + op,
+                    X2 = m + 2 * aan,
+                    Y2 = m + op + schilVert,
+                    Offset = -2 * m,
+                    StrokeWidth = 1,
+                    StrokeColor = "#444",
+                };
+
+        var dimOp2 = new SvgDimLine
+                {
+                    Mode = DimLineMode.Vertical,
+                    X1 = m + aan,
+                    Y1 = m + 2 * op,
+                    X2 = m + aan,
+                    Y2 = m + 2 * op + schilVert,
+                    Offset = 2 * m,
+                    StrokeWidth = 1,
+                    StrokeColor = "#444",
+                };
+
+        var dimR2 = new SvgDimLine
+            {
+                Mode = DimLineMode.Vertical,
+                X1 = m + 2 * aan,
+                Y1 = m + op + schilVert,
+                X2 = m + 1 * aan,
+                Y2 = m + 2 * op + schilVert,
+                Offset = -aan -2 * m,
+                StrokeWidth = 1,
+                StrokeColor = "#444",
+            };
+
+        var dimSchuine = new SvgDimLine
+                {
+                    Mode = DimLineMode.Aligned,
+                    X1 = m + aan,
+                    Y1 = m + op * 2 + schilVert,
+                    X2 = m + aan * 2,
+                    Y2 = m + op + schilVert,
+                    Offset = 1 * m,
+                    StrokeColor = "#444"
+                };
+
+        var dimSchil = new SvgDimLine
+            {
+                Mode = DimLineMode.Aligned,
+                X1 = m + aan + wel,
+                Y1 = m + 2 * op,
+                X2 = m + aan + wel + dX,
+                Y2 = m + 2 * op + dY,
+                Offset = -1 * m,
+                StrokeColor = "#444"
+            };
+
+        // Fillet-cirkel in de buitenhoek bij P2 (tussen P1-P2 en P2-P3), straal 40mm
+        string? neusCircle = null;
+        if (wel > 0.4)
+        {
+            double welVert = SteekTrap.WelMaatVertikaal;
+            const double r = 20.0;
+            double d = r * 2;
+            double L = Math.Sqrt((op - welVert) * (op - welVert) + wel * wel);
+            double cy = m + 2 * op - r;
+            double cx = m + aan;
+            neusCircle = $"<circle cx=\"{cx:F1}\" cy=\"{cy:F1}\" r=\"{r:F1}\" fill=\"none\" stroke=\"#888\" stroke-width=\"{1.0 / sc:F1}\" />";
+        }
+
+        return
+        dimAan.Render(sc) + 
+        dimWel?.Render(sc) +
+        dimAanTotaal?.Render(sc) +
+        dimWelVert?.Render(sc) +
+        dlgWelVert?.Render() +
+        dimOp.Render(sc) + 
+        dimOp2.Render(sc) + 
+        dimR.Render(sc) + 
+        dimR2.Render(sc) + 
+        dimSchuine.Render(sc) + 
+        dimSchil.Render(sc) +
+        neusCircle;
+    }
+
+    private string DimLinesBoven()
+    {
+        if (SteekTrap is null) return "";
+        double m    = TredeMargin;
+        double aan  = SteekTrap.AantredeMaat;
+        double op   = SteekTrap.OptredeMaat;
+        double wel  = SteekTrap.WelMaat;
+        double lb   = LengteBovenValue;
+        double db   = DikteBovenValue;
+        double sc   = SvgScale;
+        double noseX = m + 2 * aan;
+        double noseY = m;
+        var tand = SteekTrap.TandOpleggingBovenzijde;
+        var sb = new System.Text.StringBuilder();
+        if (tand != null)
+        {
+            double halsDikte = lb - tand.TandLengte;
+            sb.Append(new SvgDimLine { Mode = DimLineMode.Horizontal, X1 = noseX, Y1 = noseY, X2 = noseX + halsDikte, Y2 = noseY, Offset = 0.8 * m, StrokeWidth = 1, StrokeColor = "#444" }.Render(sc));
+            sb.Append(new SvgDimLine { Mode = DimLineMode.Horizontal, X1 = noseX + halsDikte, Y1 = noseY, X2 = noseX + lb, Y2 = noseY, Offset = 0.8 * m, StrokeWidth = 1, StrokeColor = "#444" }.Render(sc));
+            sb.Append(new SvgDimLine { Mode = DimLineMode.Horizontal, X1 = noseX, Y1 = noseY, X2 = noseX + lb, Y2 = noseY, Offset = 1.6 * m, StrokeWidth = 1, StrokeColor = "#444" }.Render(sc));
+            sb.Append(new SvgDimLine { Mode = DimLineMode.Vertical, X1 = noseX + lb, Y1 = noseY, X2 = noseX + lb, Y2 = noseY + tand.TandHoogte, Offset = -0.8 * m, StrokeWidth = 1, StrokeColor = "#444" }.Render(sc));
+            sb.Append(new SvgDimLine { Mode = DimLineMode.Horizontal, X1 = noseX + wel, Y1 = noseY + op, X2 = noseX + halsDikte, Y2 = noseY + op, Offset = 0, StrokeWidth = 1, StrokeColor = "#444" }.Render(sc));
+        }
+        else
+        {
+            sb.Append(new SvgDimLine { Mode = DimLineMode.Horizontal, X1 = noseX, Y1 = noseY, X2 = noseX + lb, Y2 = noseY, Offset = 0.8 * m, StrokeWidth = 1, StrokeColor = "#444" }.Render(sc));
+            sb.Append(new SvgDimLine { Mode = DimLineMode.Vertical, X1 = noseX + lb, Y1 = noseY, X2 = noseX + lb, Y2 = noseY + db, Offset = -0.8 * m, StrokeWidth = 1, StrokeColor = "#444" }.Render(sc));
+        }
+        return sb.ToString();
+    }
+
+    private string DimLinesOnder()
+    {
+        if (SteekTrap is null) return "";
+        double m     = TredeMargin;
+        double aan   = SteekTrap.AantredeMaat;
+        double op    = SteekTrap.OptredeMaat;
+        double sc    = SvgScale;
+        double noseX = m;
+        double noseY = m + 2 * op;
+        var sb = new System.Text.StringBuilder();
+        sb.Append(new SvgDimLine { Mode = DimLineMode.Horizontal, X1 = noseX, Y1 = noseY, X2 = noseX + aan, Y2 = noseY, Offset = 2 * m, StrokeWidth = 1, StrokeColor = "#444" }.Render(sc));
+        switch (SteekTrap.OnderType)
+        {
+            case TredeOnderType.OpVloer:
+                {
+                    double dFlat   = SteekTrap.SchilDikte;
+                    double bottomY = noseY + op + dFlat;
+                    sb.Append(new SvgDimLine { Mode = DimLineMode.Vertical, X1 = noseX, Y1 = bottomY - dFlat, X2 = noseX, Y2 = bottomY, Offset = 0.8 * m, StrokeWidth = 1, StrokeColor = "#444" }.Render(sc));
+                    break;
+                }
+            case TredeOnderType.OpBordes:
+                {
+                    double d = SchilVertEff;
+                    double soffitY = noseY + op;
+                    double opleggingY = soffitY + 100;
+                    double p2x = noseX + aan * (d - 100) / op;
+                    sb.Append(new SvgDimLine { Mode = DimLineMode.Vertical,   X1 = noseX, Y1 = soffitY, X2 = noseX, Y2 = opleggingY, Offset =  0.8 * m, StrokeWidth = 1, StrokeColor = "#444" }.Render(sc));
+                    sb.Append(new SvgDimLine { Mode = DimLineMode.Horizontal, X1 = noseX, Y1 = opleggingY, X2 = p2x, Y2 = opleggingY, Offset = 0.8 * m, StrokeWidth = 1, StrokeColor = "#444" }.Render(sc));
+                    break;
+                }
+            case TredeOnderType.IsBordes:
+                {
+                    double d      = DikteOnderValue;
+                    double lo     = LengteOnderValue;
+                    double bordTop = noseY + op;
+                    double bordBot = bordTop + d;
+                    sb.Append(new SvgDimLine { Mode = DimLineMode.Vertical,   X1 = noseX + lo, Y1 = bordTop, X2 = noseX + lo, Y2 = bordBot, Offset = -0.8 * m, StrokeWidth = 1, StrokeColor = "#444" }.Render(sc));
+                    sb.Append(new SvgDimLine { Mode = DimLineMode.Horizontal, X1 = noseX,      Y1 = bordBot, X2 = noseX + lo, Y2 = bordBot, Offset =  0.8 * m, StrokeWidth = 1, StrokeColor = "#444" }.Render(sc));
+                    break;
+                }
+        }
+        return sb.ToString();
+    }
+
+    private string DimLinesSchema()
+    {
+        if (SteekTrap is null) return "";
+        double m   = TredeMargin;
+        double aan = SteekTrap.AantredeMaat;
+        double op  = SteekTrap.OptredeMaat;
+        double sc  = SvgScale;
+        double lb  = LengteBovenValue;
+        double sw  = 2.0 / sc;
+        double fs  = 11.0 / sc;
+
+        double d  = SchilVertEff;
+        double x0 = m;
+        double y0 = m + 3 * op;   // onder steunpunt: neuspunt eerste trede
+
+        var tand = SteekTrap.TandOpleggingBovenzijde;
+        double x1 = tand != null
+            ? m + 2 * aan + lb - tand.TandLengte / 2.0   // midden van tand
+            : m + 2 * aan + lb;                           // einde doorsnede
+        double y1 = m;            // boven steunpunt: neuspunt laatste trede
+
+        double arrowH  = m;
+        string profiel = "1000×" + (SteekTrap.MainSlab?.Dikte ?? 0).ToString("0 mm");
+
+        var sb = new System.Text.StringBuilder();
+
+
+        // bounding rect doorsnede: op basis van alle drie trede-polygonen
+        var (bboxX, bboxY, bboxXMax, bboxYMax) = ComputeBoundingBox(TredeLinksOnderPoints, TredePolygonPoints, TredeRechtsBovenPoints);
+        //sb.Append($"<rect x=\"{bboxX:F1}\" y=\"{bboxY:F1}\" width=\"{(bboxXMax - bboxX):F1}\" height=\"{(bboxYMax - bboxY):F1}\" fill=\"none\" stroke=\"red\" stroke-width=\"{sw:F1}\" />");
+
+
+
+        var fig = TrapSvgGenerator.GenerateSimpleLoadScheme(x0, y0, x1, y1, 
+            [$"q = {SteekTrap.PermanenteBelastingPerM2:0.0} ({SteekTrap.Krachten.Lijnlast_qk:0.0})"], "F", profiel, sc);
+        sb.Append(new SvgHelper().GetSvgContentXml(fig));
+        //var figDim = TrapSvgGenerator.GenerateSimpleSchemaDimLines(SteekTrap);
+        //sb.Append(new SvgHelper().GetSvgContentXml(figDim));
+
+
+        return sb.ToString();
+    }
+
+    private static string SchemaUpArrow(double x, double tipY, double shaftH, double hw, double ah, double sw, string color)
+    {
+        double shaftBot  = tipY + shaftH;
+        double arrowBase = tipY + ah;
+        string shaft = $"<line x1=\"{x:F1}\" y1=\"{arrowBase:F1}\" x2=\"{x:F1}\" y2=\"{shaftBot:F1}\" stroke=\"{color}\" stroke-width=\"{sw:F1}\" />";
+        string head  = $"<polygon points=\"{x:F1},{tipY:F1} {(x - hw):F1},{arrowBase:F1} {(x + hw):F1},{arrowBase:F1}\" fill=\"{color}\" stroke=\"none\" />";
+        return shaft + head;
+    }
+
+    private static string SchemaHorDim(double x0, double x1, double y, double tickH, string label, double sw, double fs, string color)
+    {
+        double mx   = (x0 + x1) / 2;
+        string line  = $"<line x1=\"{x0:F1}\" y1=\"{y:F1}\" x2=\"{x1:F1}\" y2=\"{y:F1}\" stroke=\"{color}\" stroke-width=\"{sw:F1}\" />";
+        string tick0 = $"<line x1=\"{x0:F1}\" y1=\"{(y - tickH):F1}\" x2=\"{x0:F1}\" y2=\"{(y + tickH):F1}\" stroke=\"{color}\" stroke-width=\"{sw:F1}\" />";
+        string tick1 = $"<line x1=\"{x1:F1}\" y1=\"{(y - tickH):F1}\" x2=\"{x1:F1}\" y2=\"{(y + tickH):F1}\" stroke=\"{color}\" stroke-width=\"{sw:F1}\" />";
+        string text  = $"<text x=\"{mx:F1}\" y=\"{(y + fs * 1.2):F1}\" text-anchor=\"middle\" font-size=\"{fs:F1}\" fill=\"{color}\" font-family=\"sans-serif\">{label}</text>";
+        return line + tick0 + tick1 + text;
+    }
+
+    // Berekent de soffit-knikpunten van het schema:
+    // (x0,y0) = knik onderzijde = P0 van de geëxtrapoleerde onderste standaard-trede
+    // (x1,y1) = knik bovenzijde = laatste soffit-punt van de bovenste trede
+    private (double x0, double y0, double x1, double y1) ComputeSchemaKnikPunten()
+    {
+        if (SteekTrap is null) return (0, 0, 0, 0);
+        double m        = TredeMargin;
+        double aan      = SteekTrap.AantredeMaat;
+        double op       = SteekTrap.OptredeMaat;
+        double d        = SchilVertEff;
+        double lb       = LengteBovenValue;
+        double dikteBov = DikteBovenValue;
+
+        double x0 = m;
+        double y0 = m + 3 * op + d;   // P0 van virtuele onderste trede = soffit-start
+
+        double p0x_last     = m + 2 * aan;
+        double p0y_last     = m + op + d;
+        double yHorizSoffit = p0y_last - d - op + dikteBov;
+        double xSnijpunt    = LineIntersect(p0x_last, p0y_last, p0x_last + aan, p0y_last - op, 0, yHorizSoffit, 1, yHorizSoffit)?.x ?? p0x_last;
+
+        var tand = SteekTrap.TandOpleggingBovenzijde;
+        double x1, y1;
+        if (tand != null)
+        {
+            double halsDikte   = lb - tand.TandLengte;
+            double soffitHalsY = p0y_last - op * halsDikte / aan;
+            double p8Y         = p0y_last - d - op + tand.TandHoogte;
+            if (soffitHalsY < p8Y) { x1 = xSnijpunt;              y1 = yHorizSoffit; }
+            else                   { x1 = p0x_last + halsDikte;   y1 = soffitHalsY;  }
+        }
+        else
+        {
+            double soffitRechtsY = p0y_last - op * lb / aan;
+            if (soffitRechtsY < yHorizSoffit) { x1 = xSnijpunt;       y1 = yHorizSoffit;   }
+            else                              { x1 = p0x_last + lb;   y1 = soffitRechtsY;  }
+        }
+        return (x0, y0, x1, y1);
+    }
+
+    // Bouwt de polygoonpunten van de gecombineerde doorsnede (3 treden):
+    // Kloksgewijs van knik onderzijde (soffit-start onderste trede) via neuspunten +
+    // tredevlakken naar knik bovenzijde (soffit-einde bovenste trede).
+    // Het SVG-polygon sluit via de schuine soffit terug naar knik onderzijde.
+    private string BuildSchemaDoorsnedePoints()
+    {
+        if (SteekTrap is null) return "";
+        double m        = TredeMargin;
+        double aan      = SteekTrap.AantredeMaat;
+        double op       = SteekTrap.OptredeMaat;
+        double d        = SchilVertEff;
+        double lb       = LengteBovenValue;
+        double dikteBov = DikteBovenValue;
+        double p0x_last     = m + 2 * aan;
+        double p0y_last     = m + op + d;
+        double yHorizSoffit = p0y_last - d - op + dikteBov;
+        double xSnijpunt    = LineIntersect(p0x_last, p0y_last, p0x_last + aan, p0y_last - op, 0, yHorizSoffit, 1, yHorizSoffit)?.x ?? p0x_last;
+
+        var sb = new System.Text.StringBuilder();
+
+        // knik onderzijde (soffit-zijde) → kloksgewijs via neuspunten + tredevlakken omhoog
+        sb.Append($"{m:F1},{(m + 3 * op + d):F1} ");           // P0: knik onderzijde soffit
+        sb.Append($"{m:F1},{(m + 2 * op):F1} ");               // P1: neuspunt trede 1
+        sb.Append($"{(m + aan):F1},{(m + 2 * op):F1} ");       // P2: trede 1 naar rechts
+        sb.Append($"{(m + aan):F1},{(m + op):F1} ");            // P3: neuspunt trede 2
+        sb.Append($"{(m + 2 * aan):F1},{(m + op):F1} ");       // P4: trede 2 naar rechts
+        sb.Append($"{(m + 2 * aan):F1},{m:F1} ");              // P5: neuspunt trede 3
+
+        var tand = SteekTrap.TandOpleggingBovenzijde;
+        if (tand != null)
+        {
+            double halsDikte   = lb - tand.TandLengte;
+            double tandH       = tand.TandHoogte;
+            double soffitHalsY = p0y_last - op * halsDikte / aan;
+            double p8Y         = p0y_last - d - op + tandH;
+            sb.Append($"{(m + 2 * aan + halsDikte):F1},{m:F1} ");              // P6: hals eind top
+            sb.Append($"{(m + 2 * aan + lb):F1},{m:F1} ");                    // P7: tand top rechts
+            sb.Append($"{(m + 2 * aan + lb):F1},{(m + tandH):F1} ");          // P8: tand rechtsonder
+            sb.Append($"{(m + 2 * aan + halsDikte):F1},{p8Y:F1} ");           // P9: tand linksonder
+            if (soffitHalsY < p8Y)
+            {
+                sb.Append($"{(m + 2 * aan + halsDikte):F1},{yHorizSoffit:F1} "); // P10: hor. soffit
+                sb.Append($"{xSnijpunt:F1},{yHorizSoffit:F1}");                 // P11: knik bovenzijde
+            }
+            else
+            {
+                sb.Append($"{(m + 2 * aan + halsDikte):F1},{soffitHalsY:F1}");  // P10: knik bovenzijde
+            }
+        }
+        else
+        {
+            double soffitRechtsY = p0y_last - op * lb / aan;
+            sb.Append($"{(m + 2 * aan + lb):F1},{m:F1} ");     // P6: trede 3 naar rechts
+            if (soffitRechtsY < yHorizSoffit)
+            {
+                sb.Append($"{(m + 2 * aan + lb):F1},{yHorizSoffit:F1} ");   // P7: hor. soffit
+                sb.Append($"{xSnijpunt:F1},{yHorizSoffit:F1}");             // P8: knik bovenzijde
+            }
+            else
+            {
+                sb.Append($"{(m + 2 * aan + lb):F1},{soffitRechtsY:F1}");   // P7: knik bovenzijde
+            }
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    // Berekent de bounding box van een of meer polygoon-punt-strings.
+    private static (double xMin, double yMin, double xMax, double yMax) ComputeBoundingBox(params string[] pointsStrings)
+    {
+        double xMin = double.MaxValue, yMin = double.MaxValue;
+        double xMax = double.MinValue, yMax = double.MinValue;
+        foreach (var pointsStr in pointsStrings)
+        {
+            if (string.IsNullOrWhiteSpace(pointsStr)) continue;
+            foreach (var pair in pointsStr.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var parts = pair.Split(',');
+                if (parts.Length != 2) continue;
+                if (!double.TryParse(parts[0], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double x)) continue;
+                if (!double.TryParse(parts[1], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double y)) continue;
+                if (x < xMin) xMin = x;
+                if (x > xMax) xMax = x;
+                if (y < yMin) yMin = y;
+                if (y > yMax) yMax = y;
+            }
+        }
+        return (xMin, yMin, xMax, yMax);
+    }
+
+    // Snijpunt van lijn (x1,y1)→(x2,y2) met lijn (x3,y3)→(x4,y4). Geeft null als lijnen evenwijdig zijn.
+    private static (double x, double y)? LineIntersect(
+        double x1, double y1, double x2, double y2,
+        double x3, double y3, double x4, double y4)
+    {
+        double denom = (x2 - x1) * (y4 - y3) - (y2 - y1) * (x4 - x3);
+        if (Math.Abs(denom) < 1e-10) return null;
+        double t = ((x3 - x1) * (y4 - y3) - (y3 - y1) * (x4 - x3)) / denom;
+        return (x1 + t * (x2 - x1), y1 + t * (y2 - y1));
+    }
+
+    private static Punt? LineIntersect(Punt p1, Punt p2, Punt p3, Punt p4)
+    {
+        var r = LineIntersect(p1.X, p1.Y, p2.X, p2.Y, p3.X, p3.Y, p4.X, p4.Y);
+        return r is { } pt ? new Punt(pt.x, pt.y) : null;
+    }
+
+    // Verwijdert opeenvolgende punten
+    private static string DeduplicatePoints(string pointsStr, double tolerance = 1.0)
+    {
+        if (string.IsNullOrWhiteSpace(pointsStr)) return pointsStr;
+        var pairs = pointsStr.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var result = new System.Collections.Generic.List<string>(pairs.Length);
+        double prevX = double.NaN, prevY = double.NaN;
+        foreach (var pair in pairs)
+        {
+            var parts = pair.Split(',');
+            if (parts.Length != 2) continue;
+            if (!double.TryParse(parts[0], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double x)) continue;
+            if (!double.TryParse(parts[1], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double y)) continue;
+            double dx = x - prevX, dy = y - prevY;
+            if (!double.IsNaN(prevX) && Math.Sqrt(dx * dx + dy * dy) < tolerance)
+                continue;
+            result.Add(pair);
+            prevX = x; prevY = y;
+        }
+        return string.Join(" ", result);
+    }
+
+    private static string RenderPointLabels(string pointsStr, double sc, string color = "red")
+    {
+        if (string.IsNullOrWhiteSpace(pointsStr)) return "";
+        var sb = new System.Text.StringBuilder();
+        double fs = 11.0 / sc;
+        var pairs = pointsStr.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < pairs.Length; i++)
+        {
+            var parts = pairs[i].Split(',');
+            if (parts.Length != 2) continue;
+            if (!double.TryParse(parts[0], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double x)) continue;
+            if (!double.TryParse(parts[1], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double y)) continue;
+            sb.Append($"<circle cx=\"{x:F1}\" cy=\"{y:F1}\" r=\"{fs * 0.4:F1}\" fill=\"{color}\" />");
+            sb.Append($"<text x=\"{x:F1}\" y=\"{y:F1}\" dy=\"{-fs * 0.4:F1}\" font-size=\"{fs:F1}\" fill=\"{color}\" font-family=\"monospace\">p{i}</text>");
+        }
+        return sb.ToString();
+    }
+
+    private readonly record struct Punt(double X, double Y)
+    {
+        public Punt AddX(double dx) => this with { X = X + dx };
+        public Punt AddY(double dy) => this with { Y = Y + dy };
+        public Punt Add(Punt other) => new(X + other.X, Y + other.Y);
+    }
+}

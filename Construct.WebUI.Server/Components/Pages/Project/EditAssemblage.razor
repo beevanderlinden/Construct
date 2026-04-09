@@ -90,25 +90,28 @@
                                             <KaskonMilieuklasseDekking Boven="@slab.PlaatDekking.Boven"
                                                                        Onder="@slab.PlaatDekking.Onder"
                                                                        Merk="@Model.Merk" />
+
+                                            <KaskonSlabFireResistance Slab="slab" />
                                         }
                                        
-
                                         @if (slab.PlaatWapening != null)
                                         {
+                                            
+                                            <KaskonInputContainer Label="wapening">
+
+                                            </KaskonInputContainer>
                                             <PlaatProfielVisualisatie Wapening="@slab.PlaatWapening"
                                                                       Breedte="1000"
                                                                       Hoogte="@slab.Dikte"
                                                                       MaxDisplayHeight="300" />
+
+                                            <WapeningContextTabel PlaatWapening="@slab.PlaatWapening"
+                                                                  OnChanged="@(() => StateHasChanged())" />
                                         }
                                         else
                                         {
                                             <p>Geen plaatwapening gedefinieerd</p>
                                         }
-
-                                       
-
-                                                                  
-
                                     </Content>
                                 </FluentTab>
                             }
@@ -116,6 +119,7 @@
 
                         @if (Model is BordesEntity bordes)
                         {
+                            <div>VERWIJDER OF GENERIEK?</div>
                             <FluentTab Id="tab-bordes-wapening" Label="plaatwapening">
                                 <Header><FluentIcon Value="@(new Icons.Regular.Size20.CircleSparkle())" />wapening</Header>
                                 <Content>
@@ -127,22 +131,7 @@
                                         Bereken wapening
                                     </FluentButton>
 
-                                    <KaskonInputContainer Label="instellingen">
-                                        <WapeningConstraintPopUp
-                                            BijlegBovenConstraint="bordes.BijlegBovenConstraint"
-                                            BijlegOnderConstraint="bordes.BijlegOnderConstraint"
-                                            DetailWapeningConstraint="bordes.DetailWapeningConstraint"
-                                            BovenHoofdConstraint="bordes.BovenHoofdConstraint"
-                                            BovenVerdeelConstraint="bordes.BovenVerdeelConstraint"
-                                            OnderHoofdConstraint="bordes.OnderHoofdConstraint"
-                                            OnderVerdeelConstraint="bordes.OnderVerdeelConstraint"
-                                            DiametersBijleg="_diametersBijleg"
-                                            DiametersDetail="_diametersDetail"
-                                            DiametersHoofdVerdeel="_diametersHoofdVerdeel"
-                                            PlaatWapening="bordes.PlaatWapening"
-                                            OnPresetApplied="OnPresetApplied"
-                                            ShowPreset="true" />
-                                     </KaskonInputContainer>
+                                   
 
                                     <!-- Resultaten sectie -->
                                     @if (bordes.BijlegWapeningOnder != null || bordes.BijlegWapeningBoven != null || bordes.Tand?.WapeningAlgemeen != null)
@@ -265,35 +254,13 @@
                             </FluentTab>
                         }
 
-                        @if (Model is SteekTrapEntity trap)
-                        {
-                            <FluentTab Id="tab-trap-wapening" Label="wapening">
-                                <Header><FluentIcon Value="@(new Icons.Regular.Size20.CircleSparkle())" />wapening</Header>
-                                <Content>
-                                    <h3>Plaatwapening trap</h3>
-                                    <p>Configureer de wapening voor de trap inclusief minimale ondergrenzen</p>
-                                    
-                                    @if (trap.PlaatWapening != null)
-                                    {
-                                        <WapeningContextTabel PlaatWapening="@trap.PlaatWapening" 
-                                                             OnChanged="@(() => StateHasChanged())" />
-
-                                        <h3 style="margin-top: 2rem;">Visualisatie</h3>
-                                        <PlaatProfielVisualisatie Wapening="@trap.PlaatWapening"
-                                                                  Breedte="1000"
-                                                                  Hoogte="@(trap.MainSlab?.Dikte ?? 100)"
-                                                                  MaxDisplayHeight="300" />
-                                    }
-                                    else
-                                    {
-                                        <p>Geen plaatwapening gedefinieerd voor deze trap</p>
-                                    }
-                                </Content>
-                            </FluentTab>
-                        }
+                
 
                         @if (Model.Toetsen != null && Model.Toetsen.Any())
                         {
+                            
+
+
                             <FluentTab Id="tab-toetsen" Label="toetsen">
                                 <Header>
                                     <FluentIcon Value="@(new Icons.Regular.Size20.Check())" />toetsen
@@ -308,7 +275,14 @@
                                 </Header>
                                 <Content>
                                     
-                                    
+                                    @if (Model is SteekTrapEntity tr)
+                                    {
+                                        <SteekTrapResultaten SteekTrap=@tr />
+
+
+                                    }
+
+
                                     @* Validatie sectie *@
                                     @if (Model.Validation != null && (Model.Validation.HasErrors || Model.Validation.HasWarnings))
                                     {
@@ -358,7 +332,7 @@
                                     {
                                         <div style="margin-top: 1rem;">
                                             <h3>Toetsen overzicht</h3>
-                                            @foreach (var t in Model.Toetsen)
+                                            @foreach (var t in Model.Toetsen.Where(t=>t!=null))
                                             {
                                                 <KaskonInputContainer Label="@t.Heading">
                                                     <div style="display: flex; align-items: center; justify-content: space-between;">
@@ -369,13 +343,13 @@
                                                             }
                                                             else
                                                             {
-                                                                <span>Let op:</span>
+                                                                <span>❌</span>
                                                                 @if (t.Meldingen != null)
                                                                 {
-                                                                    @foreach (var melding in t.Meldingen)
+                                                                    @foreach (var melding in t.Meldingen.Where(m=>m.Type == MeldingType.Waarschuwing))
                                                                     {
                                                                         @((MarkupString)
-                                                                        melding.Bericht)
+                                                                        melding.Bericht)<br />
                                                                     }
                                                                 }
                                                             }
@@ -467,7 +441,7 @@
 
     private string _berekeningMelding = string.Empty;
     private int _renderKey = 0; // Force re-render counter
-    
+
     private ToetsDetailPopup? _toetsDetailPopup;
 
     private void OnPresetApplied()
@@ -478,7 +452,7 @@
             bordes.BijlegWapeningOnder = null;
             bordes.BijlegWapeningBoven = null;
         }
-        
+
         StateHasChanged();
     }
 
@@ -574,36 +548,31 @@
             // Toon errors
             foreach (var error in validation.Errors)
             {
-                ToastService.ShowError($"❌ {error.Bericht}", timeout: 5000);
+                ToastService.ShowError($"[{Model?.Merk}] {error.Bericht}", timeout: 5000);
             }
 
             // Toon warnings
-            foreach (var warning in validation.Warnings)
+            if (validation.HasWarnings)
             {
-                ToastService.ShowWarning($"⚠️ {warning.Bericht}", timeout: 4000);
+                var warningSummary = $"[{Model.Merk}] :";
+                warningSummary += $" {validation.Warnings.Count} waarschuwing(en) gevonden.";
+                // foreach (var warning in validation.Warnings)
+                // {
+                //     warningSummary += $"\r\n {warning.Bericht}";
+                // }
+                ToastService.ShowWarning($"{warningSummary}", timeout: 5000);
             }
+
+                        
 
             // Toon success als alles OK is
             if (!validation.HasErrors && !validation.HasWarnings)
             {
-                ToastService.ShowSuccess($"✓ {Model.Merk} bijgewerkt, geen problemen gevonden", timeout: 2000);
+                ToastService.ShowSuccess($"✓ {Model?.Merk} bijgewerkt, geen problemen gevonden", timeout: 2000);
             }
-            else
-            {
-                // Toon samenvatting
-                var summary = $"{Model.Merk} bijgewerkt";
-                if (validation.HasErrors)
-                    summary += $" - {validation.Errors.Count} error(s)";
-                if (validation.HasWarnings)
-                    summary += $" - {validation.Warnings.Count} waarschuwing(en)";
-                
-                ToastService.ShowInfo(summary, timeout: 3000);
-            }
+           
         }
-        else
-        {
-            ToastService.ShowInfo($"Merk ({Model?.Merk}) Bijgewerkt", 1000);
-        }
+       
 
         StateHasChanged();
     }

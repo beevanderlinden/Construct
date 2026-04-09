@@ -472,7 +472,19 @@ namespace Construct.Domain.Entities
             var asRequired = rMin.AsRequired;
             var asProvided = rMin.AsApplied;
 
-            if (asRequired > asProvided)
+            var instelling = ProjectInfo?.WapeningAfhandeling ?? WapeningAfhandelingEnum.AlleenVerhogen;
+            bool wapeningAanpassen = instelling switch
+            {
+                WapeningAfhandelingEnum.Gebruiker     => false,                   // nooit aanpassen
+                WapeningAfhandelingEnum.AlleenVerhogen => asRequired > asProvided, // alleen bij tekort
+                WapeningAfhandelingEnum.Optimaliseer   => true,                   // altijd herberekenen
+                _ => asRequired > asProvided
+            };
+            // Als invoer leeg is, altijd automatisch bepalen
+            if (string.IsNullOrWhiteSpace(this.PlaatWapening?.Onder?.BasisWapening?.Tekst))
+                wapeningAanpassen = true;
+
+            if (wapeningAanpassen && asRequired > 0)
             {
                 // Parse huidige wapening
                 var parsed = WapeningOptimizer.ParseWapeningTekst(this.PlaatWapening?.Onder?.BasisWapening?.Tekst);
@@ -528,8 +540,8 @@ namespace Construct.Domain.Entities
             }
             else
             {
-                // Wapening is voldoende
-                Console.WriteLine($"✅ Basiswapening onder: {this.PlaatWapening?.Onder?.BasisWapening?.Tekst} is voldoende ({asProvided:0}mm² >= {asRequired:0}mm²)");
+                // Wapening is voldoende of instelling=Gebruiker: geen aanpassing
+                Console.WriteLine($"✅ Basiswapening onder: {this.PlaatWapening?.Onder?.BasisWapening?.Tekst} ({instelling}) – geen aanpassing ({asProvided:0}mm² / benodigd {asRequired:0}mm²)");
             }
 
 
@@ -1103,7 +1115,10 @@ namespace Construct.Domain.Entities
             
             // ✅ Pas ondergrenzen toe op alle wapeningen
             PasOndergrenzenToe();
-            
+
+            // ✅ Brandwerendheid bijwerken
+            MainSlab?.UpdateRei();
+
             // ✅ Roep base aan zodat validatie wordt gemaakt
             base.Bijwerken();
 

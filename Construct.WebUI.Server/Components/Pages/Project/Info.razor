@@ -1,6 +1,7 @@
 ﻿@page "/Project/info"
 
 @using Construct.Application.Interfaces
+@using Construct.Domain.Entities
 @inject IDialogService DialogService
 @inject IToastService ToastService
 
@@ -13,6 +14,13 @@
     <FluentCard AreaRestricted="false" Style="max-width:210mm;">
         <h1>Projectinfo</h1>
         <ProjectInfo Model="@projectInfoViewModel" ModelChanged="BijwerkenProjectInfo"></ProjectInfo>
+
+        <FluentDivider Style="margin:1rem 0;" />
+
+        <WapeningAfhandelingSelector
+            Value="@ProjectEntity.ProjectInfo.WapeningAfhandeling"
+            ValueChanged="@OnWapeningAfhandelingChanged"
+            ToonSchema="true" />
 
     </FluentCard>
 
@@ -39,7 +47,8 @@
                     Nummer = ProjectEntity.ProjectInfo.Nummer,
                     Naam = ProjectEntity.ProjectInfo.Naam,
                     Plaatsnaam = ProjectEntity.ProjectInfo.Plaatsnaam,
-                    Grondslagen = ProjectEntity.ProjectInfo.Grondslagen
+                    Grondslagen = ProjectEntity.ProjectInfo.Grondslagen,
+                    MinimaleREI = ProjectEntity.ProjectInfo.MinimaleREI,
                 };
         }
     }
@@ -48,22 +57,15 @@
     private void BijwerkenProjectInfo()
     {
         if (ProjectEntity == null) return;
-        // GEEN IDEE HOE WE DIT ASYNC KUNNEN MAKEN.
-        // probleem: IProjectService heeft geen toegang tot de viewmodels
-        // zodat ik niet MapToDto daar kan doen
-        // en volgens mij moet de Service in 
 
         if (projectInfoViewModel != null)
         {
-            //await DialogService.ShowInfoAsync(message: $"We gaan het project (entity) aanpassen vanuit ({projectInfoViewModel.ToString()})", title: "Project bijwerken");
-
             ProjectEntity.ProjectInfo.Nummer = projectInfoViewModel.Nummer;
             ProjectEntity.ProjectInfo.Naam = projectInfoViewModel.Naam;
             ProjectEntity.ProjectInfo.Plaatsnaam = projectInfoViewModel.Plaatsnaam;
 
             ProjectEntity.ProjectInfo.Grondslagen = projectInfoViewModel.Grondslagen;
-
-            //ProjectEntity.ProjectInfo = projectInfoViewModel.MapProjectInfoToDto();
+            ProjectEntity.ProjectInfo.MinimaleREI = projectInfoViewModel.MinimaleREI;
 
             ProjectState?.SetProject(ProjectEntity);
 
@@ -71,11 +73,15 @@
 
             StateHasChanged();
         }
+    }
 
-
-       
-
-
+    private void OnWapeningAfhandelingChanged(WapeningAfhandelingEnum waarde)
+    {
+        if (ProjectEntity == null) return;
+        ProjectEntity.ProjectInfo.WapeningAfhandeling = waarde;
+        ProjectState?.SetProject(ProjectEntity);
+        ToastService.ShowSuccess($"Wapening afhandeling ingesteld op '{waarde}'");
+        StateHasChanged();
     }
 
 

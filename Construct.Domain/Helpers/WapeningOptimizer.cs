@@ -13,6 +13,55 @@ namespace Construct.Domain.Helpers
     /// </summary>
     public static class WapeningOptimizer
     {
+        /// <summary>
+        /// Centrale methode die de wapening-tekst bepaalt op basis van de <see cref="WapeningAfhandelingEnum"/> instelling.
+        /// </summary>
+        /// <param name="huidigeTekst">De huidige wapening-tekst (invoer gebruiker, mag null/leeg zijn).</param>
+        /// <param name="asRequired">Benodigde wapeningsdoorsnede (mm²).</param>
+        /// <param name="wap">De <see cref="WapeningContext"/> met referentielengte en ondergrens.</param>
+        /// <param name="instelling">De project-brede wapening-afhandeling instelling.</param>
+        /// <returns>Nieuwe wapening-tekst en toegepaste As.</returns>
+        public static (string tekst, double asProvided) BepaalWapeningMetInstelling(
+            string? huidigeTekst,
+            double asRequired,
+            WapeningContext wap,
+            WapeningAfhandelingEnum instelling)
+        {
+            bool invoerLeeg = string.IsNullOrWhiteSpace(huidigeTekst);
+
+            // Altijd automatisch bepalen als de invoer leeg is
+            if (invoerLeeg)
+                return BepaalPlaatWapening(asRequired, wap);
+
+            var huidig = ParseWapeningTekst(huidigeTekst);
+            double asHuidig = huidig.HasValue
+                ? BerekenAsPlaatWapeningPublic(huidig.Value.diameter, huidig.Value.hoh, wap.ReferentieLengte)
+                : 0;
+
+            switch (instelling)
+            {
+                case WapeningAfhandelingEnum.Gebruiker:
+                    // Geen aanpassing – retourneer invoer ongewijzigd
+                    return (huidigeTekst!, asHuidig);
+
+                case WapeningAfhandelingEnum.AlleenVerhogen:
+                    // Alleen verhogen als onvoldoende
+                    if (asHuidig >= asRequired)
+                        return (huidigeTekst!, asHuidig);
+                    return BepaalPlaatWapening(asRequired, wap);
+
+                case WapeningAfhandelingEnum.Optimaliseer:
+                default:
+                    // Altijd optimaal herberekenen (kan ook verlagen)
+                    return BepaalPlaatWapening(asRequired, wap);
+            }
+        }
+
+        /// <summary>
+        /// Publieke wrapper voor het berekenen van As uit diameter en hoh (per meter breedte).
+        /// </summary>
+        public static double BerekenAsPlaatWapeningPublic(double diameter, double hoh, double breedte = 1000)
+            => BerekenAsPlaatWapening(diameter, hoh, breedte);
 
         public static (string tekst, double asProvided) BepaalPlaatWapening(double asRequired, WapeningContext wap)
         {

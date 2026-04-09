@@ -1,0 +1,125 @@
+@using Construct.Domain.Entities.Parts
+@using Eurocode.BetonConstructies
+
+<KaskonInputContainer Label="brandwerendheid REI">
+    <div class="form-control-text">
+        @if (Slab != null)
+        {
+            <span style="@ReiStyle">@ReiLabel</span>
+        }
+        <FluentButton Appearance="Appearance.Stealth"
+                      Title="Toon NEN-EN 1992-1-2 Tabel 5.8"
+                      OnClick="OpenPopup"
+                      IconStart="@(new Icons.Regular.Size28.MoreHorizontal())">
+        </FluentButton>
+    </div>
+</KaskonInputContainer>
+
+@if (!_hidden && Slab != null)
+{
+    var h = Slab.Dikte;
+    var a = Slab.PlaatWapening?.Onder?.BasisWapening?.ReferentieAfstand ?? 0;
+    var rei = Slab.Rei;
+    var nextRow = PlaatBrandwerendheid.Tabel.FirstOrDefault(r => r.Rei > rei);
+
+    <div class="modal-backdrop custom-blur" @onclick="@(() => _hidden = true)">
+        <div class="modal-content-base modal-content-wide" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Brandwerendheid — NEN-EN 1992-1-2:2004, Tabel 5.8</h3>
+                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="@(() => _hidden = true)">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 0.75rem;">
+                    Vrijdragende massieve plaat in 1 richting.<br />
+                    <i>h</i> = <strong>@h.ToString("0") mm</strong> &nbsp;|&nbsp;
+                    <i>a</i> = <strong>@a.ToString("0.#") mm</strong>
+                    <small style="color: var(--neutral-foreground-hint);">(hartafstand onderwapening)</small>
+                </p>
+
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                    <thead>
+                        <tr style="background: var(--neutral-layer-3); border-bottom: 2px solid var(--neutral-stroke-divider);">
+                            <th style="padding: 0.4rem 0.8rem; text-align: left;">REI (min)</th>
+                            <th style="padding: 0.4rem 0.8rem; text-align: right;"><i>h</i><sub>s,min</sub> (mm)</th>
+                            <th style="padding: 0.4rem 0.8rem; text-align: right;"><i>a</i><sub>min</sub> (mm)</th>
+                            <th style="padding: 0.4rem 0.8rem; text-align: center;"><i>h</i></th>
+                            <th style="padding: 0.4rem 0.8rem; text-align: center;"><i>a</i></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in PlaatBrandwerendheid.Tabel)
+                        {
+                            var isAchieved = row.Rei == rei;
+                            var hOk = h >= row.HsMin;
+                            var aOk = a >= row.AMin;
+                            var rowStyle = isAchieved ? "background: var(--accent-fill-rest); color: white;" : "";
+                            <tr style="border-bottom: 1px solid var(--neutral-stroke-divider); @rowStyle">
+                                <td style="padding: 0.4rem 0.8rem; font-weight: @(isAchieved ? "bold" : "normal");">
+                                    REI @row.Rei
+                                </td>
+                                <td style="padding: 0.4rem 0.8rem; text-align: right;">@row.HsMin.ToString("0")</td>
+                                <td style="padding: 0.4rem 0.8rem; text-align: right;">@row.AMin.ToString("0")</td>
+                                <td style="padding: 0.4rem 0.8rem; text-align: center;">@(hOk ? "✓" : "✗")</td>
+                                <td style="padding: 0.4rem 0.8rem; text-align: center;">@(aOk ? "✓" : "✗")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 1rem;">
+                    @if (rei == 0)
+                    {
+                        <p style="color: var(--error);">❌ Plaat voldoet niet aan REI 30. Vergroot de plaatdikte of verklein de betondekking.</p>
+                    }
+                    else
+                    {
+                        <p>Bereikt: <strong>REI @rei min</strong></p>
+                        @if (nextRow.Rei > 0)
+                        {
+                            var aNeeded = Slab.GetAfstandBenodigdVoorREI(nextRow.Rei);                            <p style="color: var(--neutral-foreground-hint); font-size: 0.85em;">
+                                Volgende klasse REI @nextRow.Rei: benodigd <i>h</i> ≥ @nextRow.HsMin.ToString("0") mm
+                                @if (double.IsNaN(aNeeded))
+                                {
+                                    <span>— plaatdikte onvoldoende</span>
+                                }
+                                else
+                                {
+                                    <span> en <i>a</i> ≥ @aNeeded.ToString("0") mm</span>
+                                }
+                            </p>
+                        }
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" @onclick="@(() => _hidden = true)">Sluiten</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public SlabPart? Slab { get; set; }
+
+    private bool _hidden = true;
+
+    private void OpenPopup()
+    {
+        Slab?.UpdateRei();
+        _hidden = false;
+    }
+
+    private string ReiLabel => Slab?.Rei switch
+    {
+        null or 0 => "❌ geen brandwerendheid",
+        30 => "⚠️ REI 30 min",
+        var r => $"🔥 REI {r} min"
+    };
+
+    private string ReiStyle => Slab?.Rei switch
+    {
+        null or 0 => "color: var(--error);",
+        30 => "color: orange;",
+        _ => ""
+    };
+}

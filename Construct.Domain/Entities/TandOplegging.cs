@@ -159,6 +159,32 @@ namespace Construct.Domain.Entities
 
 
         public double HalsDikte { get; set; } = 100;
+
+        /// <summary>
+        /// Opgave halsdikte door de gebruiker. Als gevuld, wordt HalsDikte direct op deze waarde gezet.
+        /// Kan niet tegelijk met <see cref="BovensteAantredeLengteOpgave"/> worden opgegeven.
+        /// </summary>
+        public double? HalsDikteOpgave { get; set; } = null;
+
+        /// <summary>
+        /// Opgave lengte bovenste aantrede door de gebruiker. HalsDikte = Opgave - TandLengte.
+        /// Kan niet tegelijk met <see cref="HalsDikteOpgave"/> worden opgegeven.
+        /// </summary>
+        public double? BovensteAantredeLengteOpgave { get; set; } = null;
+
+        /// <summary>
+        /// Berekent de effectieve halsdikte op basis van de ingestelde opgaveoptie:
+        /// 1. HalsDikteOpgave gezet → gebruik direct.
+        /// 2. BovensteAantredeLengteOpgave gezet → halsdikte = opgave − tandlengte.
+        /// 3. Standaard → halsdikte = aantredeMaat − tandlengte.
+        /// </summary>
+        public double BerekenHalsDikte(double aantredeMaat)
+        {
+            //if (HalsDikteOpgave.HasValue) return HalsDikteOpgave.Value;
+            //if (BovensteAantredeLengteOpgave.HasValue) return BovensteAantredeLengteOpgave.Value - TandLengte;
+            return aantredeMaat - TandLengte;
+        }
+
         public double DekkingAlgemeen { get; set; } = 30;
         public double StaafDiameterAlgemeen { get; set; } = 8;
         public double DikteOplegmateriaal { get; set; } = 10;
@@ -350,7 +376,7 @@ namespace Construct.Domain.Entities
         {
             get
             {
-                if (Oplegging.IsValidated)
+                if (OplegLengteAkkoord)
                 {
                     return $"Aanwezig opleglengte ({Oplegging.OplegLengteNettoAanwezig:0} mm) is groter dan nominale opleglengte ({Oplegging.OplegLengteNominaal:0} mm), akkoord";
                 }
@@ -470,7 +496,7 @@ namespace Construct.Domain.Entities
             {
                 // ✅ Voor SteekTrapEntity: gebruik steektrap krachten
                 Oplegging.BerekenOplegReactieRekenwaarde = () => steektrap.Krachten.VEd;
-                Oplegging.BerekenLengteOndersteundeElement = () => steektrap.LengteTotaal;
+                Oplegging.BerekenLengteOndersteundeElement = () => steektrap.LtProjZ;
                 Oplegging.BetonOndersteundeElement = beton ?? new();
 
                 Oplegging.OplegLengteNettoAanwezig = steektrap.TandOpleggingBovenzijde?.TandLengte ?? 50;
@@ -496,10 +522,10 @@ namespace Construct.Domain.Entities
                     double trap2Lengte = 0;
                     
                     if (bordes.Trap1?.AansluitendElement is SteekTrapEntity trap1)
-                        trap1Lengte = trap1.LengteTotaal;
+                        trap1Lengte = trap1.LtProjZ;
                     
                     if (bordes.Trap2?.AansluitendElement is SteekTrapEntity trap2)
-                        trap2Lengte = trap2.LengteTotaal;
+                        trap2Lengte = trap2.LtProjZ;
                     
                     return Math.Max(trap1Lengte, trap2Lengte);
                 };

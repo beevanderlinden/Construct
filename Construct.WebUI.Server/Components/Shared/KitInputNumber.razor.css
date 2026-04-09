@@ -10,6 +10,15 @@
         border-bottom-right-radius: 0;
     }
 
+        .kit-input-group input[type="number"]:not(:disabled) {
+            background-color: var(--control-bg, white);
+        }
+
+    .kit-input-group input[type="number"]:not(:disabled)::-webkit-inner-spin-button,
+    .kit-input-group input[type="number"]:not(:disabled)::-webkit-outer-spin-button {
+        background-color: var(--control-bg, white);
+    }
+
     .kit-input-group .kit-input-addon {
         display: flex;
         align-items: center;
@@ -25,4 +34,28 @@
 
     .kit-input-unit{
         border: none;
+    }
+
+    .kit-input-group input[type="number"]:disabled::-webkit-inner-spin-button,
+    .kit-input-group input[type="number"]:disabled::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        appearance: none;
+        margin: 0;
+    }
+
+    .kit-input-group input[type="number"]:disabled {
+        -moz-appearance: textfield;
+        background-color: transparent;
+    }
+
+    /* Hide spin buttons on demand */
+    .kit-input-group input.no-spin::-webkit-inner-spin-button,
+    .kit-input-group input.no-spin::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        appearance: none;
+        margin: 0;
+    }
+
+    .kit-input-group input.no-spin {
+        -moz-appearance: textfield;
     }

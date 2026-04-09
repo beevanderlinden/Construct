@@ -41,6 +41,12 @@ namespace Construct.WebUI.Server.Shared.ViewModels
             Gevolgklasse = GevolgklasseEnum.CC2
         };
 
+        /// <summary>
+        /// Minimale brandwerendheid in minuten voor alle vloeren in het project (REI).
+        /// Waarde 0 = geen eis.
+        /// </summary>
+        public int MinimaleREI { get; set; } = 0;
+
 
 
 

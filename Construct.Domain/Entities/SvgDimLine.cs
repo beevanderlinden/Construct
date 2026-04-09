@@ -41,6 +41,8 @@ namespace Construct.Domain.Entities
         public bool ShowExtensionLines { get; set; } = true;
         public string StringFormat { get; set; } = "0";
 
+        private double _length;
+
         public string DisplayValue
         {
             get
@@ -48,7 +50,7 @@ namespace Construct.Domain.Entities
                 if (!string.IsNullOrWhiteSpace(Text))
                     return Text;
 
-                double length = Mode switch
+                _length = Mode switch
                 {
                     DimLineMode.Aligned => Math.Sqrt((X2 - X1) * (X2 - X1) + (Y2 - Y1) * (Y2 - Y1)),
                     DimLineMode.Horizontal => Math.Abs(X2 - X1),
@@ -56,7 +58,7 @@ namespace Construct.Domain.Entities
                     _ => 0
                 };
 
-                return length.ToString(StringFormat);
+                return _length.ToString(StringFormat);
             }
         }
 
@@ -253,6 +255,9 @@ namespace Construct.Domain.Entities
         /// </summary>
         public string Render(double scale)
         {
+            
+            
+
             var sb = new StringBuilder();
             sb.AppendLine("<g>");
     
@@ -331,6 +336,9 @@ namespace Construct.Domain.Entities
             }
 
             sb.AppendLine("</g>");
+
+            if (_length == 0) return "";
+
             return sb.ToString();
         }
 
@@ -416,8 +424,18 @@ namespace Construct.Domain.Entities
 
         public override BoundingBox GetBoundingBox()
         {
-            return new BoundingBox() { };
-            throw new NotImplementedException();
+            var bb = new BoundingBox();
+
+            // Originele meetpunten (aanhechtingspunten van de hulplijnen)
+            bb.Add(X1, Y1);
+            bb.Add(X2, Y2);
+
+            // Offsetpunten (waar de eigenlijke maatlijn ligt)
+            var (x1o, y1o, x2o, y2o, _) = GetOffsetPoints(12, 1.5, Scale);
+            bb.Add(x1o, y1o);
+            bb.Add(x2o, y2o);
+
+            return bb;
         }
     }
 

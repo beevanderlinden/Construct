@@ -1,5 +1,6 @@
 ﻿:root {
     --line-height: 4mm;
+    --control-bg: #dededed;
     --padding-table-cell: 1mm; /* zodat we zonder rand netjes tekst uitgelijnd hebben */
     --margin-table-left: -1mm; /* mogelijk gebruiken om tabelrand in de marge te tekenen, door negatieve waarde*/
     --border-width-table: 0.1mm; /* standaard tabelrand dikte */
@@ -9,10 +10,20 @@
     --page-padding-bottom: 10mm; /* pagina marge onder */
     --accent-doc: var(--accent-fill-rest); /* kleur voor accenten in document */
     --accent: #006a6a;
-    --head-bg: rgba(0,106,106,0.10);
-    --foot-bg: rgba(0,106,106,0.18);
+    --head-bg: color-mix(in srgb, var(--accent) 5%, transparent);
+    --foot-bg: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
+body[data-theme="dark"] {
+    --control-bg: black;
+}
+
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --control-bg: black;
+    }
+}
 
 i {
     font-family: "Cambria Math", Cambria, serif;
@@ -733,7 +744,7 @@ input[type="number"]::-webkit-outer-spin-button {
     --svg-text-color: darkblue;
     --svg-line-color: black;
     --svg-fill-color: gray;
-    --accent: #006a6a;
+    --accent: #000080;
 
 
 }
@@ -783,13 +794,25 @@ svg.has-warning line{
 }
 
 
-    .preview-container svg * {
+    .preview-container svg:not(.no-theme-adapt) * {
         /*fill: var(--svg-fill-color);*/ /* standaardkleur voor alles (vlakken, lijnen) */
         stroke: var(--svg-line-color); /* standaard lijntint */
     }
 
+    /* ✅ Dark mode: witte SVG-elementen zichtbaar maken op lichte preview-achtergrond.
+       Gebruik class="no-theme-adapt" op SVGs die eigen kleuren moeten behouden (bv. logo's). */
+    @media (prefers-color-scheme: dark) {
+        .preview-container svg:not(.no-theme-adapt) *[stroke="white"] {
+            stroke: #333 !important;
+        }
+
+        .preview-container svg:not(.no-theme-adapt) *[fill="white"] {
+            fill: #f0f0f0 !important;
+        }
+    }
+
     /* tekst apart behandelen */
-    .preview-container svg text {
+    .preview-container svg:not(.no-theme-adapt) text {
         /*fill: var(--svg-text-color);*/ /* tekstkleur (anders dan de rest) */
         stroke: none; /* voorkomt omlijning rond letters */
     }
@@ -960,31 +983,31 @@ svg.has-warning line{
     }
 
     /* ✅ BOEKJE EFFECT: Eerste pagina (cover) blijft wit */
-    .preview-container .ec-panel:first-child {
+    /*.preview-container .ec-panel:first-child {
         background: white;
-    }
+    }*/
 
     /* ✅ LINKERPAGINA's van elk boekje (eerste kind in wrapper) - binding aan RECHTERKANT */
-    .boekje-wrapper .ec-panel:nth-child(1) {
+    /*.boekje-wrapper .ec-panel:nth-child(1) {
         background: linear-gradient(
             to left,
-            #d8d8d8 0%,      /* Rechterrand donkerder (binding aan binnenkant) */
-            #e8e8e8 5%,      /* Snelle overgang */
-            #f5f5f5 15%,     /* Naar lichtgrijs */
-            #ffffff 30%      /* Rest volledig wit */
-        );
-    }
+            #d8d8d8 0%,*/      /* Rechterrand donkerder (binding aan binnenkant) */
+            /*#e8e8e8 5%,*/      /* Snelle overgang */
+            /*#f5f5f5 15%,*/     /* Naar lichtgrijs */
+            /*#ffffff 30%*/      /* Rest volledig wit */
+        /*);
+    }*/
 
     /* ✅ RECHTERPAGINA's van elk boekje (tweede kind in wrapper) - binding aan LINKERKANT */
-    .boekje-wrapper .ec-panel:nth-child(2) {
+    /*.boekje-wrapper .ec-panel:nth-child(2) {
         background: linear-gradient(
             to right,
-            #d8d8d8 0%,      /* Linkerrand donkerder (binding aan binnenkant) */
-            #e8e8e8 5%,      /* Snelle overgang */
-            #f5f5f5 15%,     /* Naar lichtgrijs */
-            #ffffff 30%      /* Rest volledig wit */
-        );
-    }
+            #d8d8d8 0%,*/      /* Linkerrand donkerder (binding aan binnenkant) */
+            /*#e8e8e8 5%,*/      /* Snelle overgang */
+            /*#f5f5f5 15%,*/     /* Naar lichtgrijs */
+            /*#ffffff 30%*/      /* Rest volledig wit */
+        /*);
+    }*/
 
 .ec-panel {
     width: 210mm;
@@ -1036,6 +1059,12 @@ svg.has-warning line{
 
     .ec-header .right {
         text-align: right;
+    }
+
+    /* ✅ Header logo: kleur gelijk aan headertekst, lijndikte nul */
+    .ec-header .left svg.header-logo * {
+        fill: var(--accent) !important;
+        stroke: none !important;
     }
 
 .ec-footer {
@@ -1841,3 +1870,10 @@ a.bookmark-link:hover {
     }
 
 
+
+/* KitInputNumber: dark mode override via FluentUI body[data-theme] */
+body[data-theme="dark"] .kit-input-group input[type="number"]:not(:disabled),
+body[data-theme="dark"] .kit-input-group input[type="number"]:not(:disabled)::-webkit-inner-spin-button,
+body[data-theme="dark"] .kit-input-group input[type="number"]:not(:disabled)::-webkit-outer-spin-button {
+    background-color: black;
+}

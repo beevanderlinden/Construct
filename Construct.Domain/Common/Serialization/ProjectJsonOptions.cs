@@ -30,6 +30,7 @@ namespace Construct.Domain
                 WriteIndented = true,
                 Converters =
                 {
+                    new BaseMateriaalJsonConverter(),    // ✅ Polymorphic converter voor BaseMateriaal (Beton/Staal/Hout)
                     new MaterialenDictionaryConverter(),  // ✅ NIEUW: Custom converter voor Dictionary<Guid, BaseMateriaal>
                     new BelastingCombinatieItemConverter(),  // ✅ NIEUW: Custom converter om circular references te voorkomen
                     new JsonStringEnumConverter()  // ✅ Serialiseer enums als strings
@@ -81,6 +82,7 @@ namespace Construct.Domain
                 PropertyNameCaseInsensitive = true,  // ✅ NIEUW: Zorg voor case-insensitive deserialisatie
                 Converters =
                 {
+                    new BaseMateriaalJsonConverter(),    // ✅ Polymorphic converter voor BaseMateriaal (Beton/Staal/Hout)
                     new MaterialenDictionaryConverter(),  // ✅ NIEUW: Custom converter voor Dictionary<Guid, BaseMateriaal>
                     new BelastingCombinatieItemConverter(),  // ✅ NIEUW: Custom converter om circular references te voorkomen
                     new JsonStringEnumConverter()  // ✅ Serialiseer enums als strings

@@ -600,14 +600,14 @@ public static class BeamResultsHelper
         // Headers
         table.Headers =
         [
-            new(new("type", width)),
+            new(new("materiaal", width)),
             new(new("kwaliteit", width)),
             new(new("E-modulus [N/mm²]", width)),
             new(new("s.g. [kg/m³]", width))
         ];
 
         // Rijen
-        foreach (var m in materialen ?? Enumerable.Empty<BaseMateriaal>())
+        foreach (var m in materialen ?? Enumerable.Empty<BaseMateriaal>().Where(m=>m is not null))
         {
             table.Rows.Add([
                 new(m.Type.ToString(), width),
@@ -648,7 +648,7 @@ public static class BeamResultsHelper
         ];
 
         // Rijen
-        foreach (var staal in staalMaterialen ?? Enumerable.Empty<StaalContext>())
+        foreach (var staal in (staalMaterialen ?? Enumerable.Empty<StaalContext>()).Where(m => m is not null))
         {
             table.Rows.Add([
                 new(staal.Type.ToString(), width),
@@ -692,7 +692,7 @@ public static class BeamResultsHelper
         ];
 
         // Rijen
-        foreach (var hout in houtMaterialen ?? Enumerable.Empty<HoutContext>())
+        foreach (var hout in (houtMaterialen ?? Enumerable.Empty<HoutContext>()).Where(m => m is not null))
         {
             table.Rows.Add([
                 new(hout.Type.ToString(), width),
@@ -736,7 +736,7 @@ public static class BeamResultsHelper
         ];
 
         // Rijen
-        foreach (var beton in betonMaterialen ?? Enumerable.Empty<BetonContext>())
+        foreach (var beton in (betonMaterialen ?? Enumerable.Empty<BetonContext>()).Where(m => m is not null))
         {
             table.Rows.Add([
                 new(beton.Type.ToString(), width),

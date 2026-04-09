@@ -2,6 +2,7 @@
 using CommonLibrary.Models;
 using Eurocode.HoutConstructies;
 using Eurocode.StaalConstructies;
+using Kaskon.Toolbox.PrefabModels;
 using Mechanica.LiggerSB;
 using Profielen.Staal;
 using System.Text.Json.Serialization;
@@ -11,6 +12,26 @@ using System.Text.Json.Serialization;
 
 namespace Construct.Domain.Entities
 {
+    public class VrijRolEntity : AssemblageEntity
+    {
+        // test voor vrij opgegelde ligger (met rol aan einde)
+        // geen combinaties
+        // geen gevallen
+        // alleen maar een lijnlast en/of puntlast
+        // 1 profiel
+        // 1 materiaal
+        // resultaten: V, M, θ en w op verschillende posities (max moment, max doorbuiging, etc.)
+
+        VgmVrijLijnlast Vgm { get; set; } = new(10, 2, 1, 1);
+
+
+
+
+
+
+    }
+
+
     public class LiggerEntity : AssemblageEntity
     {
         public LiggerEntity()
@@ -22,13 +43,10 @@ namespace Construct.Domain.Entities
             
             this.Naam = "stalen ligger";
             this.Merk = "SL-?";
-            
-            
-            Profiel = new Profielen.Staal.ProfielIH(Doorsneden.HEA200)
-            {
-                //Materiaal = this.Materiaal // geef het materiaal (ref) door van de ligger
-            };
 
+
+            Profiel = new ProfielIH(Doorsneden.HEA200);
+            
             // Let op! belastingcombinatie-generator moet nog worden aangezet
             this.Belastingen.GenereerBelastingCombinaties(
                 this.Belastingen, 

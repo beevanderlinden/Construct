@@ -42,7 +42,7 @@ namespace Construct.Domain.Entities
             foreach (var kvp in Attributes)
                 sb.Append($" {kvp.Key}=\"{kvp.Value}\"");
 
-            sb.Append(">");
+            sb.Append('>');
 
             // Render alle definities
             foreach (var child in Children)

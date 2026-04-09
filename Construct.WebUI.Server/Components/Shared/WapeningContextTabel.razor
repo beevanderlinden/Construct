@@ -13,6 +13,7 @@ else
                     <th>Positie</th>
                     <th>c [mm]</th>
                     <th>Toegepast</th>
+                    <th>mm²</th>
                     <th>Ondergrens</th>
                 </tr>
             </thead>
@@ -24,8 +25,17 @@ else
                         <td>@currentItem.Label</td>
                         <td>@currentItem.Context?.DekkingToegepast</td>
                         <td>
-                            @currentItem.Context?.SanitizedTekst()
+                             <FluentTextField Value="@(currentItem.Context?.Tekst ?? string.Empty)" 
+                                           ValueChanged="@(v => OnTekstChanged(currentItem.Context, v))" 
+                                           Style="min-width: 120px;" 
+                                           Placeholder="nvt" />
+
+
                            
+                        </td>
+                        <td>
+                            @currentItem.Context?.As.ToString("0")
+
                         </td>
                         <td>
                             <FluentTextField Value="@(currentItem.Context?.TekstOndergrens ?? string.Empty)" 
@@ -167,6 +177,7 @@ else
         
         OnChanged.InvokeAsync();
     }
+   
 
     /// <summary>
     /// Hulpklasse voor tabelweergave van WapeningContext met label en dekking

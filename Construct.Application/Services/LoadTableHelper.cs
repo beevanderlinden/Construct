@@ -20,17 +20,16 @@ public static class LoadTableHelper
         var table = new TableContent
         {
             HideHeaders = false,
-            Title = title ?? ""
+            Title = title ?? "",
+            Headers =
+            [
+                new() { CellContent = new("naam") },
+                new() { CellContent = new("omschrijving") },
+                new() { CellContent = new("van - tot") },
+                new() { CellContent = new("waarde") },
+                new() { CellContent = new("eenheid") },
+            ]
         };
-
-        table.Headers =
-        [
-            new() { CellContent = new("naam") },
-            new() { CellContent = new("omschrijving") },
-            new() { CellContent = new("van - tot") },
-            new() { CellContent = new("waarde") },
-            new() { CellContent = new("eenheid") },
-        ];
 
         foreach (var l in loads)
         {

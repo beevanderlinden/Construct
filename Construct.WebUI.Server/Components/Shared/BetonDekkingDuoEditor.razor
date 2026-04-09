@@ -343,7 +343,7 @@
                 </FluentButton>
             </div>
         }
-    )
+    
     </div>
 }
 else
@@ -448,6 +448,24 @@ else
         // Bereken bij elke parameter update
         DekkingBoven?.BerekenEnValideer();
         DekkingOnder?.BerekenEnValideer();
+    }
+
+    protected override void OnInitialized()
+    {
+        _dekkingGelijk = AreGelijk(DekkingBoven, DekkingOnder);
+    }
+
+    private static bool AreGelijk(BetonDekkingContext? a, BetonDekkingContext? b)
+    {
+        if (a is null && b is null) return true;
+        if (a is null || b is null) return false;
+        return a.DekkingToe == b.DekkingToe
+            && a.IsKwaliteitsBeheersing == b.IsKwaliteitsBeheersing
+            && a.IsPlaatGeometrie == b.IsPlaatGeometrie
+            && a.GrootsteKorrelDiameter == b.GrootsteKorrelDiameter
+            && a.WapeningDiameterGelijkwaardig == b.WapeningDiameterGelijkwaardig
+            && (a.SelectedMilieuklassen ?? []).OrderBy(x => x)
+                   .SequenceEqual((b.SelectedMilieuklassen ?? []).OrderBy(x => x));
     }
 
     // Wrapper method voor EventCallback

@@ -18,8 +18,8 @@
         <tr><td>Betonsterkteklasse</td>        <td>@Model.Materiaal?.UserFriendlyName</td></tr>
         <tr><td>Betonstaal</td>                <td>@_betonstaal.BetonStaalKwaliteit</td></tr>
         <tr><td>Milieuklasse</td>              <td>@Model?.DekkingBoven?.MilieuklassenUserFriendlyName</td></tr>
-        <tr><td>Dekking c<sub>nom</sub></td>   <td>@Model.DekkingBoven.DekkingNom.ToString("0 mm")</td></tr>
-        <tr><td>Dekking c<sub>prov</sub></td>  <td>@Model.DekkingBoven.DekkingToe.ToString("0 mm")</td></tr>
+        <tr><td>Dekking c<sub>nom</sub></td>   <td>@Model?.DekkingBoven?.DekkingNom.ToString("0 mm")</td></tr>
+        <tr><td>Dekking c<sub>prov</sub></td>  <td>@Model?.DekkingBoven?.DekkingToe.ToString("0 mm")</td></tr>
     </tbody>
 </table>
 
@@ -35,8 +35,8 @@
         
         <tr><td>Breedte</td><td>@Model.Breedte.ToString("0 mm")</td></tr>
         
-        <tr><td>L<sub>t</sub> grondvlak</td><td>@Model.LengteTotaal.ToString("0 mm")</td></tr>
-        <tr><td>Belasting afwerking</td><td>@Model.BelastingAfwerking.ToString("0.# kN/m²")</td></tr>
+        <tr><td>L<sub>t</sub> grondvlak</td><td>@Model.LtProjZ.ToString("0 mm")</td></tr>
+        <tr><td>Belasting afwerking</td><td>@Model.AfwerkingVlaklast.ToString("0.# kN/m²")</td></tr>
 
 
         @if (Model.TandOpleggingBovenzijde != null)
