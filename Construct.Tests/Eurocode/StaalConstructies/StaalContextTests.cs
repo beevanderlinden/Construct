@@ -129,7 +129,7 @@ public class StaalContextTests
         double I = profiel.Iy * 1e-12; // m⁴
         double EI = E * I;             // kN·m²
 
-        var vmn = new VgmVrijLijnlast(q, L, E, I);
+        var vmn = new VmnVrijLijnlast(q, L, E, I);
 
         // ── Punt A (x = 0) ───────────────────────────────────────────────────
         vmn.PuntA.V.Should().BeApproximately(q * L / 2.0, 0.001);                               // RA = 40 kN
@@ -166,7 +166,7 @@ public class StaalContextTests
         double I = profiel.Iy * 1e-12; // m⁴
         double EI = E * I;             // kN·m²
 
-        var vmn = new VgmInklemmingLijnlast(q, L, E, I);
+        var vmn = new VmnInklemmingLijnlast(q, L, E, I);
 
         // ── Punt A (x = 0) — inklemming ──────────────────────────────────────
         vmn.PuntA.V.Should().BeApproximately(q * L, 0.001);                                 // RA = 40 kN
@@ -204,7 +204,7 @@ public class StaalContextTests
         double I = profiel.Iy * 1e-12; // m⁴
         double EI = E * I;             // kN·m²
 
-        var vmn = new VgmVrijPuntlast(p, a, L, E, I);
+        var vmn = new VmnVrijPuntlast(p, a, L, E, I);
 
         // ── Punt A (x = 0) ───────────────────────────────────────────────────
         vmn.PuntA.V.Should().BeApproximately(p / 2.0, 0.001);                  // RA = 10 kN

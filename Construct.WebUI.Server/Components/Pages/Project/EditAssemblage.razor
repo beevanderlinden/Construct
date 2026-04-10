@@ -70,6 +70,15 @@
                                 {
                                     <Construct.WebUI.Server.Components.Beam.BeemLoadCases Beam="ligger.Beam"/>
                                 }
+                                else if (Model is VrijRolEntity vrijRol)
+                                {
+                                    <p>Dit is puur voor demonstratie.</p>
+                                    <EditVgmGeometrie Vmn="@vrijRol.ForgetMeNot" />
+
+                                    <p>Test ^--^</p>
+                                    <EditVgmGeometrie Vmn="@vrijRol.VmnVrijRol" />
+
+                                }
 
 
                             </Content>

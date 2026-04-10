@@ -22,9 +22,18 @@ namespace Construct.Domain.Entities
         // 1 materiaal
         // resultaten: V, M, θ en w op verschillende posities (max moment, max doorbuiging, etc.)
 
-        VgmVrijLijnlast Vgm { get; set; } = new(10, 2, 1, 1);
+        public VmnVrijLijnlast ForgetMeNot { get; set; } = new(10, 5.0, 210e6, 5700e-8);
 
+        public VmnVrij VmnVrijRol { get; set; } = new(5.0, 210e6, 5700e-8)
+        {
+           
+        };
 
+        public VrijRolEntity()
+        {
+            VmnVrijRol.VoegLijnlastToe(-10);
+            VmnVrijRol.VoegPuntlastToe(-20, 1.0);
+        }
 
 
 

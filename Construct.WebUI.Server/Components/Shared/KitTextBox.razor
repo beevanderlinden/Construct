@@ -1,0 +1,35 @@
+<div class="kit-field">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <span class="kit-field-label">@((MarkupString)Label)</span>
+    }
+    <input type="text"
+           value="@Value"
+           @onchange="OnChange"
+           placeholder="@Placeholder"
+           disabled="@Disabled" />
+    @if (!string.IsNullOrEmpty(_validationMessage))
+    {
+        <div class="text-danger kit-field-error">@_validationMessage</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public EventCallback OnValueChanged { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+
+    private string? _validationMessage;
+
+    private async Task OnChange(ChangeEventArgs e)
+    {
+        _validationMessage = null;
+        var val = e.Value?.ToString();
+        await ValueChanged.InvokeAsync(val);
+        if (OnValueChanged.HasDelegate)
+            await OnValueChanged.InvokeAsync();
+    }
+}

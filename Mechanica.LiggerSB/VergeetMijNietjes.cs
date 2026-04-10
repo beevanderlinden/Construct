@@ -35,53 +35,10 @@ namespace Mechanica.LiggerSB
 
     }
 
-    public abstract class VergeetMijNietje : IVergeetMijNietje
+
+    public class VmnInklemmingLijnlast : VergeetMijNietje
     {
-        public double L { get; set; }
-        public double E { get; set; }
-        public double I { get; set; }
-        public double RA { get; set; }
-        public double RB { get; set; }
-
-        // vaste punten
-        public VmnResult PuntA => new (0, this);
-        public VmnResult PuntB => new (L, this);
-        public VmnResult PuntC => new (L / 2, this);
-
-        // berekeningen (abstract, per vergeet-mij-nietje verschillend)
-        public abstract double GetM(double x);
-        public abstract double GetTheta(double x);
-        public abstract double GetV(double x);
-        public abstract double GetW(double x);
-
-        // controle voor x (voor alle vergeet-mij-nietjes gelijk)
-        public void CheckPosX(double x)
-        {
-            if (x < 0 || x > L)
-                throw new ArgumentOutOfRangeException(nameof(x), "x moet tussen 0 en L liggen.");
-        }
-
-        public abstract double GetRA();
-        public abstract double GetRB();
-        public abstract void Init();
-    }
-
-    public interface IVergeetMijNietje
-    {
-        double GetRA();
-        double GetRB();
-        double GetV(double x);
-        double GetM(double x);
-        double GetTheta(double x);  
-        double GetW(double x);
-        void CheckPosX(double x);
-        public void Init();
-    }
-
-
-    public class VgmInklemmingLijnlast : VergeetMijNietje
-    {
-        public VgmInklemmingLijnlast(double q, double l, double e, double i)
+        public VmnInklemmingLijnlast(double q, double l, double e, double i)
         {
             Q = q;
             L = l;
@@ -129,9 +86,9 @@ namespace Mechanica.LiggerSB
 
 
 
-    public class VgmVrijPuntlast : VergeetMijNietje
+    public class VmnVrijPuntlast : VergeetMijNietje
     {
-        public VgmVrijPuntlast(double p, double a, double l, double e, double i)
+        public VmnVrijPuntlast(double p, double a, double l, double e, double i)
         {
             P = p;
             A = a;
@@ -199,9 +156,9 @@ namespace Mechanica.LiggerSB
     /// <summary>
     /// Voor standaard controleberekeningen aan de hand van de berekende doorsnede-eigenschappen en krachten.
     /// </summary>
-    public class VgmVrijLijnlast : VergeetMijNietje
+    public class VmnVrijLijnlast : VergeetMijNietje
     {
-        public VgmVrijLijnlast(double q, double l, double e, double i)
+        public VmnVrijLijnlast(double q, double l, double e, double i)
         {
             Q = q;
             L = l;
@@ -220,36 +177,36 @@ namespace Mechanica.LiggerSB
         public override double GetV(double x)
         {
             CheckPosX(x);
-            return RA - Q * x;
+            return RA + Q * x;
         }
                     
 
         public override double GetM(double x)
         {
             CheckPosX(x);
-            return RA * x - Q * Math.Pow(x, 2) / 2.0;
+            return (RA * x + Q * Math.Pow(x, 2) / 2.0) * -1;
         }
 
         public override double GetTheta(double x)
         {
             CheckPosX(x);
-            return Q / (24 * E * I) * (6 * L * Math.Pow(x, 2) - 4 * Math.Pow(x, 3) - Math.Pow(L, 3));
+            return -Q / (24 * E * I) * (6 * L * Math.Pow(x, 2) - 4 * Math.Pow(x, 3) - Math.Pow(L, 3));
         }
 
         public override double GetW(double x)
         {
             CheckPosX(x);
-            return Q / (24 * E * I) * (2 * L * Math.Pow(x, 3) - Math.Pow(x, 4) - Math.Pow(L, 3) * x);
+            return -Q / (24 * E * I) * (2 * L * Math.Pow(x, 3) - Math.Pow(x, 4) - Math.Pow(L, 3) * x);
         }
 
         public override double GetRA()
         {
-            return Q * L / 2.0;
+            return -Q * L / 2.0;
         }
 
         public override double GetRB()
         {
-            return Q * L / 2.0;
+            return -Q * L / 2.0;
         }
 
         public override void Init()
@@ -269,11 +226,11 @@ namespace Mechanica.LiggerSB
     ///               .VoegLijnlastToe(10)
     ///               .VoegPuntlastToe(20, 4.0);
     /// </example>
-    public class VgmVrij : VergeetMijNietje
+    public class VmnVrij : VergeetMijNietje
     {
         private readonly List<VergeetMijNietje> _lasten = [];
 
-        public VgmVrij(double l, double e, double i)
+        public VmnVrij(double l, double e, double i)
         {
             L = l;
             E = e;
@@ -282,17 +239,17 @@ namespace Mechanica.LiggerSB
         }
 
         /// <summary>Voegt een verdeelde belasting q (kN/m) toe. Retourneert this voor fluent chaining.</summary>
-        public VgmVrij VoegLijnlastToe(double q)
+        public VmnVrij VoegLijnlastToe(double q)
         {
-            _lasten.Add(new VgmVrijLijnlast(q, L, E, I));
+            _lasten.Add(new VmnVrijLijnlast(q, L, E, I));
             Refresh();
             return this;
         }
 
         /// <summary>Voegt een puntlast p (kN) op positie a (m) toe. Retourneert this voor fluent chaining.</summary>
-        public VgmVrij VoegPuntlastToe(double p, double a)
+        public VmnVrij VoegPuntlastToe(double p, double a)
         {
-            _lasten.Add(new VgmVrijPuntlast(p, a, L, E, I));
+            _lasten.Add(new VmnVrijPuntlast(p, a, L, E, I));
             Refresh();
             return this;
         }

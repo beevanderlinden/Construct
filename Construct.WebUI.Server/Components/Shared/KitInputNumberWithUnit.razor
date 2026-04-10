@@ -1,0 +1,91 @@
+@typeparam T
+@using System.Globalization
+
+<div class="kit-field">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <span class="kit-field-label">@((MarkupString)Label)</span>
+    }
+    <div class="kit-input-group">
+        <input type="number"
+               class="@Class"
+               @bind="DisplayValueString"
+               step="@SelectedUnit.Step"
+               disabled="@(Disabled || DisabledInput)" />
+        <select class="kit-unit-select" value="@_selectedLabel" @onchange="OnUnitSelectChanged" disabled="@Disabled">
+            @foreach (var u in Units)
+            {
+                <option value="@u.Label">@u.Label</option>
+            }
+        </select>
+    </div>
+    @if (!string.IsNullOrEmpty(_validationMessage))
+    {
+        <div class="text-danger kit-field-error">@_validationMessage</div>
+    }
+</div>
+
+@code {
+    [Parameter] public T? Value { get; set; }
+    [Parameter] public EventCallback<T> ValueChanged { get; set; }
+    [Parameter] public EventCallback OnValueChanged { get; set; }
+    [Parameter] public IReadOnlyList<UnitOption> Units { get; set; } = [];
+    [Parameter] public string? DefaultUnit { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool DisabledInput { get; set; }
+    [Parameter] public string Class { get; set; } = "form-control";
+
+    private string _selectedLabel = string.Empty;
+    private string? _validationMessage;
+
+    private UnitOption SelectedUnit =>
+        Units.FirstOrDefault(u => u.Label == _selectedLabel)
+        ?? Units.FirstOrDefault()
+        ?? new UnitOption("–", 1.0);
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrEmpty(_selectedLabel) || !Units.Any(u => u.Label == _selectedLabel))
+            _selectedLabel = DefaultUnit ?? Units.FirstOrDefault()?.Label ?? string.Empty;
+    }
+
+    private string? DisplayValueString
+    {
+        get
+        {
+            if (Value == null) return null;
+            double model = Convert.ToDouble(Value);
+            double display = model * SelectedUnit.Factor;
+            return display.ToString(CultureInfo.InvariantCulture);
+        }
+        set
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                _validationMessage = null;
+                ValueChanged.InvokeAsync(default);
+                return;
+            }
+            if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double display))
+            {
+                double model = display / SelectedUnit.Factor;
+                _validationMessage = null;
+                var converted = (T)Convert.ChangeType(model, typeof(T));
+                ValueChanged.InvokeAsync(converted);
+                if (OnValueChanged.HasDelegate)
+                    OnValueChanged.InvokeAsync();
+            }
+            else
+            {
+                _validationMessage = "⚠️ Ongeldige waarde";
+            }
+        }
+    }
+
+    private void OnUnitSelectChanged(ChangeEventArgs e)
+    {
+        _selectedLabel = e.Value?.ToString() ?? _selectedLabel;
+        // Model value stays unchanged — display recalculates via DisplayValueString getter
+    }
+}

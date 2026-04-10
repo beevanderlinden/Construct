@@ -1,0 +1,135 @@
+@using Construct.Application.Services
+@using Mechanica.LiggerSB
+@using System.Globalization
+
+@if (Vmn != null)
+{
+    @* Gemeenschappelijke eigenschappen *@
+
+
+    <KitTextField Label="type" Value="@GetTypeNaam()" />
+
+
+    <KitInputNumberWithUnit T="double"
+                            Label="Lengte <i>L</i>"
+                            Value="@Vmn.L"
+                            ValueChanged="@(v => { Vmn.L = v; OnGeometryChanged(); })"
+                            Units="@UnitSets.Lengte"
+                            DefaultUnit="m" />
+
+
+   
+   
+        <KitInputNumberWithUnit T="double"
+                                Label="E-modulus <i>E</i>"
+                                Value="@Vmn.E"
+                                ValueChanged="@(v => { Vmn.E = v; OnGeometryChanged(); })"
+                                Units="@UnitSets.Elasticiteitsmodulus"
+                                DefaultUnit="N/mm²" />
+
+        <KitInputNumberWithUnit T="double"
+                                Label="I<sub>y</sub> traagheidsmoment"
+                                Value="@Vmn.I"
+                                ValueChanged="@(v => { Vmn.I = v; OnGeometryChanged(); })"
+                                Units="@UnitSets.Traagheid"
+                                DefaultUnit="cm⁴" />
+
+
+   
+
+    @* Type-specifieke invoer *@
+    @if (Vmn is VmnVrijLijnlast vrijLijn)
+    {
+        <KitInputNumberWithUnit T="double"
+                                Label="lijnlast <i>q</i>"
+                                Value="@vrijLijn.Q"
+                                ValueChanged="@(v => { vrijLijn.Q = v; OnGeometryChanged(); })"
+                                Units="@UnitSets.KrachtPerLengte"
+                                DefaultUnit="kN/m" />
+    }
+    else if (Vmn is VmnInklemmingLijnlast inklLijn)
+    {
+        <KaskonInputContainer Label="q">
+            <KitInputNumber T="double" Min="-500" Max="500" Step="0.5"
+                            @bind-Value="inklLijn.Q" Unit="kN/m" OnValueChanged="OnGeometryChanged" />
+        </KaskonInputContainer>
+    }
+    else if (Vmn is VmnVrijPuntlast vrijPunt)
+    {
+        <KaskonInputContainer Label="P">
+            <KitInputNumber T="double" Min="-500" Max="500" Step="0.5"
+                            @bind-Value="vrijPunt.P" Unit="kN" OnValueChanged="OnGeometryChanged" />
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="a">
+            <KitInputNumber T="double" Min="0" Max="@vrijPunt.L" Step="0.1"
+                            @bind-Value="vrijPunt.A" Unit="m" OnValueChanged="OnGeometryChanged" />
+        </KaskonInputContainer>
+    }
+    else if (Vmn is VmnVrij)
+    {
+        <KaskonInputContainer Label="belastingen">
+            <div class="form-control text-muted">superpositie — zie belastingen</div>
+        </KaskonInputContainer>
+    }
+
+    @* Reacties (berekend, alleen-lezen) *@
+    
+    <VgnDiagram Vmn="@Vmn" Type="VgnDiagramType.V" N="8" />
+    <VgnDiagram Vmn="@Vmn" Type="VgnDiagramType.M" N="16" />
+    <VgnDiagram Vmn="@Vmn" Type="VgnDiagramType.W" N="32" />
+
+        <KitInputNumberWithUnit T="double" Value="@Vmn.RA"
+                                Label="R<sub>A</sub>"
+                                Units="@UnitSets.Kracht" DefaultUnit="kN"
+                                DisabledInput="true" />
+
+        <KitInputNumberWithUnit T="double" Value="@Vmn.RB"
+                                Label="R<sub>B</sub>"
+                                Units="@UnitSets.Kracht" DefaultUnit="kN"
+                                DisabledInput="true" />
+
+        <KitInputNumberWithUnit T="double" Value="@Vmn.PuntC.M"
+                                Label="M<sub>C</sub>"
+                                Units="@UnitSets.Moment" DefaultUnit="kNm"
+                                DisabledInput="true" />
+
+   
+
+        <KitInputNumberWithUnit T="double" Value="@Vmn.PuntC.W"
+                                Label="w<sub>C</sub>"
+                                Units="@UnitSets.Lengte" DefaultUnit="mm"
+                                DisabledInput="true" />
+
+
+    <KitInputNumberWithUnit T="int" Value="@((int)Math.Abs(Vmn.L / Vmn.PuntC.W))"
+                            Label="|L/w|"
+                            Units="@UnitSets.VerhoudingLengte" DefaultUnit="L/x"
+                            DisabledInput="true" />
+
+
+
+
+}
+
+@code
+{
+    [Parameter] public VergeetMijNietje? Vmn { get; set; }
+    [Parameter] public EventCallback<VergeetMijNietje> VmnChanged { get; set; }
+    [CascadingParameter] public Action? RequestParentRefresh { get; set; }
+
+    private void OnGeometryChanged()
+    {
+        Vmn?.Init();
+        RequestParentRefresh?.Invoke();
+    }
+
+    private string GetTypeNaam() => Vmn switch
+    {
+        VmnVrijLijnlast       => "vrij | lijnlast",
+        VmnVrijPuntlast       => "vrij | puntlast",
+        VmnInklemmingLijnlast => "ingeklemd | lijnlast",
+        VmnVrij               => "vrij | superpositie",
+        _                     => Vmn?.GetType().Name ?? "onbekend"
+    };
+}
