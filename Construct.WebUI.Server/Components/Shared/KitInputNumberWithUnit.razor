@@ -34,6 +34,7 @@
     [Parameter] public string? Label { get; set; }
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public bool DisabledInput { get; set; }
+    [Parameter] public string? Format { get; set; }
     [Parameter] public string Class { get; set; } = "form-control";
 
     private string _selectedLabel = string.Empty;
@@ -57,7 +58,9 @@
             if (Value == null) return null;
             double model = Convert.ToDouble(Value);
             double display = model * SelectedUnit.Factor;
-            return display.ToString(CultureInfo.InvariantCulture);
+            return Format is null
+                ? display.ToString(CultureInfo.InvariantCulture)
+                : display.ToString(Format, CultureInfo.InvariantCulture);
         }
         set
         {

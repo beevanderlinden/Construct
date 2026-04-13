@@ -1,0 +1,119 @@
+@using CommonLibrary.Models
+@using Eurocode.StaalConstructies
+@using Eurocode.HoutConstructies
+@using System.Globalization
+
+<div class="kit-field kit-mat @(_open ? "kit-mat--open" : "")">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <span class="kit-field-label">@((MarkupString)Label)</span>
+    }
+
+    <div class="kit-mat-header" @onclick="ToggleOpen">
+        <span class="kit-mat-naam">@HeaderTekst()</span>
+        <span class="kit-mat-chevron">▾</span>
+    </div>
+
+    @if (_open)
+    {
+        <div class="kit-mat-panel">
+
+            <div class="kit-mat-tabs">
+                @foreach (var cat in _categorieen)
+                {
+                    <button type="button"
+                            class="kit-mat-tab @(_actieveCategorie == cat ? "kit-mat-tab--actief" : "")"
+                            @onclick="() => _actieveCategorie = cat"
+                            @onclick:stopPropagation>
+                        @cat
+                    </button>
+                }
+            </div>
+
+            <div class="kit-mat-list">
+                @if (_actieveCategorie == "Staal")
+                {
+                    @foreach (var k in Enum.GetValues<StaalKwaliteitEnum>())
+                    {
+                        <button type="button"
+                                class="kit-mat-item @(Value is StaalContext sv && sv.StaalKwaliteit == k ? "kit-mat-item--actief" : "")"
+                                @onclick="() => SelectMat(new StaalContext { StaalKwaliteit = k })"
+                                @onclick:stopPropagation>
+                            @k
+                        </button>
+                    }
+                }
+                else
+                {
+                    @foreach (var k in GetHoutOpties())
+                    {
+                        <button type="button"
+                                class="kit-mat-item @(Value is HoutContext hv && hv.Kwaliteit == k ? "kit-mat-item--actief" : "")"
+                                @onclick="() => SelectMat(new HoutContext(k))"
+                                @onclick:stopPropagation>
+                            @k
+                        </button>
+                    }
+                }
+            </div>
+
+            @if (Value != null)
+            {
+                <div class="kit-mat-preview">
+                    E = @FormatE(Value.E) N/mm²
+                </div>
+            }
+
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public BaseMateriaal? Value { get; set; }
+    [Parameter] public EventCallback<BaseMateriaal?> ValueChanged { get; set; }
+    [Parameter] public string? Label { get; set; }
+
+    private bool _open;
+    private string _actieveCategorie = "Staal";
+
+    private readonly string[] _categorieen = ["Staal", "Hout C", "Hout D", "Hout GL"];
+
+    protected override void OnParametersSet()
+    {
+        if (Value is StaalContext)
+            _actieveCategorie = "Staal";
+        else if (Value is HoutContext h)
+        {
+            string naam = h.Kwaliteit.ToString();
+            _actieveCategorie = naam.StartsWith("GL") ? "Hout GL"
+                              : naam.StartsWith("D")  ? "Hout D"
+                                                      : "Hout C";
+        }
+    }
+
+    private IEnumerable<Houtkwaliteit> GetHoutOpties() => _actieveCategorie switch
+    {
+        "Hout C"  => Enum.GetValues<Houtkwaliteit>().Where(k => k.ToString().StartsWith("C")),
+        "Hout D"  => Enum.GetValues<Houtkwaliteit>().Where(k => k.ToString().StartsWith("D")),
+        "Hout GL" => Enum.GetValues<Houtkwaliteit>().Where(k => k.ToString().StartsWith("GL")),
+        _         => Enumerable.Empty<Houtkwaliteit>()
+    };
+
+    private void ToggleOpen() => _open = !_open;
+
+    private async Task SelectMat(BaseMateriaal mat)
+    {
+        _open = false;
+        await ValueChanged.InvokeAsync(mat);
+    }
+
+    private string HeaderTekst() => Value switch
+    {
+        StaalContext s => $"Staal {s.Naam}",
+        HoutContext h  => $"Hout {h.Naam}",
+        _              => "— kies materiaal —"
+    };
+
+    private static string FormatE(double e) =>
+        ((int)e).ToString("N0", CultureInfo.InvariantCulture).Replace(",", "\u202f");
+}

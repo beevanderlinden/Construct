@@ -47,26 +47,21 @@
         <!-- Verticale tab menu -->
         <div class="tab-menu">
             <button class="tab-btn @(activeTab == "geometrie" ? "active" : "")" @onclick='() => activeTab = "geometrie"'>
-                <span class="tab-icon">??</span>
                 <span class="tab-label">Geometrie</span>
             </button>
             @if (MateriaalType == DoorsneeDemoMateriaalType.Beton)
             {
                 <button class="tab-btn @(activeTab == "beugels" ? "active" : "")" @onclick='() => activeTab = "beugels"'>
-                    <span class="tab-icon">?</span>
                     <span class="tab-label">Beugels</span>
                 </button>
                 <button class="tab-btn @(activeTab == "langswapening" ? "active" : "")" @onclick='() => activeTab = "langswapening"'>
-                    <span class="tab-icon">??</span>
                     <span class="tab-label">Langs</span>
                 </button>
             }
             <button class="tab-btn @(activeTab == "krachten" ? "active" : "")" @onclick='() => activeTab = "krachten"'>
-                <span class="tab-icon">?</span>
                 <span class="tab-label">Krachten</span>
             </button>
             <button class="tab-btn @(activeTab == "resultaten" ? "active" : "")" @onclick='() => activeTab = "resultaten"'>
-                <span class="tab-icon">??</span>
                 <span class="tab-label">Resultaten</span>
             </button>
         </div>
@@ -234,11 +229,11 @@
                     <select @bind="beugelWapening.Diameter" @bind:after="UpdateBuigstraal"
                             @onfocus='() => focusElement = "beugel-diameter"'
                             @onblur='() => focusElement = ""'>
-                        <option value="5">�5</option>
-                        <option value="6">�6</option>
-                        <option value="8">�8</option>
-                        <option value="10">�10</option>
-                        <option value="12">�12</option>
+                        <option value="5">Ø5</option>
+                        <option value="6">Ø6</option>
+                        <option value="8">Ø8</option>
+                        <option value="10">Ø10</option>
+                        <option value="12">Ø12</option>
                     </select>
                     <span></span>
                 </label>
@@ -262,7 +257,7 @@
                 </label>
                 <label>
                     <span>Asw:</span>
-                    <span>@($"{beugelWapening.Asw:F1}") mm�/m</span>
+                    <span>@($"{beugelWapening.Asw:F1}") mm²/m</span>
                     <span></span>
                 </label>
                 <label>
@@ -288,19 +283,19 @@
                     <span></span>
                 </label>
                 <label>
-                    <span>Diameter (�):</span>
+                    <span>Diameter (Ø):</span>
                     <select @bind="diameterBovenStaven" @bind:after="UpdateBovenWapening"
                             @onfocus='() => focusElement = "wapening-boven-diameter"'
                             @onblur='() => focusElement = ""'>
-                        <option value="6">�6</option>
-                        <option value="8">�8</option>
-                        <option value="10">�10</option>
-                        <option value="12">�12</option>
-                        <option value="16">�16</option>
-                        <option value="20">�20</option>
-                        <option value="25">�25</option>
-                        <option value="32">�32</option>
-                        <option value="40">�40</option>
+                        <option value="6">Ø6</option>
+                        <option value="8">Ø8</option>
+                        <option value="10">Ø10</option>
+                        <option value="12">Ø12</option>
+                        <option value="16">Ø16</option>
+                        <option value="20">Ø20</option>
+                        <option value="25">Ø25</option>
+                        <option value="32">Ø32</option>
+                        <option value="40">Ø40</option>
                     </select>
                     <span></span>
                 </label>
@@ -323,19 +318,19 @@
                     <span></span>
                 </label>
                 <label>
-                    <span>Diameter (�):</span>
+                    <span>Diameter (Ø):</span>
                     <select @bind="diameterOnderStaven" @bind:after="UpdateOnderWapening"
                             @onfocus='() => focusElement = "wapening-onder-diameter"'
                             @onblur='() => focusElement = ""'>
-                        <option value="6">�6</option>
-                        <option value="8">�8</option>
-                        <option value="10">�10</option>
-                        <option value="12">�12</option>
-                        <option value="16">�16</option>
-                        <option value="20">�20</option>
-                        <option value="25">�25</option>
-                        <option value="32">�32</option>
-                        <option value="40">�40</option>
+                        <option value="6">Ø6</option>
+                        <option value="8">Ø8</option>
+                        <option value="10">Ø10</option>
+                        <option value="12">Ø12</option>
+                        <option value="16">Ø16</option>
+                        <option value="20">Ø20</option>
+                        <option value="25">Ø25</option>
+                        <option value="32">Ø32</option>
+                        <option value="40">Ø40</option>
                     </select>
                     <span></span>
                 </label>
@@ -368,9 +363,9 @@
                         <select @bind="diameterZijwapening" @bind:after="UpdateZijwapening"
                                 @onfocus='() => focusElement = "wapening-zij-diameter"'
                                 @onblur='() => focusElement = ""'>
-                            <option value="8">�8</option>
-                            <option value="10">�10</option>
-                            <option value="12">�12</option>
+                            <option value="8">Ø8</option>
+                            <option value="10">Ø10</option>
+                            <option value="12">Ø12</option>
                         </select>
                         <span></span>
                     </label>

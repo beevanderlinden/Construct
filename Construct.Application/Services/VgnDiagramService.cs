@@ -12,7 +12,7 @@ namespace Construct.Application.Services
         private const double SvgH         = 120;
         private const double BaselineY    = 72;   // y-positie van de balk-as
         private const double MaxAmplitude = 52;   // max uitwijking boven/onder baseline
-        private const double CircleR      = 2.8;
+        private const double CircleR      = 0.8;
         private const double LabelPts     = 10;
         private const double Padding      = 8;    // marge rondom het diagram
 
@@ -141,7 +141,7 @@ namespace Construct.Application.Services
             doc.Children.Add(baseline);
             foreach (var c in circles) doc.Children.Add(c);
             doc.Children.Add(valLabel);
-            doc.Children.Add(typeLabel);
+            //doc.Children.Add(typeLabel);
             doc.Children.Add(lblA);
             doc.Children.Add(lblB);
 

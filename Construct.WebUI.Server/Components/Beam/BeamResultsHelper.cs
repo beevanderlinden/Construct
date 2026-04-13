@@ -607,7 +607,7 @@ public static class BeamResultsHelper
         ];
 
         // Rijen
-        foreach (var m in materialen ?? Enumerable.Empty<BaseMateriaal>().Where(m=>m is not null))
+        foreach (var m in (materialen ?? Enumerable.Empty<BaseMateriaal>()).Where(m => m is not null))
         {
             table.Rows.Add([
                 new(m.Type.ToString(), width),

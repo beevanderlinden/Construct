@@ -21,6 +21,7 @@ namespace Construct.Domain.Entities
     [JsonDerivedType(typeof(BordesEntity), typeDiscriminator: "Bordes")]
     [JsonDerivedType(typeof(KolomEntity), typeDiscriminator: "Kolom")]
     [JsonDerivedType(typeof(LiggerEntity), typeDiscriminator: "Ligger")]
+    [JsonDerivedType(typeof(VrijRolEntity), typeDiscriminator: "VrijRol")]
 
 
 

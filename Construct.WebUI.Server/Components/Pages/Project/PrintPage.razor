@@ -1936,7 +1936,7 @@ else
                             new(new("*w<sub>max</sub>*", "1cm")),
                             new(new("*w<sub>bijk</sub>*", "2cm")),
                             new(new("toel.","2cm")),
-                            new(new("UC", "2cm"))
+                            new(new("U.C.", "2cm"))
                         ];
                         // dummy
 
@@ -1946,8 +1946,11 @@ else
                         var db1 = dbv.CombinatieContexts.FirstOrDefault(c => c.CombinatieType == Eurocode.Belastingen.BelastingCombinatieTypeEnum.QuasiBlijvend);
                         var db2 = dbv.CombinatieContexts.FirstOrDefault(c => c.CombinatieType == Eurocode.Belastingen.BelastingCombinatieTypeEnum.Frequent);
 
-                        var uc1 = db1?.Wmax / dbv.GrenswaardeEind;
-                        var uc2 = db2?.Wbijk / dbv.GrenswaardeBijkomend;
+                        var uc1 = Math.Abs(db1?.Wmax ?? 0) / dbv.GrenswaardeEind;
+                        var uc2 = Math.Abs(db2?.Wbijk ?? 0) / dbv.GrenswaardeBijkomend;
+
+                        string uc1Tekst = uc1 > 1.00499 ? $"**{uc1:0.00} ‼️** " : $"{uc1:0.00}";
+                        string uc2Tekst = uc2 > 1.00499 ? $"**{uc2:0.00} ‼️** " : $"{uc2:0.00}";
 
                         var width1 = "2cm";
                         var width2 = "4cm";
@@ -1963,7 +1966,7 @@ else
                             new($"**{db1?.Wmax:0.0}**" ,width3), //wmax
                             new($"{db1?.Wbijk:0.0}", width3), //bijk
                             new($"{dbv.GrenswaardeEind:0.0}",width3), //toel.
-                            new($"({uc1:0.00})", width3) });
+                            new(uc1Tekst, width3) });
 
                         tblDoorbuiging.Rows.Add(new() {
                             new($"{steekTrap.DoorbuigingValidatie.LengteMM:0}", width1),
@@ -1975,7 +1978,7 @@ else
                             new($"**{db2?.Wbijk:0.0}**" ,width3), //wbijk
                             new($"{dbv.GrenswaardeBijkomend:0.0}",width3), //toel.
 
-                            new($"({uc2:0.00})", width3) });
+                            new(uc2Tekst, width3) });
 
 
                         section.Elements.Add(tblDoorbuiging);

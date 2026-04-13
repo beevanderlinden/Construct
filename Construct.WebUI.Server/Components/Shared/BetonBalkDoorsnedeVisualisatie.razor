@@ -20,29 +20,31 @@
             @if (BeugelWapening != null)
             {
                 <div class="legenda-item">
-                    <span class="legenda-symbool beugel"></span>
                     <span>Beugels: @BeugelWapening.ToString()</span>
                 </div>
             }
             @if (WapeningBoven != null)
             {
                 <div class="legenda-item">
-                    <span class="legenda-symbool boven"></span>
-                    <span>Boven: @WapeningBoven.Tekst</span>
+                    <span>Boven: @WapeningBoven.SanitizedTekst()</span>
                 </div>
             }
             @if (WapeningOnder != null)
             {
                 <div class="legenda-item">
-                    <span class="legenda-symbool onder"></span>
-                    <span>Onder: @WapeningOnder.Tekst</span>
+                    <span>Onder: @WapeningOnder.SanitizedTekst()</span>
                 </div>
             }
-            @if (WapeningZijLinks != null || WapeningZijRechts != null)
+            @if (WapeningZijLinks != null)
             {
                 <div class="legenda-item">
-                    <span class="legenda-symbool zij"></span>
-                    <span>Zij: @(WapeningZijLinks?.Tekst ?? "") @(WapeningZijRechts != null && WapeningZijLinks != null ? "+" : "") @(WapeningZijRechts?.Tekst ?? "")</span>
+                    <span>Links: @(WapeningZijLinks?.SanitizedTekst() ?? "")</span>
+                </div>
+            }
+            @if (WapeningZijRechts != null)
+            {
+                <div class="legenda-item">
+                    <span>Rechts: @(WapeningZijRechts?.SanitizedTekst() ?? "")</span>
                 </div>
             }
         </div>

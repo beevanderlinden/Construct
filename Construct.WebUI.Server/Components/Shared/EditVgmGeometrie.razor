@@ -1,6 +1,7 @@
 @using Construct.Application.Services
 @using Mechanica.LiggerSB
 @using System.Globalization
+@using CommonLibrary.Models
 
 @if (Vmn != null)
 {
@@ -18,14 +19,20 @@
                             DefaultUnit="m" />
 
 
-   
-   
+        <KitMateriaalSelectie Label="materiaal E"
+                               Value="@_gekozenMateriaal"
+                               ValueChanged="@(m => { _gekozenMateriaal = m; if (m != null) { Vmn.E = m.E * 1e3; OnGeometryChanged(); } })" />
+
         <KitInputNumberWithUnit T="double"
                                 Label="E-modulus <i>E</i>"
                                 Value="@Vmn.E"
                                 ValueChanged="@(v => { Vmn.E = v; OnGeometryChanged(); })"
                                 Units="@UnitSets.Elasticiteitsmodulus"
                                 DefaultUnit="N/mm²" />
+
+        <KitProfielSelectie Label="profiel I<sub>y</sub>"
+                             Value="@_gekozenProfiel"
+                             ValueChanged="@(p => { _gekozenProfiel = p; if (p != null) { Vmn.I = p.Iy * 1e-12; OnGeometryChanged(); } })" />
 
         <KitInputNumberWithUnit T="double"
                                 Label="I<sub>y</sub> traagheidsmoment"
@@ -77,7 +84,11 @@
     
     <VgnDiagram Vmn="@Vmn" Type="VgnDiagramType.V" N="8" />
     <VgnDiagram Vmn="@Vmn" Type="VgnDiagramType.M" N="16" />
-    <VgnDiagram Vmn="@Vmn" Type="VgnDiagramType.W" N="32" />
+    <VgnDiagram Vmn="@Vmn" Type="VgnDiagramType.W" N="16" />
+
+    <br /> 
+    <br />
+
 
         <KitInputNumberWithUnit T="double" Value="@Vmn.RA"
                                 Label="R<sub>A</sub>"
@@ -89,23 +100,7 @@
                                 Units="@UnitSets.Kracht" DefaultUnit="kN"
                                 DisabledInput="true" />
 
-        <KitInputNumberWithUnit T="double" Value="@Vmn.PuntC.M"
-                                Label="M<sub>C</sub>"
-                                Units="@UnitSets.Moment" DefaultUnit="kNm"
-                                DisabledInput="true" />
-
-   
-
-        <KitInputNumberWithUnit T="double" Value="@Vmn.PuntC.W"
-                                Label="w<sub>C</sub>"
-                                Units="@UnitSets.Lengte" DefaultUnit="mm"
-                                DisabledInput="true" />
-
-
-    <KitInputNumberWithUnit T="int" Value="@((int)Math.Abs(Vmn.L / Vmn.PuntC.W))"
-                            Label="|L/w|"
-                            Units="@UnitSets.VerhoudingLengte" DefaultUnit="L/x"
-                            DisabledInput="true" />
+       
 
 
 
@@ -117,6 +112,9 @@
     [Parameter] public VergeetMijNietje? Vmn { get; set; }
     [Parameter] public EventCallback<VergeetMijNietje> VmnChanged { get; set; }
     [CascadingParameter] public Action? RequestParentRefresh { get; set; }
+
+    private BaseProfiel? _gekozenProfiel;
+    private BaseMateriaal? _gekozenMateriaal;
 
     private void OnGeometryChanged()
     {
