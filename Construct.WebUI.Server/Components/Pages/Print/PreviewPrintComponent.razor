@@ -12,20 +12,86 @@
 
 </div>
 
+
 <script>
     window.blazorPrintHtml = (htmlString, fileName) => {
-        
         // Bewaar oude title
         const oldTitle = document.title;
         document.title = fileName || oldTitle;
 
+        // Parse HTML en extract alleen body content (voorkomt nested <html> tags)
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlString, 'text/html');
+        const bodyContent = doc.body.innerHTML;
+
+        // ✅ Voeg inline print CSS toe aan de head
+        const printStyle = document.createElement('style');
+        printStyle.id = 'dynamic-print-styles';
+        printStyle.textContent = `
+            @@media print {
+                .preview-container.print-mode,
+                #print-container {
+                    display: block !important;
+                    background: none !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    gap: 0 !important;
+                    min-height: auto !important;
+                    max-width: none !important;
+                    width: 100% !important;
+                    overflow: visible !important;
+                }
+
+                .preview-container.print-mode .ec-panel,
+                #print-container .ec-panel {
+                    display: block;
+                    width: 210mm !important;
+                    height: 297mm !important;
+                    padding-left: 14mm !important;
+                    padding-right: 14mm !important;
+                    padding-top: 10mm !important;
+                    padding-bottom: 10mm !important;
+                    margin: 0 auto !important;
+                    background: white !important;
+                    box-shadow: none !important;
+                    box-sizing: border-box;
+                    page-break-after: always;
+                    page-break-before: always;
+                }
+
+                .preview-container.print-mode .ec-panel:first-child,
+                #print-container .ec-panel:first-child {
+                    page-break-before: auto;
+                }
+
+                .preview-container.print-mode .ec-panel:last-child,
+                #print-container .ec-panel:last-child {
+                    page-break-after: auto;
+                }
+
+                @@page {
+                    size: A4;
+                    margin: 0;
+                }
+            }
+        `;
+        document.head.appendChild(printStyle);
+
         // Maak tijdelijke print-container
         const printEl = document.createElement('div');
         printEl.id = 'print-container';
-        printEl.innerHTML = htmlString;
+        printEl.innerHTML = bodyContent;
+        
+        // ✅ Voeg print-mode class toe
+        const previewContainer = printEl.querySelector('.preview-container');
+        if (previewContainer) {
+            previewContainer.classList.add('print-mode');
+        }
+        
         printEl.style.width = '210mm';
         printEl.style.margin = '0 auto';
-        printEl.style.background = 'white';
+        printEl.style.border = 'none';
+        
         document.body.appendChild(printEl);
 
         // Verberg alles behalve printEl
@@ -45,7 +111,8 @@
             // Herstel originele state
             hidden.forEach(h => h.el.style.display = h.display);
             printEl.remove();
-            document.title = oldTitle; // herstel oude title
+            printStyle.remove(); // Verwijder inline styles
+            document.title = oldTitle;
         });
     };
 </script>

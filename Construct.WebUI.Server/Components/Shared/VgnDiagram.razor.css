@@ -1,0 +1,10 @@
+.vgn-diagram {
+    display: block;
+    width: 100%;
+}
+
+    .vgn-diagram svg {
+        display: block;
+        width: 100%;
+        overflow: visible; /* labels op de rand niet afkappen */
+    }

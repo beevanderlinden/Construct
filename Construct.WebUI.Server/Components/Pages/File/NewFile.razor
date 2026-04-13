@@ -117,7 +117,7 @@ else
             ProjectEntity.ProjectInfo.Naam = ViewModel.Naam;
             ProjectEntity.ProjectInfo.Plaatsnaam = ViewModel.Plaatsnaam;
             ProjectEntity.ProjectInfo.Grondslagen = ViewModel.Grondslagen;
-            ProjectState?.SetProject(ProjectEntity);
+            ProjectState?.UpdateProject(ProjectEntity);  // ✅ Gebruik UpdateProject in plaats van SetProject
             //StateHasChanged();
         }
     }

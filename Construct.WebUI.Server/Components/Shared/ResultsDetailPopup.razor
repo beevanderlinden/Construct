@@ -1,0 +1,1146 @@
+﻿@using System.Reflection
+@using CommonLibrary
+@using ExportFactory.Shared
+@typeparam T
+
+@inject IJSRuntime JS
+
+<div class="results-detail-popup @(IsOpen ? "open" : "")" @onclick="Close" id="popup-@_popupId">
+    <div class="popup-content" @onclick:stopPropagation="true">
+        <div class="popup-header">
+            <h3>@Title</h3>
+            <div class="header-controls">
+                <input type="text" 
+                       class="search-input" 
+                       placeholder="Zoeken..." 
+                       @bind="_searchFilter" 
+                       @bind:event="oninput"
+                       @bind:after="StateHasChanged" />
+                <button class="sort-btn" @onclick="ToggleSortOrder" title="Sorteer volgorde">
+                    @GetSortButtonText()
+                </button>
+                <button class="close-btn" @onclick="Close">&times;</button>
+            </div>
+        </div>
+        
+        <div class="popup-body">
+            @if (Model != null)
+            {
+                @if (_isBaseEurocodeContext && HasMeldingen())
+                {
+                    <div class="meldingen-section">
+                        <h4>Meldingen</h4>
+                        @foreach (var melding in GetMeldingen())
+                        {
+
+                            <div class="melding-item @GetMeldingClass(melding)">
+                                <div class="melding-content">
+                                    @melding
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                
+                <div class="property-tree">
+                    @RenderProperties(Model, string.Empty, 0)
+                </div>
+            }
+            else
+            {
+                <p class="no-data">Geen gegevens beschikbaar</p>
+            }
+        </div>
+        
+        <div class="popup-footer">
+            <button class="btn btn-primary" @onclick="Close">Sluiten</button>
+        </div>
+    </div>
+</div>
+
+@code {
+[Parameter] public T? Model { get; set; }
+[Parameter] public bool IsOpen { get; set; }
+[Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+[Parameter] public string Title { get; set; } = "Details";
+    
+    private bool _isBaseEurocodeContext;
+    private HashSet<string> _expandedPaths = new();
+    private SortOrder _sortOrder = SortOrder.Default;
+    private string _popupId = Guid.NewGuid().ToString("N");
+    private string _searchFilter = string.Empty;
+    private T? _previousModel;
+    private bool _modelChanged;
+    private bool _katexRendering = true; // Start met loading state
+    
+    private enum SortOrder
+    {
+        Default,
+        Ascending,
+        Descending
+    }
+    
+protected override void OnParametersSet()
+{
+    _isBaseEurocodeContext = Model != null && typeof(BaseEurocodeContext).IsAssignableFrom(typeof(T));
+    
+    // Detecteer model wijziging
+    if (!EqualityComparer<T>.Default.Equals(_previousModel, Model))
+    {
+        _modelChanged = true;
+        _previousModel = Model;
+        _katexRendering = true; // Reset loading state voor nieuwe data
+    }
+}
+    
+    private bool HasMeldingen()
+    {
+        if (!_isBaseEurocodeContext || Model == null) return false;
+        
+        var meldingenProp = typeof(T).GetProperty("Meldingen");
+        if (meldingenProp == null) return false;
+        
+        var meldingen = meldingenProp.GetValue(Model) as System.Collections.IEnumerable;
+        if (meldingen == null) return false;
+        
+        return meldingen.Cast<object>().Any();
+    }
+    
+    private IEnumerable<dynamic> GetMeldingen()
+    {
+        if (!_isBaseEurocodeContext || Model == null) yield break;
+        
+        var meldingenProp = typeof(T).GetProperty("Meldingen");
+        if (meldingenProp == null) yield break;
+        
+        var meldingen = meldingenProp.GetValue(Model) as System.Collections.IEnumerable;
+        if (meldingen == null) yield break;
+        
+        foreach (var melding in meldingen)
+        {
+            if (melding != null)
+                yield return melding;
+        }
+    }
+    
+    private string GetMeldingClass(dynamic melding)
+    {
+        try
+        {
+            // Use reflection to safely get Severity property
+            var type = melding.GetType();
+            var severityProp = type.GetProperty("Severity");
+            
+            if (severityProp != null)
+            {
+                var severityValue = severityProp.GetValue(melding);
+                if (severityValue != null)
+                {
+                    var severityString = severityValue.ToString();
+                    return severityString switch
+                    {
+                        "Error" => "melding-error",
+                        "Warning" => "melding-warning",
+                        "Info" => "melding-info",
+                        _ => "melding-opmerking"
+                    };
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log for debugging
+            Console.WriteLine($"Error getting melding class: {ex.Message}");
+        }
+        
+        return "melding-opmerking";
+    }
+    
+    private string GetMeldingText(dynamic melding)
+    {
+        try
+        {
+            var type = melding.GetType();
+            var toMarkDownMethod = type.GetMethod("ToMarkDownString");
+            
+            if (toMarkDownMethod != null)
+            {
+                var markdownText = toMarkDownMethod.Invoke(melding, null) as string;
+                if (!string.IsNullOrEmpty(markdownText))
+                {
+                    return ConvertMarkdownToHtml(markdownText);
+                }
+            }
+            
+            // Fallback: try ToString()
+            return ConvertMarkdownToHtml(melding.ToString() ?? "Geen melding tekst");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error getting melding text: {ex.Message}");
+            return "Fout bij ophalen melding";
+        }
+    }
+    
+protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+    // Twee-fase rendering: eerst skeleton, dan KaTeX + verberg skeleton
+    if (IsOpen)
+    {
+        if (_katexRendering)
+        {
+            try
+            {
+                // Fase 1: Wacht tot DOM met skeleton is gerenderd
+                await Task.Delay(50);
+                
+                // Fase 2: Render KaTeX (TeX strings staan nu in DOM)
+                await JS.InvokeVoidAsync("renderKatexInElement", $"#popup-{_popupId} .popup-body");
+                
+                Console.WriteLine("KaTeX rendering started");
+                
+                // Wacht kort op KaTeX processing
+                await Task.Delay(150);
+                
+                // Fase 3: Verberg skeleton en toon gerenderde formules
+                _katexRendering = false;
+                StateHasChanged(); // Dit triggert nog een render
+                
+                Console.WriteLine("KaTeX rendering complete");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"KaTeX rendering error: {ex.Message}");
+                _katexRendering = false;
+                StateHasChanged();
+            }
+        }
+    }
+}
+    
+    private async Task Close()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+    
+    private void ToggleSortOrder()
+    {
+        _sortOrder = _sortOrder switch
+        {
+            SortOrder.Default => SortOrder.Ascending,
+            SortOrder.Ascending => SortOrder.Descending,
+            SortOrder.Descending => SortOrder.Default,
+            _ => SortOrder.Default
+        };
+        StateHasChanged();
+    }
+    
+    private string GetSortButtonText()
+    {
+        return _sortOrder switch
+        {
+            SortOrder.Ascending => "A→Z",
+            SortOrder.Descending => "Z→A",
+            _ => "Std"
+        };
+    }
+    
+private void ToggleExpand(string path)
+{
+    if (_expandedPaths.Contains(path))
+        _expandedPaths.Remove(path);
+    else
+        _expandedPaths.Add(path);
+        
+    StateHasChanged();
+}
+    
+private bool IsExpanded(string path) => _expandedPaths.Contains(path);
+    
+    private RenderFragment RenderProperties(object obj, string path, int depth)
+    {
+        return builder =>
+        {
+            if (obj == null || depth > 5) return; // Prevent infinite recursion
+            
+            var type = obj.GetType();
+            var allProperties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.CanRead);
+            
+            // Check if there are any properties with TableColumn attribute
+            var hasTableColumnProperties = allProperties
+                .Any(p => p.GetCustomAttribute<TableColumnAttribute>() != null);
+            
+            // If TableColumn attributes exist, filter to only show those (but always include Formula properties)
+            if (hasTableColumnProperties)
+            {
+                allProperties = allProperties.Where(p => 
+                    p.GetCustomAttribute<TableColumnAttribute>() != null ||
+                    (p.Name.EndsWith("Formula") && p.PropertyType == typeof(Formula)));
+            }
+            
+            // Separate Formula properties first (before sorting)
+            var formulaProperties = allProperties
+                .Where(p => p.Name.EndsWith("Formula") && p.PropertyType == typeof(Formula))
+                .ToDictionary(p => p.Name.Substring(0, p.Name.Length - 7), p => p); // Remove "Formula" suffix
+            
+            var regularProperties = allProperties
+                .Where(p => !p.Name.EndsWith("Formula") || p.PropertyType != typeof(Formula));
+            
+            // Sort only regular properties (formulas will be rendered with their parent)
+            var sortedProperties = _sortOrder switch
+            {
+                SortOrder.Ascending => regularProperties.OrderBy(p => p.Name),
+                SortOrder.Descending => regularProperties.OrderByDescending(p => p.Name),
+                _ => regularProperties // Default order (declaration order)
+            };
+            
+            // Apply search filter if present
+            if (!string.IsNullOrWhiteSpace(_searchFilter))
+            {
+                regularProperties = regularProperties.Where(p => 
+                {
+                    var tableColumnAttr = p.GetCustomAttribute<TableColumnAttribute>();
+                    var searchText = _searchFilter.ToLower();
+                    
+                    // Search in property name
+                    if (p.Name.ToLower().Contains(searchText))
+                        return true;
+                    
+                    // Search in Symbol or Label
+                    if (tableColumnAttr != null)
+                    {
+                        if (!string.IsNullOrEmpty(tableColumnAttr.Symbol) && 
+                            tableColumnAttr.Symbol.ToLower().Contains(searchText))
+                            return true;
+                        
+                        if (!string.IsNullOrEmpty(tableColumnAttr.Label) && 
+                            tableColumnAttr.Label.ToLower().Contains(searchText))
+                            return true;
+                    }
+                    
+                    return false;
+                });
+            }
+            
+            foreach (var prop in regularProperties)
+            {
+                try
+                {
+                    var value = prop.GetValue(obj);
+                    var propertyPath = string.IsNullOrEmpty(path) ? prop.Name : $"{path}.{prop.Name}";
+                    
+                    // Check for TableColumn attribute (BaseEurocodeContext specifiek)
+                    var tableColumnAttr = prop.GetCustomAttribute<TableColumnAttribute>();
+                    var hasTableColumn = tableColumnAttr != null;
+                    
+                    builder.OpenElement(0, "div");
+                    builder.AddAttribute(1, "class", $"property-item depth-{depth} {(hasTableColumn ? "has-table-column" : "")}");
+                    
+                    // Property naam (met Symbol indien beschikbaar)
+                    builder.OpenElement(2, "div");
+                    builder.AddAttribute(3, "class", "property-name");
+                    builder.AddContent(4, GetIndentation(depth));
+                    
+                    // Voor Formula properties: toon Formula.Name in linkerkolom
+                    if (value is Formula formula && !string.IsNullOrEmpty(formula.Name))
+                    {
+                        builder.OpenElement(5, "span");
+                        builder.AddAttribute(6, "class", "formula-name-label");
+                        builder.AddContent(7, formula.Name);
+                        builder.CloseElement(); // span
+                    }
+                    else if (hasTableColumn && !string.IsNullOrEmpty(tableColumnAttr!.Symbol))
+                    {
+                        // Toon Symbol (HTML met sub/sup) + markdown support
+                        builder.OpenElement(5, "span");
+                        builder.AddAttribute(6, "class", "symbol-text");
+                        
+                        // Build tooltip: Label (+ Description indien aanwezig)
+                        var tooltip = tableColumnAttr.Label ?? "";
+                        if (!string.IsNullOrEmpty(tableColumnAttr.Description))
+                        {
+                            if (!string.IsNullOrEmpty(tooltip))
+                                tooltip += " - " + tableColumnAttr.Description;
+                            else
+                                tooltip = tableColumnAttr.Description;
+                        }
+                        
+                        if (!string.IsNullOrEmpty(tooltip))
+                        {
+                            builder.AddAttribute(7, "title", tooltip);
+                        }
+                        
+                        builder.AddMarkupContent(8, ConvertMarkdownToHtml(tableColumnAttr.Symbol));
+                        builder.CloseElement(); // span
+                    }
+                    else if (hasTableColumn && !string.IsNullOrEmpty(tableColumnAttr!.Label))
+                    {
+                        // Geen Symbol, toon Label als tekst
+                        builder.OpenElement(5, "span");
+                        builder.AddAttribute(6, "class", "name-text");
+                        
+                        // Tooltip: Description (indien aanwezig)
+                        if (!string.IsNullOrEmpty(tableColumnAttr.Description))
+                        {
+                            builder.AddAttribute(7, "title", tableColumnAttr.Description);
+                        }
+                        
+                        builder.AddContent(8, tableColumnAttr.Label);
+                        builder.CloseElement(); // span
+                    }
+                    else
+                    {
+                        builder.OpenElement(12, "span");
+                        builder.AddAttribute(13, "class", "name-text");
+                        builder.AddContent(14, prop.Name);
+                        builder.CloseElement(); // span
+                    }
+                    
+                    builder.AddContent(15, "");
+                    builder.CloseElement(); // div property-name
+                    
+                    // Property waarde
+                    builder.OpenElement(16, "div");
+                    builder.AddAttribute(17, "class", "property-value");
+                    
+                    // Speciale behandeling voor Formula type
+                    if (value is Formula formu)
+                    {
+                        // Render formula inline (Name staat al in property-name kolom)
+                        builder.OpenElement(18, "div");
+                        builder.AddAttribute(19, "class", "formula-container");
+                        
+                        // StaticValue (LaTeX formula)
+                        if (!string.IsNullOrEmpty(formu.StaticValue))
+                        {
+                            builder.OpenElement(20, "div");
+                            builder.AddAttribute(21, "class", "formula-static katex-formula");
+                            // Formula.StaticValue is also TeX
+                            builder.AddContent(22, $"\\({formu.BuildFormula()}\\)");
+                            builder.CloseElement();
+                        }
+                        
+                        // DynamicValue (computed result)
+                        // if (!string.IsNullOrEmpty(formu.DynamicValue))
+                        // {
+                        //     builder.OpenElement(23, "div");
+                        //     builder.AddAttribute(24, "class", "formula-dynamic katex-formula");
+                        //     builder.AddContent(25, $"\\({formu.DynamicValue}\\)"); 
+                        //     builder.CloseElement();
+                        // }
+                        
+                        // builder.CloseElement(); // formula-container
+                    }
+                    else if (value == null)
+                    {
+                        builder.OpenElement(29, "span");
+                        builder.AddAttribute(30, "class", "null-value");
+                        builder.AddContent(31, "null");
+                        builder.CloseElement();
+                    }
+                    else if (IsSimpleType(prop.PropertyType))
+                    {
+                        builder.OpenElement(32, "span");
+                        builder.AddAttribute(33, "class", GetValueClass(prop.PropertyType));
+                        
+                        // Gebruik StringFormat uit TableColumn indien beschikbaar
+                        string formattedValue;
+                        if (hasTableColumn && !string.IsNullOrEmpty(tableColumnAttr!.StringFormat))
+                        {
+                            formattedValue = FormatValueWithFormat(value, tableColumnAttr.StringFormat);
+                        }
+                        else
+                        {
+                            formattedValue = FormatValue(value, prop.PropertyType);
+                        }
+                        
+                        builder.AddContent(34, formattedValue);
+                        
+                        // Voeg Unit toe indien beschikbaar
+                        if (hasTableColumn && !string.IsNullOrEmpty(tableColumnAttr!.Unit))
+                        {
+                            builder.AddContent(35, " ");
+                            builder.OpenElement(36, "span");
+                            builder.AddAttribute(37, "class", "unit-text");
+                            builder.AddContent(38, tableColumnAttr.Unit);
+                            builder.CloseElement(); // span
+                        }
+                        
+                        builder.CloseElement(); // span value
+                    }
+                    else if (value is System.Collections.IEnumerable enumerable && !(value is string))
+                    {
+                        // Collection
+                        builder.OpenElement(39, "span");
+                        builder.AddAttribute(40, "class", "collection-value");
+                        var count = enumerable.Cast<object>().Count();
+                        builder.AddContent(41, $"[{count} items]");
+                        builder.CloseElement();
+                    }
+                    else
+                    {
+                        // Complex object - show type with expand/collapse
+                        var isExpanded = IsExpanded(propertyPath);
+                        
+                        builder.OpenElement(42, "span");
+                        builder.AddAttribute(43, "class", "complex-type-container");
+                        
+                        builder.OpenElement(44, "button");
+                        builder.AddAttribute(45, "class", "expand-btn");
+                        builder.AddAttribute(46, "onclick", EventCallback.Factory.Create(this, () => ToggleExpand(propertyPath)));
+                        builder.AddContent(47, isExpanded ? "?" : "?");
+                        builder.CloseElement(); // button
+                        
+                        builder.OpenElement(48, "span");
+                        builder.AddAttribute(49, "class", "complex-type");
+                        builder.AddContent(50, $"{{ {prop.PropertyType.Name} }}");
+                        builder.CloseElement(); // span
+                        
+                        builder.CloseElement(); // complex-type-container
+                    }
+                    
+                    builder.CloseElement(); // property-value div
+                    builder.CloseElement(); // property-item div
+                    
+                    // Check if there's a corresponding Formula property
+                    if (formulaProperties.TryGetValue(prop.Name, out var formulaProp))
+                    {
+                        try
+                        {
+                            var formulaValue = formulaProp.GetValue(obj) as Formula;
+                            if (formulaValue != null)
+                            {
+                                // Render Formula property directly below - inherit parent styling
+                                builder.OpenElement(52, "div");
+                                builder.AddAttribute(53, "class", $"property-item depth-{depth} formula-property {(hasTableColumn ? "has-table-column" : "")}");
+                                
+                                // Formula.Name in property-name column (if available)
+                                builder.OpenElement(54, "div");
+                                builder.AddAttribute(55, "class", "property-name");
+                                
+                                if (!string.IsNullOrEmpty(formulaValue.Name))
+                                {
+                                    builder.OpenElement(56, "span");
+                                    builder.AddAttribute(57, "class", "formula-name-label");
+                                    builder.AddContent(58, formulaValue.Name);
+                                    builder.CloseElement(); // span
+                                }
+                                
+                                builder.CloseElement(); // div
+                                
+                                // Formula value
+                                builder.OpenElement(59, "div");
+                                builder.AddAttribute(60, "class", "property-value");
+                                
+                                // Render formula inline (Name staat al in property-name kolom)
+                                builder.OpenElement(61, "div");
+                                builder.AddAttribute(62, "class", $"formula-container {(_katexRendering ? "loading" : "")}");
+                                
+                                // Altijd TeX renderen (voor KaTeX)
+                                // StaticValue (LaTeX formula)
+                                if (!string.IsNullOrEmpty(formulaValue.StaticValue))
+                                {
+                                    builder.OpenElement(63, "div");
+                                    builder.AddAttribute(64, "class", "formula-static katex-formula");
+                                    builder.AddContent(65, $"\\({formulaValue.StaticValue}\\)");
+                                    builder.CloseElement();
+                                }
+                                
+                                // DynamicValue (computed result)
+                                if (!string.IsNullOrEmpty(formulaValue.DynamicValue))
+                                {
+                                    builder.OpenElement(66, "div");
+                                    builder.AddAttribute(67, "class", "formula-dynamic katex-formula");
+                                    builder.AddContent(68, formulaValue.DynamicValue);
+                                    builder.CloseElement();
+                                }
+                                
+                                // Skeleton overlay tijdens loading
+                                if (_katexRendering)
+                                {
+                                    builder.OpenElement(69, "div");
+                                    builder.AddAttribute(70, "class", "formula-skeleton-overlay");
+                                    builder.CloseElement();
+                                }
+                                
+                                builder.CloseElement(); // formula-container
+                                builder.CloseElement(); // property-value div
+                                builder.CloseElement(); // property-item div
+                            }
+                        }
+                        catch
+                        {
+                            // Skip if formula property throws exception
+                        }
+                    }
+                    
+                    // Recursively render nested complex properties (but not collections or Formula)
+                    // Only if expanded
+                    if (value != null && !IsSimpleType(prop.PropertyType) && 
+                        !(value is System.Collections.IEnumerable) && 
+                        !(value is Formula) && 
+                        depth < 3 &&
+                        IsExpanded(propertyPath))
+                    {
+                        builder.AddContent(69, RenderProperties(value, propertyPath, depth + 1));
+                    }
+                }
+                catch (Exception)
+                {
+                    // Skip properties that throw exceptions
+                }
+            }
+        };
+    }
+    
+    private string FormatValueWithFormat(object value, string format)
+    {
+        if (value == null) return "null";
+        
+        try
+        {
+            if (value is IFormattable formattable)
+            {
+                return formattable.ToString(format, System.Globalization.CultureInfo.InvariantCulture);
+            }
+        }
+        catch
+        {
+            // Fallback to default formatting
+        }
+        
+        return value.ToString() ?? string.Empty;
+    }
+    
+    private bool IsSimpleType(Type type)
+    {
+        return type.IsPrimitive || 
+               type.IsEnum || 
+               type == typeof(string) || 
+               type == typeof(decimal) || 
+               type == typeof(DateTime) || 
+               type == typeof(DateTimeOffset) || 
+               type == typeof(TimeSpan) || 
+               type == typeof(Guid) ||
+               Nullable.GetUnderlyingType(type) != null;
+    }
+    
+    private string GetValueClass(Type type)
+    {
+        if (type == typeof(bool) || type == typeof(bool?))
+            return "boolean-value";
+        if (IsNumericType(type))
+            return "number-value";
+        if (type == typeof(string))
+            return "string-value";
+        if (type.IsEnum)
+            return "enum-value";
+        
+        return "value";
+    }
+    
+    private bool IsNumericType(Type type)
+    {
+        return type == typeof(int) || type == typeof(int?) ||
+               type == typeof(long) || type == typeof(long?) ||
+               type == typeof(short) || type == typeof(short?) ||
+               type == typeof(byte) || type == typeof(byte?) ||
+               type == typeof(uint) || type == typeof(uint?) ||
+               type == typeof(ulong) || type == typeof(ulong?) ||
+               type == typeof(ushort) || type == typeof(ushort?) ||
+               type == typeof(sbyte) || type == typeof(sbyte?) ||
+               type == typeof(double) || type == typeof(double?) ||
+               type == typeof(float) || type == typeof(float?) ||
+               type == typeof(decimal) || type == typeof(decimal?);
+    }
+    
+    private string FormatValue(object value, Type type)
+    {
+        if (value == null) return "null";
+        
+        if (type == typeof(double) || type == typeof(double?))
+            return ((double)value).ToString("F3");
+        if (type == typeof(float) || type == typeof(float?))
+            return ((float)value).ToString("F3");
+        if (type == typeof(decimal) || type == typeof(decimal?))
+            return ((decimal)value).ToString("F2");
+        if (type == typeof(bool) || type == typeof(bool?))
+            return value.ToString()!.ToLower();
+        
+        return value.ToString() ?? string.Empty;
+    }
+    
+    private string GetIndentation(int depth)
+    {
+        return new string(' ', depth * 2);
+    }
+    
+    private string ConvertMarkdownToHtml(string markdown)
+    {
+        if (string.IsNullOrEmpty(markdown))
+            return markdown;
+        
+        var result = markdown;
+        
+        // **bold** -> <strong>bold</strong>
+        result = System.Text.RegularExpressions.Regex.Replace(
+            result, 
+            @"\*\*(.+?)\*\*", 
+            "<strong>$1</strong>");
+        
+        // *italic* -> <em>italic</em>
+        result = System.Text.RegularExpressions.Regex.Replace(
+            result, 
+            @"\*(.+?)\*", 
+            "<em>$1</em>");
+        
+        // ~sub~ -> <sub>sub</sub>
+        result = System.Text.RegularExpressions.Regex.Replace(
+            result, 
+            @"~(.+?)~", 
+            "<sub>$1</sub>");
+        
+        // ^sup^ -> <sup>sup</sup>
+        result = System.Text.RegularExpressions.Regex.Replace(
+            result, 
+            @"\^(.+?)\^", 
+            "<sup>$1</sup>");
+        
+        return result;
+    }
+}
+
+<style>
+    .results-detail-popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        backdrop-filter: blur(2px);
+    }
+    
+    .results-detail-popup.open {
+        display: flex;
+    }
+    
+    .popup-content {
+        background: var(--neutral-layer-2);
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-width: 800px;
+        width: 90%;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--neutral-stroke-rest);
+    }
+    
+    .popup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border-bottom: 1px solid var(--neutral-stroke-rest);
+    }
+    
+    .popup-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--accent-foreground-rest);
+    }
+    
+    .header-controls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    
+    .search-input {
+        padding: 0.25rem 0.5rem;
+        border: 1px solid var(--neutral-stroke-rest);
+        border-radius: 4px;
+        background: var(--neutral-layer-1);
+        color: var(--neutral-foreground-rest);
+        font-size: 0.9rem;
+        min-width: 150px;
+        transition: all 0.2s;
+    }
+    
+    .search-input:focus {
+        outline: none;
+        border-color: var(--accent-stroke-rest);
+        background: var(--neutral-layer-floating);
+    }
+    
+    .search-input::placeholder {
+        color: var(--neutral-foreground-hint);
+    }
+    
+    .sort-btn {
+        background: var(--neutral-fill-stealth-rest);
+        border: 1px solid var(--neutral-stroke-rest);
+        color: var(--neutral-foreground-rest);
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    
+    .sort-btn:hover {
+        background: var(--neutral-fill-stealth-hover);
+        border-color: var(--accent-stroke-rest);
+    }
+    
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--neutral-foreground-rest);
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+    
+    .close-btn:hover {
+        background: var(--neutral-fill-stealth-hover);
+        color: var(--neutral-foreground-hover);
+    }
+    
+    .popup-body {
+        padding: 1rem;
+        overflow-y: auto;
+        flex: 1;
+    }
+    
+    .meldingen-section {
+        background: var(--neutral-layer-3);
+        border-radius: 6px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--neutral-stroke-rest);
+    }
+    
+    .meldingen-section h4 {
+        margin: 0 0 1rem 0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--accent-foreground-rest);
+    }
+    
+    .melding-item {
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        border-radius: 4px;
+        border-left: 4px solid;
+        background: var(--neutral-layer-2);
+    }
+    
+    .melding-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .melding-error {
+        border-left-color: #d32f2f;
+        background: rgba(211, 47, 47, 0.1);
+    }
+    
+    .melding-warning {
+        border-left-color: #f57c00;
+        background: rgba(245, 124, 0, 0.1);
+    }
+    
+    .melding-info {
+        border-left-color: #1976d2;
+        background: rgba(25, 118, 210, 0.1);
+    }
+    
+    .melding-opmerking {
+        border-left-color: var(--accent-fill-rest);
+        background: var(--neutral-layer-floating);
+    }
+    
+    .melding-content {
+        font-size: 0.9rem;
+        color: var(--neutral-foreground-rest);
+        line-height: 1.5;
+    }
+    
+    .melding-content strong {
+        font-weight: 600;
+        color: var(--neutral-foreground-rest);
+    }
+    
+    .melding-content em {
+        font-style: italic;
+    }
+    
+    .melding-content code {
+        background: var(--neutral-layer-4);
+        padding: 0.125rem 0.25rem;
+        border-radius: 2px;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 0.85em;
+    }
+    
+    .property-tree {
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 0.9rem;
+    }
+    
+    .property-item {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 1rem;
+        padding: 0.4rem 0;
+        border-bottom: 1px solid var(--neutral-stroke-subtle);
+    }
+    
+    .property-item:last-child {
+        border-bottom: none;
+    }
+    
+    .property-item.depth-0 {
+        background: var(--neutral-layer-3);
+        padding: 0.5rem;
+        margin-bottom: 0.25rem;
+        border-radius: 4px;
+        font-weight: 600;
+    }
+    
+    .property-item.depth-1 {
+        background: var(--neutral-layer-4);
+        padding-left: 1rem;
+    }
+    
+    .property-item.depth-2 {
+        padding-left: 2rem;
+        opacity: 0.9;
+    }
+    
+    .property-item.has-table-column {
+        background: var(--neutral-layer-floating);
+        border-left: 3px solid var(--accent-fill-rest);
+        padding-left: 0.5rem;
+    }
+    
+    .property-item.formula-property {
+        border-top: none;
+        padding-top: 0;
+        margin-top: -0.4rem;
+    }
+    
+    .property-name {
+        color: var(--accent-foreground-rest);
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .symbol-text {
+        color: var(--accent-fill-rest);
+        font-weight: 600;
+        font-size: 1.05rem;
+        cursor: help;
+    }
+    
+    .label-text {
+        color: var(--neutral-foreground-hint);
+        font-size: 0.85rem;
+        font-style: italic;
+        margin-left: 0.25rem;
+    }
+    
+    .unit-text {
+        color: var(--accent-foreground-rest);
+        font-style: italic;
+        margin-left: 0.25rem;
+    }
+    
+    .name-text {
+        color: var(--accent-fill-rest);
+    }
+    
+    .property-value {
+        color: var(--accent-foreground-rest);
+        word-break: break-word;
+    }
+    
+    .null-value {
+        color: #888;
+        font-style: italic;
+    }
+    
+    .number-value {
+        color: var(--accent-foreground-rest);
+        font-weight: 600;
+    }
+    
+    .string-value {
+        color: #ce9178;
+    }
+    
+    .boolean-value {
+        color: #569cd6;
+        font-weight: 600;
+    }
+    
+    .enum-value {
+        color: #4ec9b0;
+    }
+    
+    .complex-type {
+        color: #9cdcfe;
+        font-style: italic;
+    }
+    
+    .collection-value {
+        color: #dcdcaa;
+        font-style: italic;
+    }
+    
+    .formula-container {
+        padding: 0.5rem;
+        background: var(--neutral-layer-3);
+        border-radius: 4px;
+        border-left: 3px solid var(--neutral-stroke-strong);
+        margin: 0.25rem 0;
+        position: relative;
+        min-height: 40px;
+    }
+    
+    /* Skeleton overlay tijdens loading */
+    .formula-container.loading .katex-formula {
+        opacity: 0;
+    }
+    
+    .formula-skeleton-overlay {
+        position: absolute;
+        top: 0.5rem;
+        left: 0.5rem;
+        right: 0.5rem;
+        height: 20px;
+        background: linear-gradient(
+            90deg,
+            var(--neutral-layer-3) 0%,
+            var(--neutral-layer-4) 50%,
+            var(--neutral-layer-3) 100%
+        );
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 4px;
+        pointer-events: none;
+    }
+    
+    @@keyframes shimmer {
+        0% {
+            background-position: -200% 0;
+        }
+        100% {
+            background-position: 200% 0;
+        }
+    }
+    
+    /* Smooth fade-in voor KaTeX formules */
+    .formula-container:not(.loading) .katex-formula {
+        animation: fadeIn 0.3s ease-in;
+    }
+    
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+    
+    .formula-name {
+        font-size: 0.85rem;
+        color: var(--neutral-foreground-hint);
+        font-style: italic;
+        margin-bottom: 0.25rem;
+        font-weight: 600;
+    }
+    
+    .formula-name-label {
+        color: var(--accent-fill-rest);
+        font-weight: 600;
+        font-size: 0.95rem;
+        font-style: italic;
+    }
+    
+    .formula-static {
+        font-family: 'KaTeX_Main', 'Cambria Math', 'Times New Roman', serif;
+        color: var(--neutral-foreground-rest);
+        margin-bottom: 0.25rem;
+    }
+    
+    .formula-dynamic {
+        color: var(--neutral-foreground-hint);
+        font-size: 0.9rem;
+        padding-left: 1rem;
+        font-style: italic;
+    }
+    
+    .complex-type-container {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .expand-btn {
+        background: none;
+        border: none;
+        color: var(--accent-fill-rest);
+        cursor: pointer;
+        padding: 0;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 2px;
+        transition: all 0.2s;
+        font-size: 0.75rem;
+    }
+    
+    .expand-btn:hover {
+        background: var(--neutral-fill-stealth-hover);
+        transform: scale(1.1);
+    }
+    
+    .no-data {
+        text-align: center;
+        color: var(--neutral-foreground-hint);
+        padding: 2rem;
+    }
+    
+    .popup-footer {
+        padding: 1rem;
+        border-top: 1px solid var(--neutral-stroke-rest);
+        display: flex;
+        justify-content: flex-end;
+    }
+    
+    .popup-footer .btn {
+        padding: 0.5rem 1.5rem;
+    }
+</style>

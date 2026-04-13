@@ -1,0 +1,133 @@
+@using CommonLibrary.Models
+@using CommonLibrary.Interfaces
+@using Profielen.Staal
+@using Profielen.Parametrisch
+@using System.Globalization
+
+<div class="kit-field kit-profiel @(_open ? "kit-profiel--open" : "")">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <span class="kit-field-label">@((MarkupString)Label)</span>
+    }
+
+    <div class="kit-profiel-header" @onclick="ToggleOpen">
+        <span class="kit-profiel-naam">@(Value?.Naam ?? "— kies profiel —")</span>
+        <span class="kit-profiel-chevron">▾</span>
+    </div>
+
+    @if (_open)
+    {
+        <div class="kit-profiel-panel">
+
+            <div class="kit-profiel-tabs">
+                @foreach (var cat in _categorieen)
+                {
+                    <button type="button"
+                            class="kit-profiel-tab @(_actieveCategorie == cat ? "kit-profiel-tab--actief" : "")"
+                            @onclick="() => _actieveCategorie = cat"
+                            @onclick:stopPropagation>
+                        @cat
+                    </button>
+                }
+            </div>
+
+            @if (_actieveCategorie == "Param")
+            {
+                <div class="kit-profiel-param">
+                    <div class="kit-profiel-param-rij">
+                        <label>
+                            B (mm)
+                            <input type="number" class="kit-profiel-param-input"
+                                   value="@_paramB"
+                                   @onchange="OnParamBChanged"
+                                   @onclick:stopPropagation />
+                        </label>
+                        <label>
+                            H (mm)
+                            <input type="number" class="kit-profiel-param-input"
+                                   value="@_paramH"
+                                   @onchange="OnParamHChanged"
+                                   @onclick:stopPropagation />
+                        </label>
+                    </div>
+                    <div class="kit-profiel-param-preview">
+                        I<sub>y</sub> = @((_paramB * Math.Pow(_paramH, 3) / 12.0 * 1e-4).ToString("0.0", CultureInfo.InvariantCulture)) cm⁴
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="kit-profiel-list">
+                    @foreach (var p in GetLijst())
+                    {
+                        <button type="button"
+                                class="kit-profiel-item @(Value == p ? "kit-profiel-item--actief" : "")"
+                                @onclick="() => SelectProfiel(p)"
+                                @onclick:stopPropagation>
+                            @p.Naam
+                        </button>
+                    }
+                </div>
+            }
+
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public BaseProfiel? Value { get; set; }
+    [Parameter] public EventCallback<BaseProfiel?> ValueChanged { get; set; }
+    [Parameter] public string? Label { get; set; }
+
+    private bool _open;
+    private string _actieveCategorie = "HEA";
+    private double _paramB = 300;
+    private double _paramH = 400;
+
+    private readonly string[] _categorieen = ["HEA", "HEB", "HEM", "IPE", "Koker", "Param"];
+
+    protected override void OnParametersSet()
+    {
+        if (Value is ParametrischProfielContext p)
+        {
+            _actieveCategorie = "Param";
+            _paramB = p.Breedte;
+            _paramH = p.Hoogte;
+        }
+    }
+
+    private IEnumerable<BaseProfiel> GetLijst() => _actieveCategorie switch
+    {
+        "HEA"   => Doorsneden.HEA.OfType<BaseProfiel>(),
+        "HEB"   => Doorsneden.HEB.OfType<BaseProfiel>(),
+        "HEM"   => Doorsneden.HEM.OfType<BaseProfiel>(),
+        "IPE"   => Doorsneden.IPE.OfType<BaseProfiel>(),
+        "Koker" => Doorsneden.Koker.OfType<BaseProfiel>(),
+        _       => Enumerable.Empty<BaseProfiel>()
+    };
+
+    private void ToggleOpen() => _open = !_open;
+
+    private async Task SelectProfiel(BaseProfiel profiel)
+    {
+        _open = false;
+        await ValueChanged.InvokeAsync(profiel);
+    }
+
+    private async Task OnParamBChanged(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
+            _paramB = v;
+        await EmitParam();
+    }
+
+    private async Task OnParamHChanged(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
+            _paramH = v;
+        await EmitParam();
+    }
+
+    private Task EmitParam() =>
+        ValueChanged.InvokeAsync(new ParametrischProfielContext(_paramB, _paramH));
+}

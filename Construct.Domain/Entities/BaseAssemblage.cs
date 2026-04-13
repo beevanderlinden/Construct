@@ -1,6 +1,7 @@
 ﻿using CommonLibrary.Interfaces;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 
 namespace Construct.Domain.Entities
 {
@@ -18,10 +19,21 @@ namespace Construct.Domain.Entities
             throw new NotImplementedException();
         }
 
-        public Guid Guid { get; set; } = Guid.NewGuid();
+        [JsonPropertyOrder(-1000)]
+        public Guid Id { get; set; } = Guid.NewGuid();
+        
+        [JsonPropertyOrder(-900)]
         public string? Merk { get; set; }
 
+        [JsonPropertyOrder(-800)]
         public string? Naam { get; set; }
+
+        /// <summary>
+        /// Optionle omschrijving van deze assemblage, bijvoorbeeld voor extra details of opmerkingen.
+        /// Bijvoorbeeld. Deze berekening geldt voor alle trappen kleiner of gelijk aan 8 treden.
+        /// </summary>
+        [JsonPropertyOrder(-700)]
+        public string? Omschrijving { get; set; }
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

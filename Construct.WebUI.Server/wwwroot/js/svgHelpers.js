@@ -248,6 +248,39 @@
         if (status) {
             svg.classList.add('${status}');
         }
+    },
+
+    // ── SvgDimLineInput helpers ───────────────────────────────────────────────
+
+    /** Opslag voor DotNetObjectReferences, geïndexeerd op SVG-element id. */
+    _dimRefs: {},
+
+    /**
+     * Registreert een DotNet-callback voor een SVG-element zodat SvgDimLineInput
+     * inputs hun waarde kunnen doorgeven via OnDimInputChanged(key, value).
+     * @param {string} svgId - id van het SVG-element (data-dim-ref attribuut)
+     * @param dotNetRef - DotNetObjectReference van de Blazor-component
+     */
+    registerDimRef: function (svgId, dotNetRef) {
+        window.svgHelpers._dimRefs[svgId] = dotNetRef;
+    },
+
+    /**
+     * Wordt aangeroepen vanuit onchange op een <input> in een SvgDimLineInput foreignObject.
+     * Zoekt het dichtstbijzijnde SVG-element met data-dim-ref op via closest() en roept
+     * de geregistreerde DotNet-callback aan met de sleutel en nieuwe waarde.
+     * @param {HTMLInputElement} input - het gewijzigde input-element
+     */
+    notifyDimInput: function (input) {
+        const svg = input.closest('[data-dim-ref]');
+        if (!svg) return;
+        const dotNetRef = window.svgHelpers._dimRefs[svg.id];
+        if (!dotNetRef) return;
+        const key = input.getAttribute('data-dim-key');
+        const value = parseFloat(input.value);
+        if (key && !isNaN(value)) {
+            dotNetRef.invokeMethodAsync('OnDimInputChanged', key, value);
+        }
     }
 
 

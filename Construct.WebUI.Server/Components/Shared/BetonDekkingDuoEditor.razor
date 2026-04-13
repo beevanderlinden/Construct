@@ -1,0 +1,681 @@
+﻿@using Eurocode.BetonConstructies
+@using Microsoft.AspNetCore.Components
+
+@if (DekkingBoven != null && DekkingOnder != null)
+{
+    <div class="dekking-editor">
+       
+
+        <table class="tableX table-smX table-borderlessX">
+            <thead>
+                <tr>
+                    <th style="width: 40%;"></th>
+                    <th style="width: 30%; text-align: left;">Boven</th>
+                    <th style="width: 30%; text-align: left;">Onder @(DekkingGelijk ? "(als boven)" : "")</th>
+                </tr>
+            </thead>
+            <tbody>
+                    
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td> 
+                        <div class="mb-3">
+                            <label class="form-check-label">
+                                <input type="checkbox" class="form-check-input" @bind="DekkingGelijk" @bind:after="OnDekkingGelijkChanged" />
+                                dekking onder gelijk als boven
+                            </label>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Kwaliteit</td>
+                    <td>@DekkingBoven.Beton.UserFriendlyName</td>
+                    <td>@DekkingOnder.Beton.UserFriendlyName</td>
+                </tr>
+                <tr>
+                    <td>Ontwerplevensduur</td>
+                    <td>@DekkingBoven.OntwerpLevensduur.ToString()</td>
+                    <td>@DekkingOnder.OntwerpLevensduur</td>
+                </tr>
+                <tr>
+                    <td>Constructieklasse</td>
+                    <td>@DekkingBoven.ConstructieklasseUserFriendlyName</td>
+                    <td>@DekkingOnder.ConstructieklasseUserFriendlyName</td>
+                </tr>
+                <!-- Milieuklassen - alle badges tonen -->
+                <tr>
+                    <td>Milieuklassen</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="flex-grow-1">
+                                @if (DekkingBoven.SelectedMilieuklassen?.Any() == true)
+                                {
+                                    <div class="badge-container">
+                                        @foreach (var mk in DekkingBoven.SelectedMilieuklassen)
+                                        {
+                                            <span class="badge bg-secondary me-1 mb-1">@mk</span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <em class="text-muted">Geen gekozen</em>
+                                }
+                            </div>
+                         
+                        <FluentButton Appearance="Appearance.Stealth"
+                                OnClick="@(() => _showMilieuSelectBoven = _showMilieuSelectOnder = !_showMilieuSelectBoven)"
+                                IconStart="@(new Icons.Regular.Size32.MoreHorizontal())"/>
+                        </div>
+                        @if (_showMilieuSelectBoven)
+                        {
+                            <div class="mt-2 milieu-checkbox-container">
+                                @foreach (var mk in AlleMilieuklassen)
+                                {
+                                    <div class="form-check">
+                                        <input type="checkbox" 
+                                               class="form-check-input" 
+                                               id="mk-boven-@mk" 
+                                               checked="@(DekkingBoven.SelectedMilieuklassen?.Contains(mk) ?? false)"
+                                               @onchange="@(e => OnMilieuCheckBoven(mk, (bool)e.Value!))" />
+                                        <label class="form-check-label" for="mk-boven-@mk">
+                                            @mk.ToString()
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="flex-grow-1">
+                                @if (DekkingOnder.SelectedMilieuklassen?.Any() == true)
+                                {
+                                    <div class="badge-container">
+                                        @foreach (var mk in DekkingOnder.SelectedMilieuklassen)
+                                        {
+                                            <span class="badge bg-secondary me-1 mb-1">@mk</span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <em class="text-muted">Geen gekozen</em>
+                                }
+                            </div>
+                           
+                            <FluentButton Appearance="Appearance.Stealth"
+                                OnClick="@(() => _showMilieuSelectOnder = _showMilieuSelectBoven = !_showMilieuSelectOnder)"
+                                Disabled="@DekkingGelijk"
+                                IconStart="@(new Icons.Regular.Size32.MoreHorizontal())"/>
+
+                        </div>
+                        @if (_showMilieuSelectOnder && !DekkingGelijk)
+                        {
+                            <div class="mt-2 milieu-checkbox-container">
+                                @foreach (var mk in AlleMilieuklassen)
+                                {
+                                    <div class="form-check">
+                                        <input type="checkbox" 
+                                               class="form-check-input" 
+                                               id="mk-onder-@mk" 
+                                               checked="@(DekkingOnder.SelectedMilieuklassen?.Contains(mk) ?? false)"
+                                               @onchange="@(e => OnMilieuCheckOnder(mk, (bool)e.Value!))" />
+                                        <label class="form-check-label" for="mk-onder-@mk">
+                                            @mk.ToString()
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </td>
+                </tr>
+
+                <!-- Snelkeuze milieuklassen -->
+                <tr>
+                    <td><em>Snelkeuze omstandigheden</em></td>
+                    <td style="text-align: center;">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary btn-sm preset-btn" 
+                                    @onclick="@(() => ApplyPresetBoven("binnen"))">
+                                🏠 <span class="preset-label">Binnen</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm preset-btn" 
+                                    @onclick="@(() => ApplyPresetBoven("buiten"))">
+                                🌦 <span class="preset-label">Buiten</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm preset-btn" 
+                                    @onclick="@(() => ApplyPresetBoven("zwembad"))">
+                                🤽 <span class="preset-label">Zwembad</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm preset-btn" 
+                                    @onclick="@(() => ApplyPresetBoven("kust"))">
+                                🌊 <span class="preset-label">Kust</span>
+                            </button>
+                        </div>
+                    </td>
+                    <td style="text-align: center;">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary btn-sm preset-btn" 
+                                    @onclick="@(() => ApplyPresetOnder("binnen"))"
+                                    disabled="@DekkingGelijk">
+                                🏠 <span class="preset-label">Binnen</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm preset-btn" 
+                                    @onclick="@(() => ApplyPresetOnder("buiten"))"
+                                    disabled="@DekkingGelijk">
+                                🌦 <span class="preset-label">Buiten</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm preset-btn" 
+                                    @onclick="@(() => ApplyPresetOnder("zwembad"))"
+                                    disabled="@DekkingGelijk">
+                                🤽 <span class="preset-label">Zwembad</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm preset-btn" 
+                                    @onclick="@(() => ApplyPresetOnder("kust"))"
+                                    disabled="@DekkingGelijk">
+                                🌊 <span class="preset-label">Kust</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+
+                <!-- Kwaliteitsbeheersing -->
+                <tr>
+                    <td>Kwaliteitsbeheersing</td>
+                    <td style="text-align: left;">
+                        <input type="checkbox" class="form-check-input" @bind="DekkingBoven.IsKwaliteitsBeheersing" @bind:after="HandleChanged" />
+                    </td>
+                    <td style="text-align: left;">
+                        <input type="checkbox" class="form-check-input" @bind="DekkingOnder.IsKwaliteitsBeheersing" @bind:after="HandleChanged" disabled="@DekkingGelijk" />
+                    </td>
+                </tr>
+
+                <!-- Plaatgeometrie -->
+                <tr>
+                    <td>Plaatgeometrie</td>
+                    <td style="text-align: left;">
+                        <input type="checkbox" class="form-check-input" @bind="DekkingBoven.IsPlaatGeometrie" @bind:after="HandleChanged" />
+                    </td>
+                    <td style="text-align: left;">
+                        <input type="checkbox" class="form-check-input" @bind="DekkingOnder.IsPlaatGeometrie" @bind:after="HandleChanged" disabled="@DekkingGelijk" />
+                    </td>
+                </tr>
+
+                <!-- Dekking nominaal (readonly) -->
+                <tr>
+                    <td>Dekking nominaal <i>c<sub>nom</sub></i> [mm]</td>
+                    <td> @DekkingBoven.DekkingNom mm</td>
+                    <td> @DekkingOnder.DekkingNom mm</td>
+
+                   @*  <td style="text-align: left;">
+                        <input type="number" class="form-control form-control-sm text-left fw-bold readonly-field" value="@DekkingBoven.DekkingNom" readonly disabled />
+                    </td>
+                    <td style="text-align: left; font-weight: 600;">
+                        <input type="number" class="form-control form-control-sm text-left fw-bold readonly-field" value="@DekkingOnder.DekkingNom" readonly disabled />
+                    </td> *@
+                </tr>
+
+                <!-- Dekking toegepast -->
+                <tr>
+                    <td>Dekking toegep. <i>c<sub>prov</sub></i> [mm]</td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm" 
+                               @bind="DekkingBoven.DekkingToe" 
+                               @bind:after="HandleChanged"
+                               min="@DekkingBoven.DekkingNom" max="100" step="1" />
+                    </td>
+                    <td>
+                        <input type="number" 
+                               class="form-control form-control-sm @(DekkingGelijk ? "readonly-field" : "")"
+                               @bind="DekkingOnder.DekkingToe" 
+                               @bind:after="HandleChanged"
+                               min="@DekkingOnder.DekkingNom" max="100" step="1" 
+                               disabled="@DekkingGelijk" />
+                    </td>
+                </tr>
+
+                <!-- Grootste korrel diameter -->
+                <tr>
+                    <td>Grootste korrel ≤ Ø [mm]</td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm" 
+                               @bind="DekkingBoven.GrootsteKorrelDiameter" 
+                               @bind:after="HandleChanged"
+                               min="0" max="63" step="1" />
+                    </td>
+                    <td>
+                        <input type="number" 
+                               class="form-control form-control-sm @(DekkingGelijk ? "readonly-field" : "")"
+                               @bind="DekkingOnder.GrootsteKorrelDiameter" 
+                               @bind:after="HandleChanged"
+                               min="0" max="63" step="1" 
+                               disabled="@DekkingGelijk" />
+                    </td>
+                </tr>
+
+                <!-- Wapening diameter gelijkwaardig -->
+                <tr>
+                    <td>Wapening Ø<sub>equiv</sub> [mm]</td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm" 
+                               @bind="DekkingBoven.WapeningDiameterGelijkwaardig" 
+                               @bind:after="HandleChanged"
+                               min="0" max="69.3" step="0.1" />
+                    </td>
+                    <td>
+                        <input type="number" 
+                               class="form-control form-control-sm @(DekkingGelijk ? "readonly-field" : "")"
+                               @bind="DekkingOnder.WapeningDiameterGelijkwaardig" 
+                               @bind:after="HandleChanged"
+                               min="0" max="69.3" step="0.1" 
+                               disabled="@DekkingGelijk" />
+                    </td>
+                </tr>
+
+                <!-- Dekking minimum (readonly) -->
+                <tr>
+                    <td>Dekking min. c<sub>min</sub> [mm]</td>
+                    <td> @DekkingBoven.DekkingMin mm</td>
+                    <td> @DekkingOnder.DekkingMin mm</td>
+                </tr>
+
+                <!-- Dekking min duurzaamheid (readonly) -->
+                <tr>
+                    <td>Dekking min. duurz. c<sub>min,dur</sub> [mm]</td>
+                    <td> @DekkingBoven.DekkingMinDuurzaamheid mm</td>
+                    <td> @DekkingOnder.DekkingMinDuurzaamheid mm</td>
+                </tr>
+
+                <!-- Dekking min aanhechting (readonly) -->
+                <tr>
+                    <td>Dekking min. aanh. c<sub>min,b</sub> [mm]</td>
+                    <td> @DekkingBoven.DekkingMinAanhechting mm</td>
+                    <td> @DekkingOnder.DekkingMinAanhechting mm</td>
+                </tr>
+            </tbody>
+        </table>
+
+        @if (DekkingBoven.Meldingen?.Any() == true || DekkingOnder.Meldingen?.Any() == true)
+        {
+            <div class="alert alert-warning mt-2" role="alert">
+                <strong>Meldingen:</strong>
+                <ul class="mb-0">
+                    @if (DekkingBoven.Meldingen?.Any() == true)
+                    {
+                        @foreach (var melding in DekkingBoven.Meldingen)
+                        {
+                            <li><strong>Boven:</strong> @((MarkupString)melding.Bericht)</li>
+                        }
+                    }
+                    @if (DekkingOnder.Meldingen?.Any() == true)
+                    {
+                        @foreach (var melding in DekkingOnder.Meldingen)
+                        {
+                            <li><strong>Onder:</strong> @((MarkupString)melding.Bericht)</li>
+                        }
+                    }
+                </ul>
+            </div>
+
+        }
+
+        @if (NeedsDekkingCorrection())
+        {
+            <div class="alert alert-info mt-2 d-flex align-items-center justify-content-between" role="alert">
+                <span>
+                    <strong>⚠️ Dekking te klein:</strong> De toegepaste dekking is kleiner dan de nominale dekking.
+                </span>
+                <FluentButton Appearance="Appearance.Accent" OnClick="FixDekking">
+                    Dekking aanpassen
+                </FluentButton>
+            </div>
+        }
+        @if (OptimizeDekkingMogelijk())
+        {
+            <div class="alert alert-success mt-2 d-flex align-items-center justify-content-between" role="alert">
+                <span>
+                    <strong>✅ Optimalisatie mogelijk:</strong> Pas dekking aan naar nominale waarde (of 20mm).
+                </span>
+                <FluentButton Appearance="Appearance.Accent" OnClick="OptimizeDekking">
+                    Optimaliseer
+                </FluentButton>
+            </div>
+        }
+    
+    </div>
+}
+else
+{
+    <div class="alert alert-danger">
+        <strong>Error:</strong> DekkingBoven en/of DekkingOnder is niet geïnitialiseerd.
+    </div>
+}
+
+<style>
+    .dekking-editor {
+        width: 100%;
+    }
+
+    .dekking-editor table {
+        margin-bottom: 0;
+    }
+
+    .dekking-editor .form-control-sm {
+        font-size: 0.875rem;
+    }
+
+    .dekking-editor .text-center {
+        text-align: center;
+    }
+
+    /* Readonly fields - duidelijk visueel onderscheid */
+    .dekking-editor .readonly-field {
+        background-color: #e9ecef !important;
+        border-color: #ced4da;
+        color: #6c757d;
+        cursor: not-allowed;
+        font-style: italic;
+    }
+
+    .dekking-editor .badge-container {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    /* Milieu checkbox container - groter en overzichtelijker */
+    .dekking-editor .milieu-checkbox-container {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 0.75rem;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .dekking-editor .milieu-checkbox-container .form-check {
+        margin-bottom: 0.5rem;
+    }
+
+    /* Preset buttons met labels */
+    .dekking-editor .preset-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.375rem 0.5rem;
+    }
+
+    .dekking-editor .preset-btn .preset-label {
+        font-size: 0.75rem;
+    }
+
+    /* Disabled state voor buttons */
+    .dekking-editor .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired]
+    public BetonDekkingContext? DekkingBoven { get; set; }
+
+    [Parameter, EditorRequired]
+    public BetonDekkingContext? DekkingOnder { get; set; }
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private MilieuklasseEnum[] AlleMilieuklassen = Enum.GetValues<MilieuklasseEnum>();
+
+    // State voor dekking gelijk
+    private bool _dekkingGelijk = false;
+    public bool DekkingGelijk
+    {
+        get => _dekkingGelijk;
+        set => _dekkingGelijk = value;
+    }
+
+    // State voor milieuklasse selectors
+    private bool _showMilieuSelectBoven = false;
+    private bool _showMilieuSelectOnder = false;
+
+    protected override void OnParametersSet()
+    {
+        // Bereken bij elke parameter update
+        DekkingBoven?.BerekenEnValideer();
+        DekkingOnder?.BerekenEnValideer();
+    }
+
+    protected override void OnInitialized()
+    {
+        _dekkingGelijk = AreGelijk(DekkingBoven, DekkingOnder);
+    }
+
+    private static bool AreGelijk(BetonDekkingContext? a, BetonDekkingContext? b)
+    {
+        if (a is null && b is null) return true;
+        if (a is null || b is null) return false;
+        return a.DekkingToe == b.DekkingToe
+            && a.IsKwaliteitsBeheersing == b.IsKwaliteitsBeheersing
+            && a.IsPlaatGeometrie == b.IsPlaatGeometrie
+            && a.GrootsteKorrelDiameter == b.GrootsteKorrelDiameter
+            && a.WapeningDiameterGelijkwaardig == b.WapeningDiameterGelijkwaardig
+            && (a.SelectedMilieuklassen ?? []).OrderBy(x => x)
+                   .SequenceEqual((b.SelectedMilieuklassen ?? []).OrderBy(x => x));
+    }
+
+    // Wrapper method voor EventCallback
+    private void HandleChanged()
+    {
+        if (DekkingGelijk)
+        {
+            // Kopieer alle waarden van Boven naar Onder
+            SyncDekkingOnderNaarBoven();
+        }
+
+        DekkingBoven?.BerekenEnValideer();
+        DekkingOnder?.BerekenEnValideer();
+        OnChanged.InvokeAsync();
+    }
+
+    private void OnDekkingGelijkChanged()
+    {
+        if (DekkingGelijk)
+        {
+            // Kopieer Boven naar Onder
+            SyncDekkingOnderNaarBoven();
+        }
+        HandleChanged();
+    }
+
+    private void SyncDekkingOnderNaarBoven()
+    {
+        if (DekkingBoven == null || DekkingOnder == null) return;
+
+        DekkingOnder.SelectedMilieuklassen = new List<MilieuklasseEnum>(DekkingBoven.SelectedMilieuklassen ?? new List<MilieuklasseEnum>());
+        DekkingOnder.IsKwaliteitsBeheersing = DekkingBoven.IsKwaliteitsBeheersing;
+        DekkingOnder.IsPlaatGeometrie = DekkingBoven.IsPlaatGeometrie;
+        DekkingOnder.DekkingToe = DekkingBoven.DekkingToe;
+        DekkingOnder.GrootsteKorrelDiameter = DekkingBoven.GrootsteKorrelDiameter;
+        DekkingOnder.WapeningDiameterGelijkwaardig = DekkingBoven.WapeningDiameterGelijkwaardig;
+    }
+
+    // Checkbox handlers voor milieuklassen
+    private void OnMilieuCheckBoven(MilieuklasseEnum mk, bool isChecked)
+    {
+        if (DekkingBoven == null) return;
+
+        var list = DekkingBoven.SelectedMilieuklassen?.ToList() ?? new List<MilieuklasseEnum>();
+
+        if (isChecked && !list.Contains(mk))
+        {
+            list.Add(mk);
+        }
+        else if (!isChecked && list.Contains(mk))
+        {
+            list.Remove(mk);
+        }
+
+        DekkingBoven.SelectedMilieuklassen = list;
+
+        if (DekkingGelijk && DekkingOnder != null)
+        {
+            DekkingOnder.SelectedMilieuklassen = new List<MilieuklasseEnum>(list);
+        }
+
+        DekkingBoven.BerekenEnValideer();
+        DekkingOnder?.BerekenEnValideer();
+        OnChanged.InvokeAsync();
+    }
+
+    private void OnMilieuCheckOnder(MilieuklasseEnum mk, bool isChecked)
+    {
+        if (DekkingOnder == null) return;
+
+        var list = DekkingOnder.SelectedMilieuklassen?.ToList() ?? new List<MilieuklasseEnum>();
+
+        if (isChecked && !list.Contains(mk))
+        {
+            list.Add(mk);
+        }
+        else if (!isChecked && list.Contains(mk))
+        {
+            list.Remove(mk);
+        }
+
+        DekkingOnder.SelectedMilieuklassen = list;
+        DekkingOnder.BerekenEnValideer();
+        OnChanged.InvokeAsync();
+    }
+
+    private void OnMilieuklassenChangedBoven(ChangeEventArgs e)
+    {
+        if (e.Value is not string[] selectedValues || DekkingBoven == null) return;
+
+        var selected = selectedValues
+            .Select(v => Enum.TryParse<MilieuklasseEnum>(v, out var mk) ? mk : (MilieuklasseEnum?)null)
+            .Where(mk => mk.HasValue)
+            .Select(mk => mk!.Value)
+            .ToList();
+
+        DekkingBoven.SelectedMilieuklassen = selected;
+
+        if (DekkingGelijk && DekkingOnder != null)
+        {
+            DekkingOnder.SelectedMilieuklassen = new List<MilieuklasseEnum>(selected);
+        }
+
+        DekkingBoven.BerekenEnValideer();
+        DekkingOnder?.BerekenEnValideer();
+        OnChanged.InvokeAsync();
+
+        _showMilieuSelectBoven = false; // Sluit dropdown na selectie
+    }
+
+    private void OnMilieuklassenChangedOnder(ChangeEventArgs e)
+    {
+        if (e.Value is not string[] selectedValues || DekkingOnder == null) return;
+
+        var selected = selectedValues
+            .Select(v => Enum.TryParse<MilieuklasseEnum>(v, out var mk) ? mk : (MilieuklasseEnum?)null)
+            .Where(mk => mk.HasValue)
+            .Select(mk => mk!.Value)
+            .ToList();
+
+        DekkingOnder.SelectedMilieuklassen = selected;
+        DekkingOnder.BerekenEnValideer();
+        OnChanged.InvokeAsync();
+
+        _showMilieuSelectOnder = false; // Sluit dropdown na selectie
+    }
+
+    private void ApplyPresetBoven(string preset)
+    {
+        if (DekkingBoven == null) return;
+
+        DekkingBoven.SelectedMilieuklassen = preset switch
+        {
+            "binnen" => new List<MilieuklasseEnum> { MilieuklasseEnum.XC1 },
+            "buiten" => new List<MilieuklasseEnum> { MilieuklasseEnum.XC4, MilieuklasseEnum.XD3, MilieuklasseEnum.XF4 },
+            "zwembad" => new List<MilieuklasseEnum> { MilieuklasseEnum.XC4, MilieuklasseEnum.XD3, MilieuklasseEnum.XA2, MilieuklasseEnum.XS1 },
+            "kust" => new List<MilieuklasseEnum> { MilieuklasseEnum.XC4, MilieuklasseEnum.XD3, MilieuklasseEnum.XF4, MilieuklasseEnum.XS2 },
+            _ => new List<MilieuklasseEnum> { MilieuklasseEnum.XC1 }
+        };
+
+        if (DekkingGelijk && DekkingOnder != null)
+        {
+            DekkingOnder.SelectedMilieuklassen = new List<MilieuklasseEnum>(DekkingBoven.SelectedMilieuklassen);
+        }
+
+        DekkingBoven.BerekenEnValideer();
+        DekkingOnder?.BerekenEnValideer();
+        OnChanged.InvokeAsync();
+    }
+
+    private void ApplyPresetOnder(string preset)
+    {
+        if (DekkingOnder == null) return;
+
+        DekkingOnder.SelectedMilieuklassen = preset switch
+        {
+            "binnen" => new List<MilieuklasseEnum> { MilieuklasseEnum.XC1 },
+            "buiten" => new List<MilieuklasseEnum> { MilieuklasseEnum.XC4, MilieuklasseEnum.XD3, MilieuklasseEnum.XF4 },
+            "zwembad" => new List<MilieuklasseEnum> { MilieuklasseEnum.XC4, MilieuklasseEnum.XD3, MilieuklasseEnum.XA2, MilieuklasseEnum.XS1 },
+            "kust" => new List<MilieuklasseEnum> { MilieuklasseEnum.XC4, MilieuklasseEnum.XD3, MilieuklasseEnum.XF4, MilieuklasseEnum.XS2 },
+            _ => new List<MilieuklasseEnum> { MilieuklasseEnum.XC1 }
+        };
+
+        DekkingOnder.BerekenEnValideer();
+        OnChanged.InvokeAsync();
+    }
+
+    private bool NeedsDekkingCorrection()
+    {
+        if (DekkingBoven == null || DekkingOnder == null) return false;
+
+        return DekkingBoven.DekkingToe < DekkingBoven.DekkingNom || 
+               DekkingOnder.DekkingToe < DekkingOnder.DekkingNom;
+    }
+
+    private bool OptimizeDekkingMogelijk()
+    {
+        if (DekkingBoven == null || DekkingOnder == null) return false;
+
+        double ondergrensVoorOptimalisatie = 20; // Stel een ondergrens in voor optimalisatie (bijv. 20 mm)
+
+        // Optimalisatie is mogelijk als de toegepaste dekking groter is dan de minimale vereiste dekking
+        return (DekkingBoven.DekkingToe > Math.Max(DekkingBoven.DekkingNom, ondergrensVoorOptimalisatie)) ||
+               (DekkingOnder.DekkingToe > Math.Max(DekkingOnder.DekkingNom, ondergrensVoorOptimalisatie)) ;
+    }
+
+    private void FixDekking()
+    {
+
+        if (DekkingBoven != null && DekkingBoven.DekkingToe < DekkingBoven.DekkingNom)
+        {
+            DekkingBoven.DekkingToe = DekkingBoven.DekkingNom;
+            DekkingBoven.BerekenEnValideer();
+        }
+
+        if (DekkingOnder != null && DekkingOnder.DekkingToe < DekkingOnder.DekkingNom)
+        {
+            DekkingOnder.DekkingToe = DekkingOnder.DekkingNom;
+            DekkingOnder.BerekenEnValideer();
+        }
+
+
+    }
+
+    private void OptimizeDekking()
+    {
+        double ondergrensVoorOptimalisatie = 20;
+        if (DekkingBoven != null)
+            DekkingBoven.DekkingToe = Math.Max(DekkingBoven.DekkingNom, ondergrensVoorOptimalisatie);
+        if (DekkingOnder != null)
+            DekkingOnder.DekkingToe = Math.Max(DekkingOnder.DekkingNom, ondergrensVoorOptimalisatie);
+    }
+}

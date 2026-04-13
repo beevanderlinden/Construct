@@ -22,7 +22,7 @@
 
                     <tr>
                         <td style="font-weight:600; padding:0.25rem 0.5rem;">Materialen:</td>
-                        <td style="padding:0.25rem 0.5rem;">@Model.Materiaal.ToMarkupString()</td>
+                        <td style="padding:0.25rem 0.5rem;">@Model.Materiaal?.ToMarkupString()</td>
                     </tr>
 
                     @foreach (var t in Model.Toetsen.Where(t=>t != null))

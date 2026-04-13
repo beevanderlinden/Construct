@@ -18,29 +18,34 @@ namespace Construct.Domain.Entities
 
     [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
     [JsonDerivedType(typeof(SteekTrapEntity), "steektrap")]
+    [JsonDerivedType(typeof(HoekTrapEntity), "hoektrap")]
     [JsonDerivedType(typeof(BordesEntity), typeDiscriminator: "Bordes")]
     [JsonDerivedType(typeof(KolomEntity), typeDiscriminator: "Kolom")]
     [JsonDerivedType(typeof(LiggerEntity), typeDiscriminator: "Ligger")]
+    [JsonDerivedType(typeof(VrijRolEntity), typeDiscriminator: "VrijRol")]
 
 
 
     public abstract class AssemblageEntity : BaseAssemblage
     {
         // JSON opslag
-        public JsonNode? MateriaalJson { get; set; }
+        // ✅ MateriaalReference beheert zowel EntityId als Entity
 
-        // internal properties and methods can go here...
-        internal BetonContext _beton = new("C45/55");
-        internal BaseMateriaal _materiaal = new BetonContext("C30/37");
+        // ✅ NIEUW: MateriaalReference voor generieke materiaal-referentie-beheer
+        private readonly MateriaalReference _materiaalRef = new();
 
         private readonly List<BaseEurocodeContext> _toetsen = [];
         private readonly List<StrookEntity> _stroken = [];
         private ProjectInfoEntity _projectInfo = new();
         private BelastingenContext _belastingen = new();
-        private DekkingContext _plaatDekking = new();
         
+        [JsonPropertyOrder(100)]
         public virtual double Breedte { get; set; } = 1200;
+        
+        [JsonPropertyOrder(101)]
         public virtual double Lengte { get; set; } = 3000;
+        
+        [JsonPropertyOrder(102)]
         public virtual double Hoogte { get; set; } = 2200;
         
 
@@ -77,6 +82,25 @@ namespace Construct.Domain.Entities
         /// </summary>
         public double AfwerkingVlaklast { get; set; }
 
+        /// <summary>
+        /// Alleen het gedeelte zonder afwerking in kN/m²
+        /// </summary>
+        public virtual double EigenGewichtPerM2 { get; set; }
+
+        /// <summary>
+        /// E.G. + afwerking in kN/m²
+        /// </summary>
+        public double PermanenteBelastingPerM2 => Math.Round(EigenGewichtPerM2 + AfwerkingVlaklast, 2);
+
+
+
+        private BelastingGeval? BG1 => Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Naam == "BG1");
+        private BelastingGeval? BG2 => Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Naam == "BG2");
+
+        public double VeranderlijkeBelastingPerM2 => BG2?.OpgelegdeBelastingen.Vlaklast ?? 0;
+        public double VeranderlijkeBelastingPuntlast => BG2?.OpgelegdeBelastingen.Puntlast ?? 0;
+
+
 
         protected virtual void OnGrondslagenPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
@@ -92,29 +116,30 @@ namespace Construct.Domain.Entities
             OnPropertyChanged(nameof(Belastingen));
         }
 
-        // public properties and methods can go here...
-        [Obsolete("Gebruik Materiaal")]
-        public BetonContext Beton // todo verplaats alle verwijziginen naar Materiaal of maak private?
-        {
-            get => _beton;
-            set => SetNestedProperty(ref _beton!, value);
-        }
 
-        [JsonIgnore]
-        public BaseMateriaal Materiaal
+        /// <summary>
+        /// Het materiaal-ID van dit assemblage. Wordt geserialiseerd naar JSON.
+        /// Gekoppeld aan het werkelijke Materiaal object via MateriaalReference.
+        /// </summary>
+        [JsonPropertyOrder(-700)]
+        public Guid? MateriaalId
         {
-            get => _materiaal;
-            set => SetNestedProperty(ref _materiaal!, value);
+            get => _materiaalRef.EntityId;
+            set => _materiaalRef.EntityId = value;
         }
 
         /// <summary>
-        /// Dekking context voor dekking en duurzaamheid aan de onderzijde en bovenzijde van een beton-element
+        /// Het materiaal van dit assemblage (beton, staal, hout).
+        /// ⚠️ NIET geserialiseerd - gebruik MateriaalId voor JSON-opslag!
         /// </summary>
-        public DekkingContext PlaatDekking
+        [JsonIgnore]
+        public BaseMateriaal? Materiaal
         {
-            get => _plaatDekking;
-            set => SetNestedProperty(ref (_plaatDekking!), value);
+            get => _materiaalRef.Entity;
+            set => _materiaalRef.Attach(value);
         }
+
+       
 
 
         [JsonIgnore]
@@ -181,6 +206,12 @@ namespace Construct.Domain.Entities
         public string EngineeringCategorie { get; set; } = "Berekening conform kiwa criteria 73 - categorie 3";
 
         /// <summary>
+        /// Validatie resultaten van dit assemblage
+        /// </summary>
+        [JsonIgnore]
+        public AssemblageValidation? Validation { get; protected set; }
+
+        /// <summary>
         /// Of dit assemblage een prefab element is
         /// dus een prefab beton element, stalen element of houten element
         /// 
@@ -203,13 +234,26 @@ namespace Construct.Domain.Entities
             
         }
 
-        public AssemblageTypeEnum AssemblageTypeNotNull { get; set; } = AssemblageTypeEnum.HoutAssemblage;
 
         private GebruiksklasseEnum? _gebruiksklasse = GebruiksklasseEnum.B_kantoorgebouwen;
         public GebruiksklasseEnum? Gebruiksklasse 
         {
             get => _gebruiksklasse;
-            set => SetProperty(ref _gebruiksklasse, value);
+            set
+            {
+                if (SetProperty(ref _gebruiksklasse, value))
+                {
+                    foreach (var bg in Belastingen.BelastingGevallen.Where(bg=>bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk))
+                    {
+                        bg.Gebruiksklasse = value;
+                    }
+
+                    // als de gebruiksklasse wijzigt de combinaties bijwerken
+                    Belastingen.GenereerBelastingCombinaties(this.Belastingen, this.Belastingen.BelastingGevallen, this.Belastingen.CombinatiesTypes);
+
+                    
+                }
+            }
         }
 
         public string GebruiksklasseUserFriendlyName
@@ -221,21 +265,133 @@ namespace Construct.Domain.Entities
         }
 
 
+        /// <summary>
+        /// Herstelt materiaal-referenties na JSON-deserialisatie.
+        /// Wordt aangeroepen vanuit RestoreReferencesAfterDeserialization().
+        /// </summary>
+        /// <param name="project">Het project met alle beschikbare materialen</param>
+        protected void RestoreMaterialReference(ProjectEntity project)
+        {
+            Console.WriteLine($"[RestoreMaterialReference] {GetType().Name} '{Merk}'");
+            Console.WriteLine($"  MateriaalId: {MateriaalId}");
+            Console.WriteLine($"  Materiaal BEFORE: {Materiaal?.Naam ?? "NULL"}");
+            Console.WriteLine($"  project.Materialen.Count: {project.Materialen?.Count ?? 0}");
+            
+            // ✅ NIEUW: Bewaar het oude materiaal als hint voor fallback
+            var oudMateriaal = Materiaal;
+            
+            if (MateriaalId.HasValue)
+            {
+                bool exists = project.Materialen.ContainsKey(MateriaalId.Value);
+                Console.WriteLine($"  MateriaalId exists in dictionary? {exists}");
+                if (exists)
+                {
+                    Console.WriteLine($"  Dictionary value: {project.Materialen[MateriaalId.Value]?.Naam ?? "NULL"}");
+                }
+            }
+            
+            _materiaalRef.Restore(
+                guid => project.Materialen.TryGetValue(guid, out var mat) ? mat : null
+            );
+            
+            Console.WriteLine($"  Materiaal AFTER: {Materiaal?.Naam ?? "NULL"}");
+            
+            // ✅ INTELLIGENTE FALLBACK: Als restore faalt, zoek een vergelijkbaar materiaal
+            if (Materiaal == null && MateriaalId.HasValue)
+            {
+                Console.WriteLine($"  ⚠️ RESTORE FAILED - Materiaal is still NULL!");
+                Console.WriteLine($"  🔍 Probeer vergelijkbaar materiaal te vinden...");
+                
+                // Gebruik het oude materiaal (uit JSON) als hint
+                if (oudMateriaal is BetonContext oudBeton)
+                {
+                    // Zoek eerst naar exact dezelfde betonsterkteklasse
+                    var vergelijkbaar = project.Materialen.Values
+                        .OfType<BetonContext>()
+                        .FirstOrDefault(b => b.Betonsterkteklasse == oudBeton.Betonsterkteklasse);
+                    
+                    if (vergelijkbaar != null)
+                    {
+                        Console.WriteLine($"  ✅ Vergelijkbaar materiaal gevonden: {vergelijkbaar.Naam}");
+                        Materiaal = vergelijkbaar;
+                        MateriaalId = vergelijkbaar.Id;
+                        return;
+                    }
+                    
+                    // Anders: neem het eerste beschikbare beton
+                    var eersteBeton = project.Materialen.Values.OfType<BetonContext>().FirstOrDefault();
+                    if (eersteBeton != null)
+                    {
+                        Console.WriteLine($"  ✅ Eerste beschikbare beton gebruikt: {eersteBeton.Naam}");
+                        Materiaal = eersteBeton;
+                        MateriaalId = eersteBeton.Id;
+                        return;
+                    }
+                }
+                
+                // Laatste fallback: maak het oude materiaal opnieuw aan
+                if (oudMateriaal != null)
+                {
+                    Console.WriteLine($"  ⚠️ Geen vergelijkbaar materiaal gevonden. Voeg oud materiaal ({oudMateriaal.Naam}) toe aan project.");
+                    Materiaal = oudMateriaal;
+                    MateriaalId = oudMateriaal.Id;
+                    project.Materialen[oudMateriaal.Id] = oudMateriaal;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Herstelt object-referenties en relaties na JSON-deserialisatie.
+        /// Roept slechts eenmaal aan via ProjectStateService.RestoreNavigationProperties()
+        /// </summary>
+        public virtual void RestoreReferencesAfterDeserialization(ProjectEntity project)
+        {
+            if (project == null) return;
+
+            var projectInfo = project.ProjectInfo;
+
+            // ✅ ProjectInfo setter
+            ProjectInfo = projectInfo;
+
+            // ✅ Belastingen getter/setter
+            Belastingen ??= new(grondslagen: ProjectInfo.Grondslagen);
+            Belastingen.Grondslagen = ProjectInfo.Grondslagen;
+
+            // We genereren de belastingcombinaties hier opnieuw.
+            // Momenteel kan de gebruiker hier niet zelf in wijzigen, maar in de toekomst misschien wel.
+            // Voor nu doen we het zo
+            Belastingen.GenereerBelastingCombinaties(Belastingen, Belastingen.BelastingGevallen, Belastingen.CombinatiesTypes);
+           
+
+            // ✅ NIEUW: Materiaal-referentie herstellen
+            RestoreMaterialReference(project);
+        }
+
         public virtual void Bijwerken()
         {
             // iedere afgeleide mag zijn eigen interpretatie invullen
             // in de basis gebeurt er niets
 
+            // ✅ Maak validatie aan
+            Validation = new AssemblageValidation(this.Merk ?? "?", this.Naam ?? "?", this);
+            
+            // ✅ Laat concrete implementatie de validatie vullen
+            ValidateAssemblage();
         }
+
+        /// <summary>
+        /// Valideer dit assemblage en vul de Validation property.
+        /// Override in concrete implementaties (SteekTrapEntity, BordesEntity, etc.)
+        /// </summary>
+        protected virtual void ValidateAssemblage()
+        {
+            // Default implementatie doet niets
+            // Concrete types zoals SteekTrapEntity kunnen dit overriden
+        }
+
         public DateTime? Bijgewerkt { get; set; } = DateTime.Now;
 
     }
 
-
-
-
-
-
-
-
 }
+

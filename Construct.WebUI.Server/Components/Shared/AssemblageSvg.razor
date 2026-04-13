@@ -23,6 +23,8 @@
     [Parameter] public string Style { get; set; } = "position:sticky; top:40px; z-index:10; width:100%; height:600px; border:1px solid gray";
     [Parameter] public bool ToonDownloadButtons { get; set; } = false;
     [Parameter] public bool ToonMaatlijnen { get; set; } = true;
+    [Parameter] public bool ToonWapening { get; set; } = false;
+
 
     // voor complete svg-model in world-Units
     private BoundingBox boundingBox { get; set; } = new();
@@ -70,14 +72,17 @@
         boundingBox.Reset();
 
 
-        if (Model is SteekTrapEntity steekTrap)
+        if (Model is HoekTrapEntity hoektrap)
+        {
+            SvgXml = HoekTrapSvgGenerator.GenerateHoektrapSvgXml(hoektrap, boundingBox, width.Value, height.Value, Style);
+        }
+        else if (Model is SteekTrapEntity steekTrap)
         {
             SvgXml = TrapSvgGenerator.GenerateTrapSvgXml(steekTrap, boundingBox, width.Value, height.Value, Style, ToonMaatlijnen);
         }
         else if (Model is BordesEntity bordes)
         {
-            SvgXml = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100%\" height=\"100%\"><text x=\"10\" y=\"20\" fill=\"red\">Onbekend model type voor SVG generatie.</text></svg>";
-            SvgXml = SvgGenerator.GenerateBordesSvgXml(bordes, boundingBox, width.Value, height.Value, Style, ToonMaatlijnen);
+            SvgXml = SvgGenerator.GenerateBordesSvgXml(bordes, boundingBox, width.Value, height.Value, Style, ToonMaatlijnen, ToonWapening);
         }
         else if (Model is KolomEntity kolom)
         {
@@ -87,6 +92,7 @@
         {
             //SvgXml = SvgGenerator.Generate
         }
+
 
 
 

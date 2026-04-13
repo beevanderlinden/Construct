@@ -86,12 +86,34 @@
 
         public string? VectorEffect { get; set; } = "non-scaling-stroke";
 
+        /// <summary>
+        /// Tooltip-tekst die als SVG &lt;title&gt; wordt gerenderd.
+        /// Browsers tonen dit als native hover-tooltip (bijv. "Ø12").
+        /// </summary>
+        public string? Title { get; set; }
 
+        // RENDER via BASE (of met <title> wanneer Title is gezet)
 
+        public override string Render()
+        {
+            if (string.IsNullOrEmpty(Title))
+                return base.Render();
 
-        // RENDER via BASE
+            Attributes.Clear();
+            ApplyAttributes();
 
+            var sb = new System.Text.StringBuilder();
+            sb.Append('<').Append(TagName);
+            foreach (var kv in Attributes)
+                sb.Append(' ').Append(kv.Key).Append("=\"").Append(kv.Value).Append('"');
 
+            sb.Append("><title>")
+              .Append(Title)
+              .Append("</title></")
+              .Append(TagName)
+              .Append('>');
+
+            return sb.ToString();
+        }
     }
-
 }

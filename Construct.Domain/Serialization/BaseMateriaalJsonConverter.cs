@@ -34,7 +34,14 @@ namespace Construct.Domain.Serialization
 
         public override void Write(Utf8JsonWriter writer, BaseMateriaal value, JsonSerializerOptions options)
         {
-            JsonSerializer.Serialize(writer, value, value.GetType(), options);
+            writer.WriteStartObject();
+            writer.WriteString("MateriaalType", value.Type.ToString());
+
+            using var doc = JsonSerializer.SerializeToDocument(value, value.GetType(), options);
+            foreach (var prop in doc.RootElement.EnumerateObject())
+                prop.WriteTo(writer);
+
+            writer.WriteEndObject();
         }
     }
 

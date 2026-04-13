@@ -1,0 +1,67 @@
+@using Construct.Domain.Entities
+
+<div style="display:flex; flex-direction:column; gap:0.5rem;">
+    <strong>Wapening afhandeling</strong>
+
+    <FluentRadioGroup Value="@Value"
+                      TValue="WapeningAfhandelingEnum"
+                      Orientation="Orientation.Vertical"
+                      ValueChanged="OnChanged">
+        <FluentRadio TValue="WapeningAfhandelingEnum" Value="WapeningAfhandelingEnum.Gebruiker">
+            <b>Gebruiker</b> – Invoer gebruiker nooit automatisch aanpassen
+        </FluentRadio>
+        <FluentRadio TValue="WapeningAfhandelingEnum" Value="WapeningAfhandelingEnum.AlleenVerhogen">
+            <b>Alleen verhogen</b> ★ standaard – Verhoog wapening alleen als ingevoerde wapening onvoldoende is
+        </FluentRadio>
+        <FluentRadio TValue="WapeningAfhandelingEnum" Value="WapeningAfhandelingEnum.Optimaliseer">
+            <b>Optimaliseer</b> – Bereken altijd de economisch optimale wapening (kan ook verlagen)
+        </FluentRadio>
+    </FluentRadioGroup>
+
+    <div>
+        <b>Tip:</b> Als de invoer van een onderdeel <em>leeg</em> is, wordt de wapening bij alle instellingen automatisch bepaald.
+        Minimale wapeningseisen worden altijd aangehouden.
+    </div>
+
+    @if (ToonSchema)
+    {
+        <details style="margin-top:0.5rem;">
+            <summary style="cursor:pointer; font-weight:600;">Toon flowschema</summary>
+            <pre style="font-size:0.75rem; padding:0.75rem; border-radius:4px; overflow-x:auto; margin-top:0.5rem;">
+Bijwerken aangeroepen
+        │
+        ▼
+  Invoer leeg? ──Ja──▶ Automatisch bepalen
+        │
+       Nee
+        │
+        ▼
+  ┌──────────────────────────────────────────┐
+  │        Controleer instelling             │
+  └────┬──────────────┬──────────────┬───────┘
+       │              │              │
+  Gebruiker    AlleenVerhogen    Optimaliseer
+       │              │              │
+  Controleer    Voldoende?       Nieuwe wapening
+  (geen         Ja ──▶ ok        (optimaal)
+  aanpassing)   Nee ──▶ verhoog
+                
+             
+            </pre>
+        </details>
+    }
+</div>
+
+@code {
+    [Parameter] public WapeningAfhandelingEnum Value { get; set; } = WapeningAfhandelingEnum.AlleenVerhogen;
+    [Parameter] public EventCallback<WapeningAfhandelingEnum> ValueChanged { get; set; }
+
+    /// <summary>Toon het ingebouwde ASCII-flowschema onder de opties.</summary>
+    [Parameter] public bool ToonSchema { get; set; } = false;
+
+    private async Task OnChanged(WapeningAfhandelingEnum waarde)
+    {
+        Value = waarde;
+        await ValueChanged.InvokeAsync(waarde);
+    }
+}

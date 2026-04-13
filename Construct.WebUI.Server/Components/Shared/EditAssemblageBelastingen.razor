@@ -1,0 +1,186 @@
+﻿@using Eurocode.Belastingen
+@using Construct.Domain.Entities
+
+@if (Model is null)
+{
+    <p>Geen belastingen beschikbaar.</p>
+}
+else
+{
+
+    <KaskonInputContainer Label="<b>permanent</b>"/>
+
+    @if (Model is SteekTrapEntity _trap)
+    {
+        <KaskonInputContainer Label="bepaal e.g.">
+            <FluentSwitch @bind-Value="_trap.GebruikEigenGewicht" CheckedMessage="opgave gebruiker" UncheckedMessage="auto"></FluentSwitch>
+        </KaskonInputContainer>
+        @if (_trap.GebruikEigenGewicht)
+        {
+            <KaskonInputContainer Label="eigen gewicht">
+                <KitInputNumber T="double" @bind-Value="_trap.EigenGewichtPerM2" Min="0" Max="20" Step="0.1" Unit="kN/m²" />
+            </KaskonInputContainer>
+        }
+        else
+        {
+            <KaskonInputContainer Label="eigen gewicht">
+                <KitInputNumber T="double" Value="_trap.EigenGewichtPerM2" Unit="kN/m²" Step="0.1" Disabled=true />
+
+            </KaskonInputContainer>
+        }
+    }
+    else
+    {
+        <KaskonInputContainer Label="eigen gewicht">
+            <KitInputNumber T="double" Value="Model.EigenGewichtPerM2" Unit="kN/m²" Step="0.1" Disabled=true />
+        </KaskonInputContainer>
+    }
+
+
+
+      <KaskonInputContainer Label="afwerking">
+        <KitInputNumber T="double" @bind-Value="Model.AfwerkingVlaklast" Min="0" Max="5" Step="0.1" Unit="kN/m²" />
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="perm. totaal">
+        <KitInputNumber T="double" Value="Model.PermanenteBelastingPerM2" Unit="kN/m²" Step="0.1" Disabled=true />
+
+    </KaskonInputContainer>
+
+    <br />
+
+     <KaskonInputContainer Label="<b>veranderlijk</b>"/>
+
+
+
+    <KaskonInputContainer Label="gebruiksklasse">
+        <FluentSelectEnum LabelPosition="LabelPosition.Top"
+                          TEnum="Eurocode.Belastingen.GebruiksklasseEnum"
+                          @bind-EnumSelectedValue="Model.Gebruiksklasse"></FluentSelectEnum>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="momentaan factoren">
+        <div class="form-control-text">
+            <i>ψ<sub>0</sub></i> = @Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom0.ToString("0.0#") | 
+            <i>ψ<sub>1</sub></i> = @Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom1.ToString("0.0#") | 
+            <i>ψ<sub>2</sub></i> = @Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom2.ToString("0.0#")
+        </div>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="vlaklast">
+        <div class="form-control-text">
+            <i>q<sub>k</sub></i> = @Model.Belastingen.BelastingGevallen.LastOrDefault()?.OpgelegdeBelastingen.Vlaklast kN/m²
+        </div>
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="puntlast">
+        <div class="form-control-text">
+            <i>Q<sub>k</sub></i> = @Model.Belastingen.BelastingGevallen.LastOrDefault()?.OpgelegdeBelastingen.Puntlast kN
+        </div>
+    </KaskonInputContainer>
+
+
+
+   
+    <br />
+
+    @if (Model is SteekTrapEntity _trap2)
+    {
+        var krachten = _trap2.Krachten;
+
+        <KaskonInputContainer Label="G q<sub>G,z,loc</sub>">
+            <div class="form-control-text">
+                <i>q<sub>z,loc</sub></i> = @((_trap2.EigenGewichtPerM2* Math.Pow(_trap2.AantredeMaat / _trap2.SchuineMaat, 2)).ToString("0.00")) kN/m²
+            </div>
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="Q q<sub>Q,z,loc</sub>">
+            <div class="form-control-text">
+                <i>q<sub>z,loc</sub></i> = @((_trap2.VeranderlijkeBelastingPerM2 * Math.Pow(_trap2.AantredeMaat / _trap2.SchuineMaat,2)).ToString("0.00")) kN/m²
+            </div>
+        </KaskonInputContainer>
+
+
+        <KaskonInputContainer Label="Quasi blijvend q<sub>E,qp,z,loc</sub>">
+            <div class="form-control-text">
+                <i>q<sub>z,loc</sub></i> = @( (krachten.qEqp * Math.Pow(_trap2.AantredeMaat / _trap2.SchuineMaat, 2)).ToString("0.00")) kN/m²
+            </div>
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="Frequent q<sub>E,freq,z,loc</sub>">
+            <div class="form-control-text">
+                <i>q<sub>z,loc</sub></i> = @( (krachten.qEfr* Math.Pow(_trap2.AantredeMaat / _trap2.SchuineMaat, 2)).ToString("0.00")) kN/m²
+                
+            </div>
+
+        </KaskonInputContainer>
+
+
+
+
+        <br />
+        
+    }
+
+    
+
+   
+
+
+   
+
+    <KaskonInputContainer Label="gevallen en combinaties">
+        <FluentButton Appearance="Appearance.Stealth"
+                      OnClick="@(() => _belastingenDialogHidden = false)"
+                      IconStart="@(new Icons.Regular.Size32.MoreHorizontal())">
+        </FluentButton>
+    </KaskonInputContainer>
+
+    @if (!_belastingenDialogHidden)
+    {
+        <div class="modal-backdrop custom-blur" @onclick="@(() => _belastingenDialogHidden = true)">
+            <div class="modal-content-base modal-content-extra-wide" @onclick:stopPropagation="true">
+                <div class="modal-header">
+                    <FluentStack VerticalAlignment="VerticalAlignment.Center" Style="gap: 0.5rem;">
+                        <FluentIcon Value="@(new Icons.Regular.Size24.DataBarVertical())" />
+                        <h1>Belastingen - @Model.Merk</h1>
+                    </FluentStack>
+                    <FluentButton Appearance="Appearance.Stealth"
+                                  OnClick="@(() => _belastingenDialogHidden = true)">
+                        <FluentIcon Value="@(new Icons.Regular.Size24.Dismiss())" />
+                    </FluentButton>
+                </div>
+
+                <div class="modal-body">
+                    <h3>Opgelegde belastingen</h3>
+                    <KaskonInputContainer Label="<i>q<sub>k</sub></i>">
+                        @Model.Belastingen.BelastingGevallen.FirstOrDefault()?.OpgelegdeBelastingen.Vlaklast kN/m²
+                    </KaskonInputContainer>
+
+                    <KaskonInputContainer Label="<i>Q<sub>k</sub></i>">
+                        @Model.Belastingen.BelastingGevallen.FirstOrDefault()?.OpgelegdeBelastingen.Puntlast kN
+                    </KaskonInputContainer>
+                    
+                    <h3>Belastinggevallen</h3>
+                    <KitBelastingGevallen Model="@Model.Belastingen"></KitBelastingGevallen>
+
+                    <h3>Belastingcombinaties</h3>
+                    <KitBelastingCombinaties Model="@Model.Belastingen" ShowMomentaanFactoren="true"></KitBelastingCombinaties>
+                </div>
+
+                <div class="modal-footer">
+                    <FluentButton Appearance="Appearance.Accent" 
+                                  OnClick="@(() => _belastingenDialogHidden = true)">
+                        Sluiten
+                    </FluentButton>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public AssemblageEntity? Model { get; set; }
+    [Parameter] public EventCallback<AssemblageEntity> ModelChanged { get; set; }
+    private bool _belastingenDialogHidden = true;
+}

@@ -8,27 +8,26 @@ namespace Construct.Domain.Entities
         {
             foreach (var assemblage in project.Assemblages)
             {
-                assemblage?.Init(project.ProjectInfo);
+                if (assemblage is null) continue;
 
-                if (assemblage is not null)
+                // ✅ Init() is al aangeroepen in RestoreReferencesAfterDeserialization()
+                // Dit gebeurt NADAT Materiaal hersteld is
+                // InitAll() stelt ALLEEN de nested properties in
+
+                var beton = assemblage.Materiaal as BetonContext;
+
+                // Set nested properties voor ALLE assemblages (niet alleen SteekTrap)
+                if (assemblage is SteekTrapEntity steektrap)
                 {
-
-                    var beton = assemblage.Materiaal as BetonContext;
-
-                    if (assemblage is SteekTrapEntity steektrap)
-                    {
-
-                        steektrap.GetToetsen();
-                        steektrap.ProjectInfo = project.ProjectInfo;
-                        steektrap.SetBeton(beton ?? new());
-                        steektrap.SetGrondslagen(steektrap.ProjectInfo.Grondslagen); // voor onderliggende onderdelen
-                        steektrap.SetProfiel(steektrap.ProfielSchil);
-                    }
-
-
+                    steektrap.GetToetsen();
+                    steektrap.ProjectInfo = project.ProjectInfo;
+                    steektrap.SetBeton(beton ?? new());
+                    steektrap.SetGrondslagen(steektrap.ProjectInfo.Grondslagen);
+                    steektrap.SetProfiel(steektrap.ProfielSchil);
                 }
-
+                // TODO: Voeg SetBeton/SetGrondslagen/SetProfiel toe voor andere assemblagetypen als nodig
             }
         }
     }
 }
+

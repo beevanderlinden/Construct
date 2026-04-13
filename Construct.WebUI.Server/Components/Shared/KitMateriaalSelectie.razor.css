@@ -1,0 +1,180 @@
+/* === Design tokens (light) === */
+.kit-field {
+    --kit-bg:               #fff;
+    --kit-border:           #ced4da;
+    --kit-border-focus:     #86b7fe;
+    --kit-shadow-focus:     rgba(13, 110, 253, 0.25);
+    --kit-text:             #212529;
+    --kit-text-muted:       #6c757d;
+}
+
+/* === Design tokens (dark) === */
+@media (prefers-color-scheme: dark) {
+    .kit-field {
+        --kit-bg:               #2c2f33;
+        --kit-border:           #495057;
+        --kit-border-focus:     #6ea8fe;
+        --kit-shadow-focus:     rgba(13, 110, 253, 0.35);
+        --kit-text:             #e9ecef;
+        --kit-text-muted:       #adb5bd;
+    }
+}
+
+/* === Outer wrapper === */
+.kit-field {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    border: 1px solid var(--kit-border);
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.625rem 0.375rem;
+    margin-top: 0.7em;
+    margin-right: 0.5rem;
+    background: var(--kit-bg);
+    min-width: 18em;
+    box-shadow: 0 0 0 0 transparent;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    overflow: visible;
+}
+
+.kit-mat--open {
+    border-color: var(--kit-border-focus);
+    box-shadow: 0 0 0 0.25rem var(--kit-shadow-focus);
+}
+
+/* === Floating label === */
+.kit-field-label {
+    position: absolute;
+    top: 0;
+    left: 0.5rem;
+    transform: translateY(-50%);
+    background: var(--kit-bg);
+    padding: 0 0.25em;
+    font-size: 0.75em;
+    color: var(--kit-text-muted);
+    line-height: 1.2;
+    user-select: none;
+    white-space: nowrap;
+}
+
+/* === Header row (name + chevron) === */
+.kit-mat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    color: var(--kit-text);
+    min-height: 1.4em;
+}
+
+.kit-mat-naam {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 1em;
+}
+
+.kit-mat-chevron {
+    color: var(--kit-text-muted);
+    font-size: 0.85em;
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+}
+
+.kit-mat--open .kit-mat-chevron {
+    transform: rotate(180deg);
+}
+
+/* === Dropdown panel === */
+.kit-mat-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 100%;
+    background: var(--kit-bg);
+    border: 1px solid var(--kit-border-focus);
+    border-radius: 0.375rem;
+    z-index: 200;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* === Category tabs === */
+.kit-mat-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid var(--kit-border);
+}
+
+.kit-mat-tab {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.78em;
+    border: 1px solid var(--kit-border);
+    border-radius: 0.25rem;
+    background: transparent;
+    color: var(--kit-text-muted);
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+
+    .kit-mat-tab:hover {
+        background: rgba(13, 110, 253, 0.08);
+        color: var(--kit-text);
+    }
+
+.kit-mat-tab--actief {
+    background: var(--kit-border-focus);
+    color: #fff;
+    border-color: var(--kit-border-focus);
+}
+
+/* === Material chip list === */
+.kit-mat-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    padding: 0.5rem;
+    max-height: 10rem;
+    overflow-y: auto;
+}
+
+.kit-mat-item {
+    padding: 0.2rem 0.65rem;
+    font-size: 0.8em;
+    border: 1px solid var(--kit-border);
+    border-radius: 1em;
+    background: transparent;
+    color: var(--kit-text);
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+    white-space: nowrap;
+    line-height: 1.5;
+}
+
+    .kit-mat-item:hover {
+        background: rgba(13, 110, 253, 0.08);
+        border-color: var(--kit-border-focus);
+    }
+
+.kit-mat-item--actief {
+    background: var(--kit-border-focus);
+    color: #fff;
+    border-color: var(--kit-border-focus);
+}
+
+/* === E-modulus preview === */
+.kit-mat-preview {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.78em;
+    color: var(--kit-text-muted);
+    border-top: 1px solid var(--kit-border);
+    background: var(--kit-bg);
+}

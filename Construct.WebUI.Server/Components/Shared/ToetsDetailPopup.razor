@@ -1,0 +1,203 @@
+﻿@using CommonLibrary
+@using CommonLibrary.Models
+@using System.Reflection
+
+@if (_visible)
+{
+    <FluentDialog @bind-Hidden="@_hidden"
+                  Modal="true"
+                  TrapFocus="true"
+                  Class="toets-detail-dialog"
+                  Style="--dialog-width: 1200px; --dialog-height: 80vh;">
+        <FluentDialogHeader ShowDismiss="true">
+            <FluentStack VerticalAlignment="VerticalAlignment.Center">
+                <FluentIcon Value="@(new Icons.Regular.Size24.Info())" />
+                <FluentLabel Typo="Typography.PaneHeader">
+                    @(_toets?.Heading ?? "Details")
+                </FluentLabel>
+            </FluentStack>
+        </FluentDialogHeader>
+
+        <FluentDialogBody Style="overflow-y: auto; max-height: calc(80vh - 140px);">
+            @if (_toets != null)
+            {
+               
+                <div style="padding: 0 1rem;">
+                    <EurocodeRazorClassLibrary.Shared.KitPropertiesFor @key="_renderKey" Model="_toets" ShowCaption="false" ShowDescription="true" ShowArticles="true" />
+
+                    @if (_nestedContexts.Count > 0 || _nestedProfielen.Count > 0)
+                    {
+                        <FluentAccordion style="margin-top: 1rem;">
+                            @foreach (var (label, ctx) in _nestedContexts)
+                            {
+                                <FluentAccordionItem @key="ctx" Heading="@label">
+                                    <EurocodeRazorClassLibrary.Shared.KitPropertiesFor @key="ctx" Model="ctx" ShowCaption="false" ShowDescription="true" ShowArticles="true" />
+                                </FluentAccordionItem>
+                            }
+                            @foreach (var (label, profiel) in _nestedProfielen)
+                            {
+                                <FluentAccordionItem @key="profiel" Heading="@label">
+                                    <table class="ec-table" style="font-size:1.0em; line-height:1.5em;">
+                                        <tr><td>Vorm</td><td>@profiel.Naam</td><td></td></tr>
+                                        <tr><td>breedte <i>b</i></td><td>@profiel.B.ToString("0")</td><td>mm</td></tr>
+                                        <tr><td>hoogte <i>h</i></td><td>@profiel.H.ToString("0")</td><td>mm</td></tr>
+                                        <tr><td>oppervlak <i>A</i></td><td>@profiel.A.ToString("0")</td><td>mm²</td></tr>
+                                        <tr><td><i>I</i><sub>y</sub></td><td>@profiel.Iy.ToString("0")</td><td>mm⁴</td></tr>
+                                    </table>
+                                </FluentAccordionItem>
+                            }
+                        </FluentAccordion>
+                    }
+                </div>
+            }
+        </FluentDialogBody>
+
+        <FluentDialogFooter>
+            <FluentButton Appearance="Appearance.Accent" OnClick="Close">
+                Sluiten
+            </FluentButton>
+        </FluentDialogFooter>
+    </FluentDialog>
+}
+
+@code {
+    private bool _visible = false;
+    private bool _hidden = true;
+    private BaseEurocodeContext? _toets;
+    private List<(string Label, BaseEurocodeContext Context)> _nestedContexts = [];
+    private List<(string Label, BaseProfiel Profiel)> _nestedProfielen = [];
+    private int _renderKey = 0;
+
+    public void Show(BaseEurocodeContext toets)
+    {
+        _toets = toets;
+        _nestedContexts = CollectNestedContexts(toets, maxDepth: 2);
+        _nestedProfielen = CollectNestedProfielen(toets);
+        _renderKey++;
+        _visible = true;
+        _hidden = false;
+        StateHasChanged();
+    }
+
+    private static List<(string Label, BaseEurocodeContext Context)> CollectNestedContexts(
+        BaseEurocodeContext root,
+        int maxDepth,
+        string prefix = "",
+        HashSet<object>? visited = null)
+    {
+        visited ??= new(ReferenceEqualityComparer.Instance);
+        visited.Add(root);
+
+        var result = new List<(string, BaseEurocodeContext)>();
+
+        foreach (var prop in root.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (!typeof(BaseEurocodeContext).IsAssignableFrom(prop.PropertyType))
+                continue;
+            if (prop.GetIndexParameters().Length > 0)
+                continue;
+
+            BaseEurocodeContext? value;
+            try { value = prop.GetValue(root) as BaseEurocodeContext; }
+            catch { continue; }
+
+            if (value == null || !visited.Add(value))
+                continue;
+
+            var heading = !string.IsNullOrEmpty(value.Heading) ? value.Heading : (prop.GetCustomAttribute<TableColumnAttribute>()?.Label ?? prop.Name);
+            var label = string.IsNullOrEmpty(prefix) ? heading : $"{prefix} › {heading}";
+
+            result.Add((label, value));
+
+            if (maxDepth > 1)
+                result.AddRange(CollectNestedContexts(value, maxDepth - 1, label, visited));
+        }
+
+        return result;
+    }
+
+    private static List<(string Label, BaseProfiel Profiel)> CollectNestedProfielen(
+        object root,
+        HashSet<object>? visited = null)
+    {
+        visited ??= new(ReferenceEqualityComparer.Instance);
+        visited.Add(root);
+
+        var result = new List<(string, BaseProfiel)>();
+
+        foreach (var prop in root.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (!typeof(BaseProfiel).IsAssignableFrom(prop.PropertyType))
+                continue;
+            if (prop.GetIndexParameters().Length > 0)
+                continue;
+
+            BaseProfiel? value;
+            try { value = prop.GetValue(root) as BaseProfiel; }
+            catch { continue; }
+
+            if (value == null || !visited.Add(value))
+                continue;
+
+            var label = prop.GetCustomAttribute<TableColumnAttribute>()?.Label ?? prop.Name;
+            result.Add((label, value));
+        }
+
+        return result;
+    }
+
+    private void Close()
+    {
+        _hidden = true;
+        _visible = false;
+        StateHasChanged();
+    }
+
+    private string GetMeldingColor(MeldingType type)
+    {
+        return type switch
+        {
+            MeldingType.Error => "error",
+            MeldingType.Waarschuwing => "warning",
+            MeldingType.Opmerking => "info",
+            MeldingType.Hint => "accent-fill-rest",
+            _ => "neutral-stroke-divider"
+        };
+    }
+}
+
+<style>
+    .toets-detail-dialog {
+        width: var(--dialog-width, 1200px);
+        max-width: 95vw;
+        height: var(--dialog-height, 80vh);
+        max-height: 90vh;
+    }
+    
+    .toets-detail-dialog::part(dialog) {
+        width: var(--dialog-width, 1200px);
+        max-width: 95vw;
+        height: var(--dialog-height, 80vh);
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    /* ✅ Zorg dat FluentDialogBody scrollbaar is */
+    .toets-detail-dialog fluent-dialog-body {
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
+    }
+    
+    /* ✅ Zorg dat tabel niet te breed wordt */
+    .toets-detail-dialog .mijn-component {
+        max-width: 100%;
+        overflow-x: auto;
+    }
+    
+    .toets-detail-dialog table {
+        width: 100%;
+        table-layout: auto;
+    }
+</style>

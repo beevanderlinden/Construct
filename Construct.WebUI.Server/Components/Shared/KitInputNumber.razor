@@ -1,0 +1,140 @@
+﻿@typeparam T
+
+<div class="kit-input-group">
+    <input type="number"
+           class="@InputClass"
+           @bind="ValueString"
+           step="@StepString"
+           min="@MinString"
+           max="@MaxString"
+           
+           disabled="@Disabled" />
+    @if (!string.IsNullOrEmpty(Unit))
+    {
+        <span class="@Class kit-input-unit">@Unit</span>
+    }
+</div>
+@if (!string.IsNullOrEmpty(ValidationMessage))
+{
+    <div class="text-danger">@ValidationMessage</div>
+}
+
+@code {
+    [Parameter] public T? Value { get; set; }
+    [Parameter] public EventCallback<T> ValueChanged { get; set; }
+    [Parameter] public EventCallback OnValueChanged { get; set; }
+    [Parameter] public T? Min { get; set; }
+    [Parameter] public T? Max { get; set; }
+    [Parameter] public string? Unit { get; set; }
+    [Parameter] public string Class { get; set; } = "form-control";
+    [Parameter] public string Step { get; set; } = "1";
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool HideSpinButtons { get; set; }
+
+    private string InputClass => HideSpinButtons ? $"{Class} no-spin" : Class;
+
+    private string? ValidationMessage;
+    private string? ValueString
+    {
+        get => Value != null ? Convert.ToString(Value, System.Globalization.CultureInfo.InvariantCulture) : null;
+        set
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                ValidationMessage = null;
+                ValueChanged.InvokeAsync(default);
+                return;
+            }
+            if (TryParse(value, out var parsed))
+            {
+                if (Min != null && Compare(parsed, Min!) < 0)
+                {
+                    ValidationMessage = $"⚠️ Waarde te klein, (mininum = {Min} {Unit})";
+                }
+                else if (Max != null && Compare(parsed, Max!) > 0)
+                {
+                    ValidationMessage = $"⚠️ Waarde te groot, (maximum = {Max} {Unit})";
+                }
+                else
+                {
+                    ValidationMessage = null;
+                    ValueChanged.InvokeAsync(parsed);
+                    if (OnValueChanged.HasDelegate)
+                        OnValueChanged.InvokeAsync();
+                }
+            }
+            else
+            {
+                ValidationMessage = "⚠️ Ongeldige waarde";
+            }
+        }
+    }
+
+    private string MinString => Min?.ToString() ?? "";
+    private string MaxString => Max?.ToString() ?? "";
+    private string StepString => Step;
+
+    private string ConstraintsString
+    {
+        get
+        {
+            if (Min != null && Max != null)
+            {
+                return $"(min{MinString}-max{MaxString})";
+            }
+            else if (Min != null)
+            {
+                return $">={MinString}";
+            }
+            else
+            {
+                return $"<={MaxString}";
+            }
+        }
+    }
+
+
+    private static bool TryParse(string? value, out T result)
+    {
+        result = default!;
+        if (typeof(T) == typeof(int))
+        {
+            if (int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var i))
+            {
+                result = (T)(object)i;
+                return true;
+            }
+        }
+        else if (typeof(T) == typeof(double))
+        {
+            if (double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d))
+            {
+                result = (T)(object)d;
+                return true;
+            }
+        }
+        else if (typeof(T) == typeof(decimal))
+        {
+            if (decimal.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var m))
+            {
+                result = (T)(object)m;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static int Compare(T? a, T? b)
+    {
+        if (a is null && b is null) return 0;
+        if (a is null) return -1;
+        if (b is null) return 1;
+        if (typeof(T) == typeof(int))
+            return ((int)(object)a!).CompareTo((int)(object)b!);
+        if (typeof(T) == typeof(double))
+            return ((double)(object)a!).CompareTo((double)(object)b!);
+        if (typeof(T) == typeof(decimal))
+            return ((decimal)(object)a!).CompareTo((decimal)(object)b!);
+        return 0;
+    }
+}

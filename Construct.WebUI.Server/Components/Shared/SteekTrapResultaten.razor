@@ -1,0 +1,44 @@
+@if (SteekTrap != null)
+{
+    var r = SteekTrap.Krachten;
+
+
+    <h3>Momenten schil</h3>
+
+     <KaskonInputContainer Label="permanent">
+        @r.Mk1.ToString("0.0 kNm")
+    </KaskonInputContainer>
+
+     <KaskonInputContainer Label="veranderlijk">
+        @if (Math.Abs(r.Mk2) > Math.Abs(r.Mk3))
+        {
+            @r.Mk2.ToString("0.0 kNm")
+        }
+        else
+        {
+            @r.Mk3.ToString("0.0 kNm")
+        }
+    </KaskonInputContainer>
+
+   
+    <KaskonInputContainer Label="fundamenteel">
+        @r.MEd.ToString("0.0 kNm")
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="frequent">
+        @r.Mfreq.ToString("0.0 kNm")
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="quasi-blijvend">
+        @r.Mqp.ToString("0.0 kNm")
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="karakteristiek">
+        @r.Mk.ToString("0.0 kNm")
+    </KaskonInputContainer>
+
+}
+
+@code {
+    [Parameter, EditorRequired] public SteekTrapEntity? SteekTrap { get; set; }
+}

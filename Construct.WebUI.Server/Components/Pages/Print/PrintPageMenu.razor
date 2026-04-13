@@ -3,7 +3,7 @@
 <div class="print-navmenu @(IsVisible ? "visible" : "hidden")">
     <input type="checkbox" title="Menu expand/collapse toggle" id="print-navmenu-toggle" class="print-navmenu-icon" @bind="expanded" />
     <label for="print-navmenu-toggle" class="print-navmenu-icon">
-        <FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" />
+        <FluentIcon Value="@(new Icons.Regular.Size32.Navigation())" Color="Color.Fill" />
     </label>
     
     <nav class="print-sitenav" aria-labelledby="print-menu">
@@ -16,42 +16,57 @@
 
             <FluentNavLink OnClick="@HandlePrintClick"
                           Disabled="@(!IsVisible)"
-                          Icon="@(new Icons.Regular.Size20.Print())"
-                          IconColor="Color.Accent"
-                          Title="Afdrukken">
+                          Icon="@(new Icons.Regular.Size32.Print())"
+                          IconColor="Color.Accent">
                 Afdrukken
             </FluentNavLink>
 
             <FluentDivider Style="margin: 8px 0;" />
 
             <FluentNavLink OnClick="@HandleDownloadRtfClick"
-                          Icon="@(new Icons.Regular.Size20.ArrowDownload())"
-                          IconColor="Color.Accent"
-                          Title="Download RTF bestand">
+                          Icon="@(new Icons.Regular.Size32.ArrowDownload())"
+                          IconColor="Color.Accent">
                 Download RTF
             </FluentNavLink>
 
             <FluentNavLink OnClick="@HandleRefreshClick"
-                          Icon="@(new Icons.Regular.Size20.ArrowRedo())"
-                          IconColor="Color.Accent"
-                          Title="Document opnieuw genereren">
+                          Icon="@(new Icons.Regular.Size32.ArrowRedo())"
+                          IconColor="Color.Accent">
                 Bijwerken
             </FluentNavLink>
 
             <FluentNavLink OnClick="@HandleToggleInfoClick"
-                          Icon="@(new Icons.Regular.Size20.Info())"
-                          IconColor="Color.Accent"
-                          Title="@InfoButtonText">
+                          Icon="@(new Icons.Regular.Size32.Info())"
+                          IconColor="Color.Accent">
                 @InfoButtonText
             </FluentNavLink>
 
-            <FluentDivider Style="margin: 8px 0;" />
+            @if (Bookmarks != null && Bookmarks.Any())
+            {
+                <FluentDivider Style="margin: 8px 0;" />
+                
+                <FluentNavGroup Title="Navigatie" 
+                               Icon="@(new Icons.Regular.Size20.BookmarkMultiple())"
+                               Expanded="true">
+                    @foreach (var bookmark in Bookmarks)
+                    {
+                        <FluentNavLink OnClick="@(() => ScrollToBookmark(bookmark.Id))"
+                                      Icon="@(new Icons.Regular.Size20.Bookmark())"
+                                      IconColor="Color.Neutral">
+                            @bookmark.Title
+                        </FluentNavLink>
+                    }
+                </FluentNavGroup>
+            }
 
-            <FluentNavLink OnClick="@HandleTestMarkdownClick"
-                          Icon="@(new Icons.Regular.Size20.Document())"
-                          Title="Test markdown document">
-                Test MD
-            </FluentNavLink>
+
+            
+
+
+
+
+            
+
 
         </FluentNavMenu>
     </nav>
@@ -67,7 +82,7 @@
         border-left: 1px solid var(--neutral-stroke-divider);
         border-radius: var(--control-corner-radius);
         box-shadow: var(--elevation-shadow-card-rest);
-        z-index: 1000;
+        z-index: 100;
         transition: transform 0.3s ease, opacity 0.3s ease, width 0.3s ease;
         height: auto; /* Automatische hoogte */
         max-height: calc(100vh - 80px); /* Max hoogte met wat marge */
@@ -118,17 +133,17 @@
 
     /* Collapsed state - alleen icons, smaller */
     input.print-navmenu-icon:not(:checked) ~ nav {
-        width: 60px;
+        width: 45px;
         overflow: hidden;
     }
 
     input.print-navmenu-icon:not(:checked) ~ .print-sitenav {
-        width: 60px;
+        width: 45px;
     }
 
     /* Pas de container breedte aan bij collapse */
     .print-navmenu:has(input.print-navmenu-icon:not(:checked)) {
-        width: 60px;
+        width: 45px;
     }
 
     .print-sitenav {
@@ -177,19 +192,44 @@
 </style>
 
 @code {
-    [Parameter] public bool IsVisible { get; set; }
-    [Parameter] public bool IsLoading { get; set; }
-    [Parameter] public string InfoButtonText { get; set; } = "Bewerk info";
+[Parameter] public bool IsVisible { get; set; }
+[Parameter] public bool IsLoading { get; set; }
+[Parameter] public string InfoButtonText { get; set; } = "Bewerk info";
+[Parameter] public List<PageBookmark>? Bookmarks { get; set; }
     
-    [Parameter] public EventCallback OnPrintClick { get; set; }
-    [Parameter] public EventCallback OnDownloadRtfClick { get; set; }
-    [Parameter] public EventCallback OnRefreshClick { get; set; }
-    [Parameter] public EventCallback OnToggleInfoClick { get; set; }
-    [Parameter] public EventCallback OnTestMarkdownClick { get; set; }
+[Parameter] public EventCallback OnPrintClick { get; set; }
+[Parameter] public EventCallback OnDownloadRtfClick { get; set; }
+[Parameter] public EventCallback OnRefreshClick { get; set; }
+[Parameter] public EventCallback OnToggleInfoClick { get; set; }
+[Parameter] public EventCallback OnTestMarkdownClick { get; set; }
+[Parameter] public EventCallback OnTestPrintClick { get; set; }
 
-    private bool expanded = true;
+[Inject] private IJSRuntime JS { get; set; } = default!;
 
-    // Wrapper methods die de expanded state behouden
+private bool expanded = !true;
+
+// Helper class voor bookmarks
+public class PageBookmark
+{
+    public string Id { get; set; } = "";
+    public string Title { get; set; } = "";
+    public int PageNumber { get; set; }
+}
+
+// Scroll naar bookmark via JavaScript
+private async Task ScrollToBookmark(string bookmarkId)
+{
+    try
+    {
+        await JS.InvokeVoidAsync("scrollToBookmark", bookmarkId);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error scrolling to bookmark: {ex.Message}");
+    }
+}
+
+// Wrapper methods die de expanded state behouden
     private async Task HandlePrintClick()
     {
         var wasExpanded = expanded;
@@ -222,6 +262,13 @@
     {
         var wasExpanded = expanded;
         await OnTestMarkdownClick.InvokeAsync();
+        expanded = wasExpanded;
+    }
+
+    private async Task HandleTestPrintClick()
+    {
+        var wasExpanded = expanded;
+        await OnTestPrintClick.InvokeAsync();
         expanded = wasExpanded;
     }
 }

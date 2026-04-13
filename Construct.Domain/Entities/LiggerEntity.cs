@@ -2,6 +2,7 @@
 using CommonLibrary.Models;
 using Eurocode.HoutConstructies;
 using Eurocode.StaalConstructies;
+using Kaskon.Toolbox.PrefabModels;
 using Mechanica.LiggerSB;
 using Profielen.Staal;
 using System.Text.Json.Serialization;
@@ -11,22 +12,50 @@ using System.Text.Json.Serialization;
 
 namespace Construct.Domain.Entities
 {
+    public class VrijRolEntity : AssemblageEntity
+    {
+        // test voor vrij opgegelde ligger (met rol aan einde)
+        // geen combinaties
+        // geen gevallen
+        // alleen maar een lijnlast en/of puntlast
+        // 1 profiel
+        // 1 materiaal
+        // resultaten: V, M, θ en w op verschillende posities (max moment, max doorbuiging, etc.)
+
+        public VmnVrijLijnlast ForgetMeNot { get; set; } = new(-10, 5.0, 210e6, 5700e-8);
+
+        public VmnVrij VmnVrijRol { get; set; } = new(5.0, 210e6, 5700e-8)
+        {
+           
+        };
+
+        public VrijRolEntity()
+        {
+            VmnVrijRol.VoegLijnlastToe(-10);
+            //VmnVrijRol.VoegPuntlastToe(-20, 2.5);
+        }
+
+
+
+
+    }
+
+
     public class LiggerEntity : AssemblageEntity
     {
         public LiggerEntity()
         {
             // stalen ligger
             this.AssemblageType = AssemblageTypeEnum.StaalAssemblage;
-            this.Materiaal = new StaalContext() { StaalKwaliteit = StaalKwaliteitEnum.S235};
+            // ⚠️ REMOVED: this.Materiaal = new StaalContext() { StaalKwaliteit = StaalKwaliteitEnum.S235};
+            // Materiaal zal worden ingesteld via JSON-deserialisatie of AddAssemblage.razor
+            
             this.Naam = "stalen ligger";
             this.Merk = "SL-?";
-            
-            
-            Profiel = new Profielen.Staal.ProfielIH(Doorsneden.HEA200)
-            {
-                //Materiaal = this.Materiaal // geef het materiaal (ref) door van de ligger
-            };
 
+
+            Profiel = new ProfielIH(Doorsneden.HEA200);
+            
             // Let op! belastingcombinatie-generator moet nog worden aangezet
             this.Belastingen.GenereerBelastingCombinaties(
                 this.Belastingen, 
@@ -39,9 +68,9 @@ namespace Construct.Domain.Entities
                 Length = 4.0,
                 LoadContext = this.Belastingen,
                 Profiel = this.Profiel,
-                Materiaal = this.Materiaal,
+                Materiaal = this.Materiaal,  // Kan null zijn totdat Materiaal wordt ingesteld
                 
-                EI = this.Profiel.Iy * 1e-12 * this.Materiaal.E * 1e3,
+                EI = this.Profiel.Iy * 1e-12 * (this.Materiaal?.E ?? 210e3) * 1e3,  // Default E als Materiaal null
             };
 
             // 

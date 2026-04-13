@@ -9,9 +9,12 @@ using System.Text.Json.Serialization;
 
 namespace Construct.Domain.Entities
 {
-    public class TandOplegging : INotifyPropertyChanged
+    public class TandOplegging : BaseEurocodeContext
     {
+        public override string Heading { get; set; } = "Tand";
+
         public event PropertyChangedEventHandler? PropertyChanged;
+
 
         protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
@@ -41,6 +44,7 @@ namespace Construct.Domain.Entities
 
             this._buigingTand = new BendingResults(beton ?? new(), this.ProfielTand, this.WapeningAlgemeen, this.SnedekrachtenTand)
             {
+                Heading = "Momentwapening tand",
                 PosLabel = "tand",
                 Name = "Tand",
                 IsGedrongenLigger = this.TandGedrongen,
@@ -71,8 +75,13 @@ namespace Construct.Domain.Entities
 
         }
 
+        [JsonIgnore]
         public AssemblageEntity Father { get; set; }
+
+        [TableColumn (Symbol = "*h~t~*", Description = "tandhoogte", Unit = "mm")]
         public double TandHoogte { get; set; } = 100;
+
+        [TableColumn(Symbol = "*b~voeg~*", Description = "voegbreedte", Unit = "mm")]
 
         public double VoegBreedte { get; set; } = 10;
 
@@ -80,6 +89,8 @@ namespace Construct.Domain.Entities
         private double _afstandVoorGedrongenLigger;
 
         private double _oplegReactie;
+        [TableColumn(Symbol = "*F~Ed~*", Description = "oplegreactie", Unit = "kN")]
+
         public double OplegReactie
         {
             get => _oplegReactie;
@@ -128,7 +139,7 @@ namespace Construct.Domain.Entities
             }
         }
 
-
+        [TableColumn(Symbol = "*k~hor~*", Description = "factor horizontale belasting", Unit = "-")]
         public double PercentageHorizontaleBelasting { get; set; } = 0.4;
 
         /// <summary>
@@ -138,11 +149,42 @@ namespace Construct.Domain.Entities
         public bool IsOndertand { get; set; } = false;
         public bool IsBoventand => !IsOndertand;
 
+        [TableColumn(Symbol = "*b*", Description = "werkende breedt", Unit = "mm")]
+
         public double WerkendeBreedte { get; set; } = 1000;
+
+        [TableColumn(Symbol = "*L~t~*", Description = "tandlengte", Unit = "mm")]
 
         public double TandLengte { get; set; } = 100;
 
+
         public double HalsDikte { get; set; } = 100;
+
+        /// <summary>
+        /// Opgave halsdikte door de gebruiker. Als gevuld, wordt HalsDikte direct op deze waarde gezet.
+        /// Kan niet tegelijk met <see cref="BovensteAantredeLengteOpgave"/> worden opgegeven.
+        /// </summary>
+        public double? HalsDikteOpgave { get; set; } = null;
+
+        /// <summary>
+        /// Opgave lengte bovenste aantrede door de gebruiker. HalsDikte = Opgave - TandLengte.
+        /// Kan niet tegelijk met <see cref="HalsDikteOpgave"/> worden opgegeven.
+        /// </summary>
+        public double? BovensteAantredeLengteOpgave { get; set; } = null;
+
+        /// <summary>
+        /// Berekent de effectieve halsdikte op basis van de ingestelde opgaveoptie:
+        /// 1. HalsDikteOpgave gezet → gebruik direct.
+        /// 2. BovensteAantredeLengteOpgave gezet → halsdikte = opgave − tandlengte.
+        /// 3. Standaard → halsdikte = aantredeMaat − tandlengte.
+        /// </summary>
+        public double BerekenHalsDikte(double aantredeMaat)
+        {
+            //if (HalsDikteOpgave.HasValue) return HalsDikteOpgave.Value;
+            //if (BovensteAantredeLengteOpgave.HasValue) return BovensteAantredeLengteOpgave.Value - TandLengte;
+            return aantredeMaat - TandLengte;
+        }
+
         public double DekkingAlgemeen { get; set; } = 30;
         public double StaafDiameterAlgemeen { get; set; } = 8;
         public double DikteOplegmateriaal { get; set; } = 10;
@@ -156,6 +198,7 @@ namespace Construct.Domain.Entities
             }
         }
 
+        [TableColumn(Symbol = "*a~b~*", Description = "lengte", Unit = "mm")]
 
         public double LengteAb
         {
@@ -179,6 +222,8 @@ namespace Construct.Domain.Entities
             }
         }
 
+        [TableColumn(Symbol = "*a~tand~*", Description = "arm voor tand", Unit = "mm")]
+
         public double ArmVoorTand
         {
             get
@@ -186,6 +231,8 @@ namespace Construct.Domain.Entities
                 return ((TandLengte + 20) / 2.0 + KleinsteWaardeVoorArm); // toevoeging 20mm komt uit Excel.
             }
         }
+
+        [TableColumn(Symbol = "*L~t,tand~*", Description = "theoretische lengte voor tand", Unit = "mm")]
 
         public double OverspanningVoorTand
         {
@@ -202,6 +249,8 @@ namespace Construct.Domain.Entities
                 return OverspanningVoorTand / TandHoogte;
             }
         }
+
+        [TableColumn(Description = "gedrongen (tand)?")]
 
         public bool TandGedrongen
         {
@@ -236,7 +285,7 @@ namespace Construct.Domain.Entities
         {
             get
             {
-                return (OplegReactie * ArmVoorTand * 0.001 + MomentVoorTandUitHorizontaleBelasting) * (IsBoventand? -1 : 1) ;
+                return (Math.Abs(OplegReactie) * ArmVoorTand * 0.001 + MomentVoorTandUitHorizontaleBelasting) * (IsBoventand? -1 : 1) ;
             }
         }
 
@@ -244,7 +293,7 @@ namespace Construct.Domain.Entities
         {
             get
             {
-                return OplegReactie * PercentageHorizontaleBelasting;
+                return Math.Abs(OplegReactie) * PercentageHorizontaleBelasting;
             }
         }
 
@@ -266,6 +315,7 @@ namespace Construct.Domain.Entities
                 return HalsDikte - DekkingAlgemeen - StaafDiameterAlgemeen * 0.5;
             }
         }
+
 
         public double NuttigeHoogteTand
         {
@@ -297,7 +347,7 @@ namespace Construct.Domain.Entities
 
 
 
-        public WapeningContext WapeningAlgemeen { get; set; } = new WapeningContext();
+        public WapeningContext WapeningAlgemeen { get; set; } = new WapeningContext() { Tekst = "6-75"};
         public SectionForces SnedekrachtenHals
         {
             get
@@ -321,11 +371,12 @@ namespace Construct.Domain.Entities
             }
         }
 
+        [TableColumn(Description = "oplegging")]
         public string ConclusieOplegging
         {
             get
             {
-                if (Oplegging.IsValidated)
+                if (OplegLengteAkkoord)
                 {
                     return $"Aanwezig opleglengte ({Oplegging.OplegLengteNettoAanwezig:0} mm) is groter dan nominale opleglengte ({Oplegging.OplegLengteNominaal:0} mm), akkoord";
                 }
@@ -352,7 +403,7 @@ namespace Construct.Domain.Entities
         {
             get
             {
-                return FactorOphangKracht * OplegReactie;
+                return FactorOphangKracht * Math.Abs(OplegReactie);
             }
         }
         public double OphangWapeningHalsBenodigd
@@ -386,7 +437,14 @@ namespace Construct.Domain.Entities
             get
             {
                 var beton = this.Father.Materiaal as BetonContext;
-                return new BendingResults(beton ?? new(), this.ProfielHals, this.WapeningAlgemeen, this.SnedekrachtenHals) { PosLabel="hals", Name = "Hals", IsGedrongenLigger = !true, LengteMaatBijGedrongenLiggerInMM = 2 * ArmVoorHals };
+                return new BendingResults(beton ?? new(), this.ProfielHals, this.WapeningAlgemeen, this.SnedekrachtenHals)
+                {
+                    Heading = "Momentwapening hals",
+                    PosLabel ="hals", 
+                    Name = "Hals",
+                    IsGedrongenLigger = !true, 
+                    LengteMaatBijGedrongenLiggerInMM = 2 * ArmVoorHals
+                };
             }
         }
 
@@ -432,18 +490,16 @@ namespace Construct.Domain.Entities
 
         public void Initialize(OpleggingContext context)
         {
+            var beton = Father?.Materiaal as BetonContext;
+
             if (Father != null && Father is SteekTrapEntity steektrap)
             {
-                // Stel de live delegate in
-                var beton = Father.Materiaal as BetonContext;
-
+                // ✅ Voor SteekTrapEntity: gebruik steektrap krachten
                 Oplegging.BerekenOplegReactieRekenwaarde = () => steektrap.Krachten.VEd;
-                Oplegging.BerekenLengteOndersteundeElement = () => steektrap.LengteTotaal;
+                Oplegging.BerekenLengteOndersteundeElement = () => steektrap.LtProjZ;
                 Oplegging.BetonOndersteundeElement = beton ?? new();
 
-
-
-                Oplegging.OplegLengteNettoAanwezig = steektrap.TandOpleggingBovenzijde?.TandLengte ?? 50; // todo ONDER/BOVEN mogelijk maken.
+                Oplegging.OplegLengteNettoAanwezig = steektrap.TandOpleggingBovenzijde?.TandLengte ?? 50;
                 Oplegging.OplegBreedteNetto = context?.OplegBreedteNetto ?? 1000;
                 Oplegging.DetailleringWapening = context?.DetailleringWapening ?? OpleggingContext.DetailleringWapeningEnum.VerticaleHaarspelden;
                 Oplegging.DrogeVerbinding = context?.DrogeVerbinding ?? false;
@@ -454,11 +510,49 @@ namespace Construct.Domain.Entities
 
                 Oplegging.Update();
             }
+            else if (Father != null && Father is BordesEntity bordes)
+            {
+                // ✅ Voor BordesEntity: gebruik maximale reactiekracht van aansluitende trappen
+                Oplegging.BerekenOplegReactieRekenwaarde = () => Math.Abs(this.OplegReactie);
+                
+                // ✅ Lengte ondersteund element: gebruik langste trap (Trap1 of Trap2)
+                Oplegging.BerekenLengteOndersteundeElement = () =>
+                {
+                    double trap1Lengte = 0;
+                    double trap2Lengte = 0;
+                    
+                    if (bordes.Trap1?.AansluitendElement is SteekTrapEntity trap1)
+                        trap1Lengte = trap1.LtProjZ;
+                    
+                    if (bordes.Trap2?.AansluitendElement is SteekTrapEntity trap2)
+                        trap2Lengte = trap2.LtProjZ;
+                    
+                    return Math.Max(trap1Lengte, trap2Lengte);
+                };
+                
+                Oplegging.BetonOndersteundeElement = beton ?? new();
 
+                Oplegging.OplegLengteNettoAanwezig = this.TandLengte - this.VoegBreedte;
+                Oplegging.OplegBreedteNetto = context?.OplegBreedteNetto ?? bordes.Breedte;
+                Oplegging.DetailleringWapening = context?.DetailleringWapening ?? OpleggingContext.DetailleringWapeningEnum.VerticaleHaarspelden;
+                Oplegging.DrogeVerbinding = context?.DrogeVerbinding ?? false;
+                Oplegging.OpleggingElementType = context?.OpleggingElementType ?? OpleggingContext.OpleggingElementTypeEnum.AfzonderlijkElement;
+                Oplegging.OplegType = context?.OplegType ?? OplegTypeEnum.LIJNVORMIG;
+                Oplegging.OplegMateriaal = context?.OplegMateriaal ?? OplegMateriaalEnum.IHWG_BETON;
+                Oplegging.BetonsterkteklasseDragendeElement = context?.BetonsterkteklasseDragendeElement ?? BetonsterkteklasseEnum.C20_25;
+
+                Oplegging.Update();
+            }
         }
 
+        protected override void Bereken()
+        {
+            //
+        }
 
-
-
+        protected override bool Valideer()
+        {
+            return Meldingen.Count == 0;
+        }
     }
 }

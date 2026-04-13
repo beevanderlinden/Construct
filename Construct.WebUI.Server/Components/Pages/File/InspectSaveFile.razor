@@ -1,0 +1,344 @@
+@page "/File/inspect-save-file"
+@using System.IO.Compression
+@using System.Text.Json
+@using System.Text
+@using System.Collections.Generic
+@rendermode InteractiveServer
+@inject IToastService ToastService
+@inject IJSRuntime JS
+
+<PageTitle>Inspect Save File</PageTitle>
+
+<style>
+    .json-tree {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .json-node {
+        margin-left: 20px;
+    }
+
+    .json-toggle {
+        cursor: pointer;
+        user-select: none;
+        display: inline-block;
+        width: 16px;
+        text-align: center;
+        color: #666;
+        font-weight: bold;
+        font-family: Arial, sans-serif;
+    }
+
+    .json-toggle:hover {
+        color: #000;
+    }
+
+    .json-key {
+        color: #881391;
+        font-weight: bold;
+    }
+
+    .json-string {
+        color: #c41a16;
+    }
+
+    .json-number {
+        color: #1c00cf;
+    }
+
+    .json-boolean {
+        color: #0000ff;
+    }
+
+    .json-null {
+        color: #666;
+        font-style: italic;
+    }
+
+    .json-bracket {
+        color: #000;
+    }
+
+    .json-array-count {
+        color: #999;
+        font-size: 10px;
+        margin-left: 4px;
+    }
+
+    .json-container {
+        max-height: 600px;
+        overflow-y: auto;
+        border: 1px solid #e0e0e0;
+        padding: 10px;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+    }
+</style>
+
+<div class="container-lg py-3">
+    <div class="page-header">
+        <h1>Inspect Save File (.cprj)</h1>
+        <p class="text-body-secondary">
+            Open a .cprj file to inspect its JSON contents for debugging serialization issues.
+        </p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Upload File</h5>
+                    
+                    <InputFile OnChange="@HandleFileSelected" accept=".cprj" />
+                    
+                    @if (!string.IsNullOrEmpty(selectedFileName))
+                    {
+                        <div class="mt-3">
+                            <small class="text-body-secondary">File: <strong>@selectedFileName</strong></small>
+                        </div>
+                    }
+
+                    @if (isProcessing)
+                    {
+                        <div class="spinner-border spinner-border-sm mt-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(fileInfo))
+            {
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <h5 class="card-title">File Info</h5>
+                        <p class="card-text">
+                            <small>@((MarkupString)fileInfo)</small>
+                        </p>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">JSON Content (Interactive Tree)</h5>
+                        @if (jsonDocument != null)
+                        {
+                            <div>
+                                <button class="btn btn-sm btn-outline-secondary me-2" @onclick="ExpandAll">
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.ChevronDown())" /> Expand All
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary me-2" @onclick="CollapseAll">
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.ChevronRight())" /> Collapse All
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="CopyToClipboard">
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.Copy())" /> Copy
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (jsonDocument == null)
+                    {
+                        <p class="text-body-secondary text-center py-5">
+                            <em>Select a .cprj file to view JSON content</em>
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="json-container">
+                            <div class="json-tree">
+                                <JsonTreeNode Node="jsonDocument.RootElement" ExpandedNodes="expandedNodes" OnToggle="ToggleNode" />
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(formatError))
+            {
+                <div class="alert alert-warning mt-3" role="alert">
+                    <strong>Format Notice:</strong>
+                    <p class="mb-0">@formatError</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? selectedFileName;
+    private string? jsonContent;
+    private string? fileInfo;
+    private string? formatError;
+    private bool isProcessing;
+    private JsonDocument? jsonDocument;
+    private HashSet<string> expandedNodes = new();
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            isProcessing = true;
+            selectedFileName = null;
+            jsonContent = null;
+            fileInfo = null;
+            formatError = null;
+            jsonDocument = null;
+            expandedNodes.Clear();
+            StateHasChanged();
+
+            var file = e.File;
+            if (file == null)
+                return;
+
+            selectedFileName = file.Name;
+
+            // Read file as bytes
+            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB max
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            byte[] fileBytes = memoryStream.ToArray();
+
+            // Update file info
+            fileInfo = $"<strong>Size:</strong> {FormatBytes(fileBytes.Length)}<br/>" +
+                      $"<strong>Type:</strong> .cprj (gzip compressed JSON)<br/>" +
+                      $"<strong>Last Modified:</strong> {file.LastModified:yyyy-MM-dd HH:mm:ss}";
+
+            // Try to decompress and read JSON
+            try
+            {
+                using var gzipStream = new GZipStream(new MemoryStream(fileBytes), CompressionMode.Decompress);
+                using var reader = new StreamReader(gzipStream, Encoding.UTF8);
+                string decompressedJson = await reader.ReadToEndAsync();
+
+                // Parse JSON document
+                try
+                {
+                    jsonDocument = System.Text.Json.JsonDocument.Parse(decompressedJson);
+                    
+                    // Also store raw JSON for copy
+                    try
+                    {
+                        var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+                        jsonContent = System.Text.Json.JsonSerializer.Serialize(jsonDocument.RootElement, options);
+                    }
+                    catch
+                    {
+                        jsonContent = decompressedJson;
+                    }
+                }
+                catch
+                {
+                    // If parsing fails, show raw JSON
+                    jsonContent = decompressedJson;
+                    formatError = "Could not parse JSON - showing raw content.";
+                }
+
+                ToastService.ShowSuccess($"Successfully loaded {selectedFileName}");
+            }
+            catch (Exception ex)
+            {
+                formatError = $"Error decompressing file: {ex.Message}";
+                ToastService.ShowError($"Error reading file: {ex.Message}");
+            }
+
+            isProcessing = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleNode(string nodeId)
+    {
+        if (expandedNodes.Contains(nodeId))
+        {
+            expandedNodes.Remove(nodeId);
+        }
+        else
+        {
+            expandedNodes.Add(nodeId);
+        }
+    }
+
+    private void ExpandAll()
+    {
+        // Recursively expand all nodes
+        if (jsonDocument != null)
+        {
+            ExpandAllNodes(jsonDocument.RootElement, "root");
+        }
+    }
+
+    private void ExpandAllNodes(JsonElement element, string path)
+    {
+        expandedNodes.Add(path);
+        
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            int index = 0;
+            foreach (var property in element.EnumerateObject())
+            {
+                ExpandAllNodes(property.Value, $"{path}.{property.Name}");
+                index++;
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            int index = 0;
+            foreach (var item in element.EnumerateArray())
+            {
+                ExpandAllNodes(item, $"{path}[{index}]");
+                index++;
+            }
+        }
+    }
+
+    private void CollapseAll()
+    {
+        expandedNodes.Clear();
+    }
+
+    private async Task CopyToClipboard()
+    {
+        if (string.IsNullOrEmpty(jsonContent))
+            return;
+
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", jsonContent);
+            ToastService.ShowSuccess("JSON copied to clipboard!");
+        }
+        catch
+        {
+            ToastService.ShowError("Failed to copy to clipboard");
+        }
+    }
+
+    private string FormatBytes(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}
+
+<component type="typeof(JsonTreeNode)" render-mode="@RenderMode.InteractiveServer" />
+

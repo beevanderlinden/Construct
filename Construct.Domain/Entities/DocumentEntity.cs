@@ -39,6 +39,7 @@ namespace Construct.Domain.Entities
         public List<LabelWithStringValue> ProjectLabels { get; set; } = [
             new LabelWithStringValue("projectnummer", "0000"),
             new LabelWithStringValue("projectnaam", "My Project"),
+            new LabelWithStringValue("plaats", "My City"),
             ];
 
         // 📄 Tekstblok met documentinformatie

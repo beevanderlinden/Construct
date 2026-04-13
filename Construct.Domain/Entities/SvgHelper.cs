@@ -1,6 +1,7 @@
 ﻿namespace Construct.Domain.Entities
 {
     using Construct.Domain.Extensions;
+    using Microsoft.Extensions.Logging;
     using System.Globalization;
     using System.Runtime.CompilerServices;
     using System.Text;
@@ -214,13 +215,27 @@
         }
 
        
+       
         public string GetSvgContentXml(IEnumerable<BaseSvg> svgObjects)
         {
             var sb = new StringBuilder();
             sb.AppendLine(AddDefs());
+            
             foreach (var tag in svgObjects)
             {
-                sb.AppendLine(tag.Render());
+                // Als het een SvgDimLineGroup is, vouw deze uit naar individuele DimLines
+                if (tag is SvgDimLineGroup dimGroup)
+                {
+                    var dimLines = dimGroup.GenerateDimLines();
+                    foreach (var dimLine in dimLines)
+                    {
+                        sb.AppendLine(dimLine.Render());
+                    }
+                }
+                else
+                {
+                    sb.AppendLine(tag.Render());
+                }
             }
 
             return sb.ToString();
@@ -259,7 +274,7 @@
         public string GetSvgStringOptimal(
             SvgDocumentInfo? documentInfo,
             SvgViewBox viewBox,
-            IEnumerable<SvgPath> paths,
+            IEnumerable<BaseSvg> paths,
             IEnumerable<SvgDimLine> dimLines,
             IEnumerable<SvgText> texts,
             double actualWidthPx = 1200,   // breedte in pixels (van style of container)
@@ -342,26 +357,31 @@
 
 
 
-            // Paths
-            foreach (var path in paths)
+            // ✅ NIEUW: Render alle BaseSvg objecten via hun Render() methode
+            // Dit ondersteunt nu ook SvgCircle, SvgLine, SvgGroup, etc. (niet alleen SvgPath)
+            foreach (var svgObj in paths)
             {
-                sb.AppendLine($@"<path d=""{path.D}""
-                stroke=""{path.Stroke}""
-                stroke-width=""{path.StrokeWidth.ToString("F2", CultureInfo.InvariantCulture)}""
-                fill=""{path.Fill}""
-                opacity=""{path.Opacity?.ToString("F2", CultureInfo.InvariantCulture)}""
-                fill-opacity=""{path.FillOpacity?.ToString("F2", CultureInfo.InvariantCulture)}""
-                stroke-dasharray=""{path.StrokeDashArray}""
-                stroke-linejoin=""{path.StrokeLineJoin}""
-                stroke-linecap=""{path.StrokeLineCap}""
-                fill-rule=""{path.FillRule}"" 
-                vector-effect=""{path.VectorEffect}""
-                />");
+                // teksten moeten verschaald worden (runtime)
+                if (svgObj is SvgText t)
+                {
+                    t.Scale = scale;
+                }
+                
+                
+                sb.AppendLine(svgObj.Render());
+                
+            }
+
+
+            foreach (var dimLine in dimLines)
+            {
+                sb.AppendLine(dimLine.Render(scale));
             }
 
             // DimLines + tekst
             foreach (var d in dimLines)
             {
+                continue; // bewaar code totdat Render() en Render(scale) werkt!
                 var (x1o, y1o, x2o, y2o, angle) = d.GetOffsetPoints(12, 1.5, scale);
 
                 sb.AppendLine($@"<line 
@@ -374,16 +394,13 @@
                 vector-effect=""non-scaling-stroke""
                 />");
 
-                //double textY = d.MidY - textOffset; // omhoog = kleinere Y in SVG (Y groeit naar beneden)
 
                 // text boven de maatlijn
                 var (midX, midY) = d.GetMidPoint(12, 1.5, scale);
 
-
                 sb.AppendLine(
                     $@"<text x=""{midX.ToSvg()}"" y=""{(midY - 2 / scale).ToSvg()}"" 
                     text-anchor=""middle"" 
-                    
                     font-size=""{textSize.ToSvg()}"" 
                     font-family=""Arial"" 
                     transform=""rotate({d.Angle.ToSvg()},{midX.ToSvg()},{midY.ToSvg()})"">
@@ -402,18 +419,71 @@
                     x2=""{x2o.ToSvg()}"" y2=""{y2o.ToSvg()}"" 
                     stroke=""{d.StrokeColor}"" stroke-width=""0.5"" stroke-dasharray=""2,2"" vector-effect=""non-scaling-stroke""/>");
                 }
-
             }
-
 
             foreach (var t in texts)
             {
-                sb.Append(t.ToSvg(scale));
+                sb.Append(t.Render(scale));
             }
 
 
             sb.AppendSvgFooter();
 
+
+            return sb.ToString();
+        }
+
+
+        /// <summary>
+        /// Rendert een complete SVG-string vanuit een vlakke lijst van <see cref="BaseSvg"/>-objecten.
+        /// <see cref="SvgDimLine"/> wordt geschaald gerenderd; <see cref="SvgText"/> krijgt de schaal
+        /// automatisch toegewezen. Alle overige elementen worden direct gerenderd.
+        /// </summary>
+        public string RenderBaseSvgs(
+            SvgDocumentInfo? info,
+            SvgViewBox viewBox,
+            IEnumerable<BaseSvg> svgElements,
+            double widthPx,
+            double heightPx,
+            string style = "width:100%; height:600px")
+        {
+            var sb = new StringBuilder();
+
+            double scale = viewBox.GetScale(widthPx, heightPx);
+
+            sb.AppendSvgHeader(info, viewBox, null, null, style, "");
+
+            int s = 8;
+            int s2 = s / 2;
+            int s3 = s / 4;
+            string r = (0.5 * s3).ToSvg();
+
+            sb.AppendLine("  <defs>");
+            sb.AppendLine($"    <marker id=\"circle-cross\" viewBox=\"0 0 {s} {s}\" markerUnits=\"strokeWidth\" markerWidth=\"{s}\" markerHeight=\"{s}\" refX=\"{s2}\" refY=\"{s2}\" orient=\"auto\">");
+            sb.AppendLine($"      <circle cx=\"{s2}\" cy=\"{s2}\" r=\"{r}\" fill=\"none\" stroke=\"black\" stroke-width=\"0.5\"/>");
+            sb.AppendLine($"      <line x1=\"{s3}\" y1=\"{s2}\" x2=\"{s - s3}\" y2=\"{s2}\" stroke=\"black\" stroke-width=\"0.5\"/>");
+            sb.AppendLine($"      <line x1=\"{s2}\" y1=\"{s3}\" x2=\"{s2}\" y2=\"{s - s3}\" stroke=\"black\" stroke-width=\"0.5\"/>");
+            sb.AppendLine("    </marker>");
+            sb.AppendLine("  </defs>");
+
+            foreach (var svgObj in svgElements)
+            {
+                switch (svgObj)
+                {
+                    case SvgDimLine dimLine:
+                        sb.AppendLine(dimLine.Render(scale));
+                        break;
+                    case SvgText text:
+                        text.Scale = scale;
+                        sb.AppendLine(text.Render());
+                        break;
+                    default:
+                        sb.AppendLine(svgObj.Render());
+                        break;
+                }
+            }
+
+            sb.AppendSvgFooter();
 
             return sb.ToString();
         }

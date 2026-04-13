@@ -1,6 +1,8 @@
 ﻿using Eurocode.Belastingen;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Drawing;
+using Tekla.Structures.RemotingHelper;
 
 namespace Construct.Domain.Entities
 {
@@ -19,7 +21,6 @@ namespace Construct.Domain.Entities
             {
                 crossSection.Add(new(crossSection.Last().X, crossSection.Last().Y + (float)tr.OptredeMaat)); // optrede
                 crossSection.Add(new(crossSection.Last().X + (float)tr.AantredeMaat, crossSection.Last().Y)); // aantrede
-
 
             }
 
@@ -43,7 +44,11 @@ namespace Construct.Domain.Entities
             {
                 default:
                 case SteekTrapTypeEnum.Standaard:
-                    hartlijn.Add(new(hartlijn.Last().X + (float)(tr.OptredeAantal1 * tr.AantredeMaat), hartlijn.Last().Y + (float)(tr.OptredeAantal1 * tr.OptredeMaat))); // trap
+                    var dx = tr.LtProjZ;
+                    var dy = tr.OptredeAantal1 * tr.OptredeMaat;
+                    if (tr.GebruikEigenLengte)
+                        dy = Math.Tan(tr.Hellingshoek * Math.PI / 180.0) * dx;
+                    hartlijn.Add(new(hartlijn.Last().X + (float)(dx), hartlijn.Last().Y + (float)(dy))); // trap
                     return hartlijn;
 
                 case SteekTrapTypeEnum.TrapBordes:
@@ -129,7 +134,7 @@ namespace Construct.Domain.Entities
         public static KrachtenDemo GetKrachten(this SteekTrapEntity tr)
         {
             SteekTrapService service = new();
-            var krachtenDemo = service.BerekenSteektrap(tr);
+            var krachtenDemo = service.GetDemoKrachten(tr, "schil");
             return krachtenDemo;
         }
 
@@ -150,7 +155,42 @@ namespace Construct.Domain.Entities
             var opp3 = tr.WelMaat * tr.WelMaatVertikaal + (tr.OptredeMaat - tr.WelMaatVertikaal) * tr.WelMaat * 0.5;
 
             return opp1 + opp2 + opp3;
+        }
 
+        /// <summary>
+        /// Schoenveterformule (Shoelace) op de 7 polygon-hoekpunten van één trede.
+        /// Dient als algebraïsche verificatie van <see cref="GetDsnOppTrede"/>.
+        /// Beide methoden leveren exact dezelfde oppervlakte op.
+        ///
+        /// Hoekpunten (relatief, P0 = soffit voor):
+        ///   P0 (0, 0)                      soffit voor
+        ///   P1 (0, −d)                     schilVert omhoog
+        ///   P2 (welHor, −d)                wel naar rechts
+        ///   P3 (0, −d−op+welVert)          neus onderkant
+        ///   P4 (0, −d−op)                  neuspunt
+        ///   P5 (aan, −d−op)                trede naar rechts
+        ///   P6 (aan, −op)                  soffit achter
+        /// waarbij d = SchilDikte × schuine / aan  +  welHor × op / aan (= SchilVertEff)
+        /// </summary>
+        public static double GetDsnOppTredePolygoon(this SteekTrapEntity tr)
+        {
+            double aan     = tr.AantredeMaat;
+            double op      = tr.OptredeMaat;
+            double welHor  = tr.WelMaat;
+            double welVert = tr.WelMaatVertikaal;
+            double schuine = tr.GetSchuine();
+            double d       = tr.SchilDikte * schuine / aan + welHor * op / aan;
+
+            double[] x = [0,    0,      welHor, 0,              0,      aan,    aan ];
+            double[] y = [0,   -d,     -d,      -d - op + welVert, -d - op, -d - op, -op ];
+
+            double sum = 0;
+            for (int i = 0; i < 7; i++)
+            {
+                int j = (i + 1) % 7;
+                sum += x[i] * y[j] - x[j] * y[i];
+            }
+            return Math.Abs(sum) * 0.5;
         }
 
 
@@ -159,20 +199,23 @@ namespace Construct.Domain.Entities
         {
             if (isProjectieZ)
             {
-                return tr.GetDsnOppTrede() / tr.AantredeMaat / 1000 * 25;
+                return Math.Round(tr.GetDsnOppTrede() / tr.AantredeMaat / 1000 * 25, 2);
             }
             else
             {
-                return tr.GetDsnOppTrede() / tr.GetSchuine() / 1000 * 25;
+                return Math.Round(tr.GetDsnOppTrede() / tr.GetSchuine() / 1000 * 25, 2);
             }
         }
 
 
-
+        public static double GetBelastingTrapBoom(this SteekTrapEntity tr)
+        {
+            return tr.GetGk() * tr.GetLengteTotaal();
+        }
 
         public static double GetPermanenteBelasting(this SteekTrapEntity tr, bool isProjectieZ = true)
         {
-            return tr.GetGk(isProjectieZ) + tr.BelastingAfwerking;
+            return tr.GetGk(isProjectieZ) + tr.AfwerkingVlaklast;
         }
 
         public static double GetPermanenteBelastingBordes(this SteekTrapEntity trb)
@@ -204,26 +247,54 @@ namespace Construct.Domain.Entities
         }
 
 
+
+
         public static double GetLengteTotaal(this SteekTrapEntity tr)
         {
-            var hartlijn = tr.GetHartlijn().OrderBy(p => p.X).ToImmutableList();
-            var lengteTotaal = hartlijn.Last().X - hartlijn.First().X;
+           
+
+            //var hartlijn = tr.GetHartlijn().OrderBy(p => p.X).ToImmutableList();
+            var lengteTotaal = (tr.OptredeAantal1 -1) * tr.AantredeMaat + (tr.LengteBoven ?? tr.AantredeMaat) + (tr.LengteOnder ?? 0) ;
+            
+            if (tr.TandOpleggingBovenzijde is TandOplegging tand)
+            {
+                lengteTotaal -= tand.TandLengte / 2.0;
+            }
+            
+            if (tr.TandOpleggingOnderzijde is TandOplegging tandOnder)
+            {
+                lengteTotaal -= tandOnder.TandLengte / 2.0;
+            }
+
+
+            // als door de referentie onder steekt (bijvoorbeeld bij bordes)
+            // dan kan de lengte worden opgegeven.
+            if (tr.OnderType == TredeOnderType.IsBordes ||
+                tr.OnderType == TredeOnderType.OpBordes)
+            {
+                lengteTotaal += tr.LengteOnder ?? 0;
+            }
+            
+           
+
+
+
 
             if (tr.Slankheid != null)
             {
-                tr.Slankheid.LengteOverspanning = lengteTotaal * tr.SchuineMaat / tr.AantredeMaat;
+                tr.Slankheid.LengteOverspanning = (int)(lengteTotaal * tr.SchuineMaat / tr.AantredeMaat);
 
                 //tr.Slankheid.EffectieveDikte = 
             }
 
 
-            return lengteTotaal;
+            return (int)lengteTotaal;
         }
 
         public static double GetHoogteTotaal(this SteekTrapEntity tr)
         {
             var hartlijn = tr.GetHartlijn().OrderBy(p => p.Y).ToImmutableList();
-            return hartlijn.Last().Y - hartlijn.First().Y;
+            return Math.Round(hartlijn.Last().Y - hartlijn.First().Y, 0);
         }
 
 

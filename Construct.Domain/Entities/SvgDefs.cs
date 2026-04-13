@@ -4,7 +4,7 @@ namespace Construct.Domain.Entities
 {
     public class SvgDefs : BaseSvg
     {
-        public List<BaseSvg> Children { get; } = new();
+        public List<BaseSvg> Children { get; } = [];
 
         protected override string TagName => "defs";
 
@@ -42,7 +42,7 @@ namespace Construct.Domain.Entities
             foreach (var kvp in Attributes)
                 sb.Append($" {kvp.Key}=\"{kvp.Value}\"");
 
-            sb.Append(">");
+            sb.Append('>');
 
             // Render alle definities
             foreach (var child in Children)

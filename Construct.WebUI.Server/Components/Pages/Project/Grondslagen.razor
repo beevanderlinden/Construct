@@ -7,9 +7,13 @@
                       ShowDescription="true" @bind-EnumSelectedValue="@Model.NationaleBijlage" />
 </KaskonInputContainer>
 
-<KaskonInputContainer Label="<i>ξ</i>">
-    <FluentTextField Value="@Model.Xi.ToString("0.00")" Disabled="true" />
-</KaskonInputContainer>
+@if (ShowReadOnlyFields)
+{
+    <KaskonInputContainer Label="<i>ξ</i>">
+        <FluentTextField Value="@Model.Xi.ToString("0.00")" Disabled="true" />
+    </KaskonInputContainer>
+}
+
 
 <KaskonInputContainer Label="gevolgklasse"> 
     <FluentSelectEnum Placeholder="Selecteer..."
@@ -18,13 +22,17 @@
                       @bind-EnumSelectedValue="@Model.Gevolgklasse" />
 </KaskonInputContainer>
 
-<KaskonInputContainer Label="betrouwbaarheidsklasse">
-    <FluentTextField Value="@Model.Betrouwbaarheidsklasse.ToString()" Disabled="true" />
-</KaskonInputContainer>
+@if (ShowReadOnlyFields)
+{
+    <KaskonInputContainer Label="betrouwbaarheidsklasse">
+        <FluentTextField Value="@Model.Betrouwbaarheidsklasse.ToString()" Disabled="true" />
+    </KaskonInputContainer>
 
-<KaskonInputContainer Label="<i>K<sub>FI</sub></i>">
-    <FluentTextField Value="@Model.Kfi.ToString("0.0")" Disabled="true" />
-</KaskonInputContainer>
+    <KaskonInputContainer Label="<i>K<sub>FI</sub></i>">
+        <FluentTextField Value="@Model.Kfi.ToString("0.0")" Disabled="true" />
+    </KaskonInputContainer>
+}
+
 
 <KaskonInputContainer Label="ontwerplevensduur">
     <FluentSelectEnum TEnum="Eurocode.Grondslagen.OntwerpLevensduurEnum" Style="max-width:120mm"
@@ -50,6 +58,8 @@
 
     [Parameter]
     public EventCallback<Eurocode.Grondslagen.GrondslagenContext> ModelChanged { get; set; }
+
+    [Parameter] public bool ShowReadOnlyFields { get; set; } = true;
 
     async Task UpdateModel()
     {

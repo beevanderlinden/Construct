@@ -1,0 +1,404 @@
+﻿@using Eurocode.BetonConstructies
+@using Construct.Domain.Entities
+@using System.Globalization
+
+<div class="plaat-profiel-container" style="width: 100%; max-width: 1000px; margin: 20px auto;">
+    @if (Wapening?.Boven != null || Wapening?.Onder != null)
+    {
+        <svg viewBox="@GetViewBox()" 
+             preserveAspectRatio="xMidYMid meet" 
+             class="plaat-profiel-svg"
+             style="width: 100%; max-height: @(MaxDisplayHeight)px; height: auto; border: 1px solid var(--neutral-stroke-rest);">
+            
+            <defs>
+                @* ✅ Unieke IDs per component instance *@
+                <pattern id="concrete-@_instanceId" patternUnits="userSpaceOnUse" width="4" height="4">
+                    <rect width="4" height="4" fill="#f5f5f5"/>
+                </pattern>
+                <pattern id="concrete-dark-@_instanceId" patternUnits="userSpaceOnUse" width="4" height="4">
+                    <rect width="4" height="4" fill="#2a2a2a"/>
+                </pattern>
+                <marker id="arrowhead-@_instanceId" markerWidth="10" markerHeight="7" 
+                        refX="9" refY="3.5" orient="auto-start-reverse">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
+                </marker>
+                <marker id="dimension-@_instanceId" markerWidth="8" markerHeight="8" 
+                        refX="4" refY="4" orient="auto">
+                    <circle cx="4" cy="4" r="3" fill="none" stroke="#666" stroke-width="1"/>
+                    <line x1="1" y1="4" x2="7" y2="4" stroke="#666" stroke-width="1"/>
+                    <line x1="4" y1="1" x2="4" y2="7" stroke="#666" stroke-width="1"/>
+                </marker>
+            </defs>
+
+            @foreach (var element in BuildSvgElements())
+            {
+                @((MarkupString)element.Render())
+            }
+        </svg>
+    }
+    else
+    {
+        <p class="text-muted">Geen wapening gedefinieerd</p>
+    }
+</div>
+
+@code {
+    [Parameter] public PlaatWapening? Wapening { get; set; }
+    [Parameter] public double Breedte { get; set; } = 1000;
+    [Parameter] public double Hoogte { get; set; } = 200;
+    [Parameter] public double MaxDisplayHeight { get; set; } = 300;
+
+
+    private double Marge => 80;
+    private double Scale => 0.8;
+    private double Pts => 12;
+    
+    // ✅ Unieke ID per component instance
+    private string _instanceId = Guid.NewGuid().ToString("N").Substring(0, 8);
+
+    private string GetViewBox()
+    {
+        var totalWidth = Breedte + (Marge * 2) + 100;
+        var totalHeight = Hoogte + (Marge * 2) + 50;
+        return $"0 0 {totalWidth.ToString("F0", CultureInfo.InvariantCulture)} {totalHeight.ToString("F0", CultureInfo.InvariantCulture)}";
+    }
+
+    private List<BaseSvg> BuildSvgElements()
+    {
+        var elements = new List<BaseSvg>();
+
+        // Betonprofiel
+        elements.Add(new SvgRect
+        {
+            X = Marge,
+            Y = Marge,
+            Width = Breedte,
+            Height = Hoogte,
+            Fill = $"url(#concrete-{_instanceId})",
+            Stroke = "#999",
+            StrokeWidth = 1
+        });
+
+        // Bovenwapening (blauwige kleur)
+        if (Wapening?.Boven?.BasisWapening != null)
+        {
+            var wap = Wapening.Boven.BasisWapening;
+            var dekkingToe = Wapening.Boven.BasisWapening.ReferentieDekking;
+            var dekkingLinks = dekkingToe;
+            var dekkingRechts = dekkingToe;
+            var dekkingBoven = dekkingToe;
+
+            var yPosHart = Marge + dekkingBoven + (wap.GemiddeldeDiameter / 2.0);
+            var yPos = yPosHart - (wap.GemiddeldeDiameter / 2.0);
+
+            // Parse wapening tekst om hoh-maat te krijgen (bijv. "r8-150" → diameter=8, hoh=150)
+            var parsed = ParseWapeningTekst(wap.Tekst);
+            var diameter = parsed?.diameter ?? wap.GemiddeldeDiameter;
+            var hoh = parsed?.hoh ?? 150; // fallback 150mm
+
+            // Bereken aantal staven en posities
+            var beschikbareBreedte = Breedte - dekkingLinks - dekkingRechts;
+            var aantalStaven = (int)Math.Floor(beschikbareBreedte / hoh) + 1;
+            var aantalAfstanden = aantalStaven - 1;
+            var totaleAfstand = aantalAfstanden * hoh;
+            var extraRuimte = beschikbareBreedte - totaleAfstand;
+            var startX = Marge + dekkingLinks + extraRuimte / 2.0;
+            
+            // Teken individuele wapeningsstaven als cirkels
+            for (int i = 0; i < aantalStaven; i++)
+            {
+                var xPos = startX + (i * hoh);
+                
+                // Stop als we buiten de plaat komen
+                if (xPos > Marge + Breedte - dekkingRechts)
+                    break;
+                
+                elements.Add(new SvgCircle
+                {
+                    Cx = xPos,
+                    Cy = yPosHart,
+                    R = diameter / 2.0,
+                    Fill = "#4A90E2",
+                    Stroke = "#2E5C8A",
+                    StrokeWidth = 0.8,
+                    Opacity = 0.9
+                });
+            }
+            
+            // Label bovenwapening (in het midden, over de wapening)
+            var textBoven = new SvgText
+            {
+                X = Marge + Breedte / 2,
+                Y = Marge - 20,
+                Text = wap.ToString(),
+                Anchor = "middle",
+                DominantBaseLine = "middle",
+                Pts = 20,
+                Scale = Scale,
+                Fill = "#2E5C8A"
+            };
+            textBoven.Content.Title = $"= {wap.As:F0} mm²";
+            elements.Add(textBoven);
+
+            // ✅ NIEUW: Verdeelwapening boven (2 horizontale lijnen over volle breedte)
+            if (Wapening.Boven.VerdeelWapening != null)
+            {
+                var verdeelWap = Wapening.Boven.VerdeelWapening;
+                var verdeelParsed = ParseWapeningTekst(verdeelWap.Tekst);
+                var verdeelDiameter = verdeelParsed?.diameter ?? 6;
+                
+                // Lijn 1: op dekking
+                var yLijn1 = Marge + verdeelWap.ReferentieDekking;
+                elements.Add(new SvgLine
+                {
+                    X1 = Marge + dekkingLinks,
+                    Y1 = yLijn1,
+                    X2 = Marge + Breedte - dekkingRechts,
+                    Y2 = yLijn1,
+                    Stroke = "#2E5C8A",
+                    StrokeWidth = 0.5
+                });
+                
+                // Lijn 2: op dekking + diameter
+                var yLijn2 = Marge + verdeelWap.ReferentieDekking + verdeelDiameter;
+                elements.Add(new SvgLine
+                {
+                    X1 = Marge + dekkingLinks,
+                    Y1 = yLijn2,
+                    X2 = Marge + Breedte - dekkingRechts,
+                    Y2 = yLijn2,
+                    Stroke = "#2E5C8A",
+                    StrokeWidth = 0.5
+                });
+            }
+
+            // Maatlijn links: van onderkant profiel tot hart bovenwapening
+            var dimLineLinksTotaal = new SvgDimLine
+            {
+                X1 = Marge,
+                Y1 = Marge + Hoogte,
+                X2 = Marge,
+                Y2 = yPosHart,
+                Offset = 40,
+                Mode = DimLineMode.Vertical,
+                ShowExtensionLines = true,
+                StrokeWidth = 0.8,
+                Scale = Scale,
+                StringFormat = "0.#",
+                MarkerStart = $"arrowhead-{_instanceId}",
+                MarkerEnd = $"arrowhead-{_instanceId}"
+            };
+            elements.Add(dimLineLinksTotaal);
+
+           
+
+           
+        }
+
+        // Onderwapening (oranje kleur)
+        if (Wapening?.Onder?.BasisWapening != null)
+        {
+            var wap = Wapening.Onder.BasisWapening;
+            var dekkingToe = Wapening.Onder.BasisWapening.ReferentieDekking;
+            var dekkingLinks = dekkingToe;
+            var dekkingRechts = dekkingToe;
+            var dekkingOnder = dekkingToe;
+            
+            var yPosHart = Marge + Hoogte - dekkingOnder - (wap.GemiddeldeDiameter / 2.0);
+            var yPos = yPosHart - (wap.GemiddeldeDiameter / 2.0);
+            
+            // Parse wapening tekst om hoh-maat te krijgen
+            var parsed = ParseWapeningTekst(wap.Tekst);
+            var diameter = parsed?.diameter ?? wap.GemiddeldeDiameter;
+            var hoh = parsed?.hoh ?? 150; // fallback 150mm
+            
+            // Bereken aantal staven en posities
+            var beschikbareBreedte = Breedte - dekkingLinks - dekkingRechts;
+            var aantalStaven = (int)Math.Floor(beschikbareBreedte / hoh) + 1;
+            var aantalAfstanden = aantalStaven - 1;
+            var totaleAfstand = aantalAfstanden * hoh;
+            var extraRuimte = beschikbareBreedte - totaleAfstand;
+            var startX = Marge + dekkingLinks + extraRuimte / 2.0;
+            
+            // Teken individuele wapeningsstaven als cirkels
+            for (int i = 0; i < aantalStaven; i++)
+            {
+                var xPos = startX + (i * hoh);
+                
+                // Stop als we buiten de plaat komen
+                if (xPos > Marge + Breedte)
+                    break;
+                
+                elements.Add(new SvgCircle
+                {
+                    Cx = xPos,
+                    Cy = yPosHart,
+                    R = diameter / 2.0,
+                    Fill = "#FF8C42",
+                    Stroke = "#D4621F",
+                    StrokeWidth = 0.8,
+                    Opacity = 0.9
+                });
+            }
+            
+            // Label onderwapening (in het midden, over de wapening)
+            var textOnder = new SvgText
+            {
+                X = Marge + Breedte / 2,
+                Y = Marge + Hoogte + 20,
+                Text = wap.ToString(),
+                
+                Anchor = "middle",
+                DominantBaseLine = "hanging",
+                Pts = 20,
+                Scale = Scale,
+                Fill = "#D4621F"
+            };
+            textOnder.Content.Title = $"= {wap.As:F0} mm²";
+            elements.Add(textOnder);
+
+            // ✅ NIEUW: Verdeelwapening onder (2 horizontale lijnen over volle breedte)
+            if (Wapening.Onder.VerdeelWapening != null)
+            {
+                var verdeelWap = Wapening.Onder.VerdeelWapening;
+                var verdeelParsed = ParseWapeningTekst(verdeelWap.Tekst);
+                var verdeelDiameter = verdeelParsed?.diameter ?? 6;
+                
+                // Lijn 1: op dekking
+                var yLijn1 = Marge + Hoogte - verdeelWap.ReferentieDekking;
+                elements.Add(new SvgLine
+                {
+                    X1 = Marge + dekkingLinks,
+                    Y1 = yLijn1,
+                    X2 = Marge + Breedte - dekkingRechts,
+                    Y2 = yLijn1,
+                    Stroke = "#D4621F",
+                    StrokeWidth = 0.5
+                });
+                
+                // Lijn 2: op dekking - diameter (naar boven toe, want onderkant)
+                var yLijn2 = Marge + Hoogte - verdeelWap.ReferentieDekking - verdeelDiameter;
+                elements.Add(new SvgLine
+                {
+                    X1 = Marge + dekkingLinks,
+                    Y1 = yLijn2,
+                    X2 = Marge + Breedte - dekkingRechts,
+                    Y2 = yLijn2,
+                    Stroke = "#D4621F",
+                    StrokeWidth = 0.5
+                });
+            }
+
+            // Maatlijn rechts: van bovenkant profiel tot hart onderwapening
+            var dimLineRechtsTotaal = new SvgDimLine
+            {
+                X1 = Marge + Breedte,
+                Y1 = Marge,
+                X2 = Marge + Breedte,
+                Y2 = yPosHart,
+                Offset = -40,
+                Mode = DimLineMode.Vertical,
+                ShowExtensionLines = true,
+                StrokeWidth = 0.8,
+                Scale = Scale,
+                StringFormat = "0.#",
+                MarkerStart = $"arrowhead-{_instanceId}",
+                MarkerEnd = $"arrowhead-{_instanceId}"
+            };
+            elements.Add(dimLineRechtsTotaal);
+
+            // Maatlijn rechts: van hart onderwapening tot onderkant profiel
+            var dimRechtsDeelOnder = new SvgDimLine
+            {
+                X1 = Marge + Breedte,
+                Y1 = yPosHart,
+                X2 = Marge + Breedte,
+                Y2 = Marge + Hoogte,
+                Offset = -40,
+                Mode = DimLineMode.Vertical,
+                ShowExtensionLines = true,
+                StrokeColor = "#D4621F",
+                StrokeWidth = 0.8,
+                Scale = Scale,
+                StringFormat = "0.#",
+                MarkerStart = $"arrowhead-{_instanceId}",
+                MarkerEnd = $"arrowhead-{_instanceId}"
+            };
+            //elements.Add(dimRechtsDeelOnder);
+
+    
+        }
+
+        // Hoogte rechts (algemene maatvoering met SvgDimLine)
+        var dimHoogte = new SvgDimLine
+        {
+            X1 = Marge + Breedte,
+            Y1 = Marge + Hoogte,
+            X2 = Marge + Breedte,
+            Y2 = Marge,
+            Offset = -Marge,
+            Mode = DimLineMode.Vertical,
+            ShowExtensionLines = true,
+            StrokeColor = "#333",
+            StrokeWidth = 1,
+            Scale = Scale,
+            Text = $"{Hoogte:F0}",
+            MarkerStart = $"arrowhead-{_instanceId}",
+            MarkerEnd = $"arrowhead-{_instanceId}"
+        };
+        elements.Add(dimHoogte);
+
+        // Breedte onder (met SvgDimLine)
+        var dimBreedte = new SvgDimLine
+        {
+            X1 = Marge,
+            Y1 = Marge + Hoogte,
+            X2 = Marge + Breedte,
+            Y2 = Marge + Hoogte,
+            Offset = -Marge,
+            Mode = DimLineMode.Horizontal,
+            ShowExtensionLines = true,
+            StrokeColor = "#333",
+            StrokeWidth = 1,
+            Scale = Scale,
+            Text = $"{Breedte:F0}",
+            MarkerStart = $"arrowhead-{_instanceId}",
+            MarkerEnd = $"arrowhead-{_instanceId}"
+        };
+        //elements.Add(dimBreedte);
+
+        return elements;
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+    }
+
+    /// <summary>
+    /// Parseert wapening tekst zoals "r6-150" naar (diameter, hoh).
+    /// Gedeelde logic met BordesEntity.ParseWapeningTekst.
+    /// </summary>
+    private static (double diameter, double hoh)? ParseWapeningTekst(string? tekst)
+    {
+        if (string.IsNullOrWhiteSpace(tekst))
+            return null;
+
+        // Format: "r6-150" of "Ø8-200"
+        var match = System.Text.RegularExpressions.Regex.Match(
+            tekst,
+            @"[rØø](\d+(?:[.,]\d+)?)-(\d+(?:[.,]\d+)?)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (match.Success)
+        {
+            string diamStr = match.Groups[1].Value.Replace(',', '.');
+            string hohStr = match.Groups[2].Value.Replace(',', '.');
+            double diameter = double.Parse(diamStr, CultureInfo.InvariantCulture);
+            double hoh = double.Parse(hohStr, CultureInfo.InvariantCulture);
+            return (diameter, hoh);
+        }
+
+        return null;
+    }
+}

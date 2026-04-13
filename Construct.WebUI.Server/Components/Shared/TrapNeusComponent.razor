@@ -102,7 +102,7 @@
                     <td colspan="3">
                         <div class="error">
                             Niet akkoord
-                            <EurocodeMeldingenComponent Meldingen="Model.BuigingTand.Meldingen" />
+                            <EurocodeMeldingenComponent Meldingen="Model.BuigingTand?.Meldingen" />
                         </div>
                     </td>
                 </tr>
@@ -224,11 +224,16 @@
 
     </table>
 
-
-
-
-
-
+    @* SVG visualisatie van de tand *@
+    <div style="margin-top: 1rem; border: 1px solid var(--neutral-stroke-rest); border-radius: 4px; padding: 0.5rem; background: var(--neutral-layer-2);">
+        <h4 style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">Detail tandoplegging</h4>
+        <TandOpleggingSvg Tand="Model" 
+                          Father="Model.Father" 
+                          ActualWidthPx="500" 
+                          ActualHeightPx="400" 
+                          ToonMaatlijnen="true" 
+                          ToonBuigvorm="true" />
+    </div>
 
 }
 else

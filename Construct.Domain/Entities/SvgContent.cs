@@ -8,7 +8,7 @@ namespace Construct.Domain.Entities
         public string? Description { get; set; }
         public string? MetadataJson { get; set; }
 
-        public List<BaseSvg> Children { get; } = new();
+        public List<BaseSvg> Children { get; } = [];
 
         /// <summary>
         /// True wanneer dit element inner content moet renderen.

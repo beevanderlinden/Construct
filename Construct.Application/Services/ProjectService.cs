@@ -37,7 +37,7 @@ namespace Construct.Application.Services
 
         public async Task VerwijderAssemblage(ProjectEntity project, Guid assemblageGuid)
         {
-            var assemblage = project.Assemblages.FirstOrDefault(p => p.Guid == assemblageGuid);
+            var assemblage = project.Assemblages.FirstOrDefault(p => p.Id == assemblageGuid);
             if (assemblage != null)
             {
                 // controleer mogelijke link met andere assemblage
@@ -45,11 +45,11 @@ namespace Construct.Application.Services
                 {
                     if (asmbly is BordesEntity bordes)
                     {
-                        if (bordes.Trap1.AansluitendElement?.Guid == assemblageGuid)
+                        if (bordes.Trap1.AansluitendElement?.Id == assemblageGuid)
                         {
                             bordes.Trap1.AansluitendElement = null;
                         }
-                        if (bordes.Trap2.AansluitendElement?.Guid == assemblageGuid)
+                        if (bordes.Trap2.AansluitendElement?.Id == assemblageGuid)
                         {
                             bordes.Trap2.AansluitendElement = null;
                         }

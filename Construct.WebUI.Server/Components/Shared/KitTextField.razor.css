@@ -1,0 +1,54 @@
+/* === Design tokens (light) === */
+.kit-field {
+    --kit-bg:               #fff;
+    --kit-border:           #ced4da;
+    --kit-text:             #212529;
+    --kit-text-muted:       #6c757d;
+}
+
+/* === Design tokens (dark) === */
+@media (prefers-color-scheme: dark) {
+    .kit-field {
+        --kit-bg:               #2c2f33;
+        --kit-border:           #495057;
+        --kit-text:             #e9ecef;
+        --kit-text-muted:       #adb5bd;
+    }
+}
+
+/* === Outer wrapper === */
+.kit-field {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    border: 1px solid var(--kit-border);
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.625rem 0.375rem;
+    margin-top: 0.7em;
+    margin-right: 0.5rem;
+    background: var(--kit-bg);
+    min-width: 18em;
+}
+
+.kit-field-label {
+    position: absolute;
+    top: 0;
+    left: 0.5rem;
+    transform: translateY(-50%);
+    background: var(--kit-bg);
+    padding: 0 0.25em;
+    font-size: 0.75em;
+    color: var(--kit-text-muted);
+    line-height: 1.2;
+    user-select: none;
+    white-space: nowrap;
+}
+
+/* === Read-only value display === */
+.kit-field-value {
+    font-size: 1em;
+    color: var(--kit-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

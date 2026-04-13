@@ -1,0 +1,140 @@
+/* === Design tokens (light) === */
+.kit-field {
+    --kit-bg:               #fff;
+    --kit-border:           #ced4da;
+    --kit-border-focus:     #86b7fe;
+    --kit-shadow-focus:     rgba(13, 110, 253, 0.25);
+    --kit-text:             #212529;
+    --kit-text-muted:       #6c757d;
+    --kit-text-disabled:    #6c757d;
+    --kit-separator:        #dee2e6;
+    --kit-select-color:     #6c757d;
+    --kit-select-disabled:  #adb5bd;
+}
+
+/* === Design tokens (dark) === */
+@media (prefers-color-scheme: dark) {
+    .kit-field {
+        --kit-bg:               #2c2f33;
+        --kit-border:           #495057;
+        --kit-border-focus:     #6ea8fe;
+        --kit-shadow-focus:     rgba(13, 110, 253, 0.35);
+        --kit-text:             #e9ecef;
+        --kit-text-muted:       #adb5bd;
+        --kit-text-disabled:    #6c757d;
+        --kit-separator:        #495057;
+        --kit-select-color:     #adb5bd;
+        --kit-select-disabled:  #495057;
+    }
+}
+
+/* === Outer wrapper === */
+.kit-field {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    border: 1px solid var(--kit-border);
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.625rem 0.375rem;
+    margin-top: 0.7em;
+    margin-right: 0.5rem;
+    background: var(--kit-bg);
+    min-width: 18em;
+    box-shadow: 0 0 0 0 transparent;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.kit-field:focus-within {
+    border-color: var(--kit-border-focus);
+    box-shadow: 0 0 0 0.25rem var(--kit-shadow-focus);
+}
+
+.kit-field-label {
+    position: absolute;
+    top: 0;
+    left: 0.5rem;
+    transform: translateY(-50%);
+    background: var(--kit-bg);
+    padding: 0 0.25em;
+    font-size: 0.75em;
+    color: var(--kit-text-muted);
+    line-height: 1.2;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.kit-field-error {
+    font-size: 0.8em;
+    margin-top: 0.2rem;
+}
+
+/* === Input row === */
+.kit-input-group {
+    display: flex;
+    align-items: center;
+}
+
+/* Strip Bootstrap form-control decoration inside kit-field */
+.kit-field .kit-input-group input[type="number"] {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    background: transparent;
+    color: var(--kit-text);
+    font-size: 1em;
+    outline: none;
+    -moz-appearance: textfield;
+}
+
+    /* Hide spinners by default */
+    .kit-field .kit-input-group input[type="number"]::-webkit-inner-spin-button,
+    .kit-field .kit-input-group input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        appearance: none;
+        margin: 0;
+    }
+
+    /* Show spinners on focus */
+    .kit-field .kit-input-group input[type="number"]:focus::-webkit-inner-spin-button,
+    .kit-field .kit-input-group input[type="number"]:focus::-webkit-outer-spin-button {
+        -webkit-appearance: inner-spin-button;
+        appearance: auto;
+    }
+
+    .kit-field .kit-input-group input[type="number"]:focus {
+        outline: none;
+        box-shadow: none;
+        -moz-appearance: number-input;
+    }
+
+    .kit-field .kit-input-group input[type="number"]:disabled {
+        color: var(--kit-text-disabled);
+        cursor: default;
+    }
+
+/* === Unit select — no border, no arrow === */
+.kit-unit-select {
+    border: none;
+    border-left: 1px solid var(--kit-separator);
+    background: transparent;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding: 0 0.5em;
+    color: var(--kit-select-color);
+    font-size: 0.875em;
+    cursor: pointer;
+    min-width: 4.5em;
+    text-align: left;
+}
+
+    .kit-unit-select:focus {
+        outline: none;
+    }
+
+    .kit-unit-select:disabled {
+        color: var(--kit-select-disabled);
+        cursor: default;
+    }

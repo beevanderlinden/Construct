@@ -1,6 +1,8 @@
 ﻿<div class="kaskon-input-container @(LabelPosition == KaskonLabelPosition.Top ? "vertical" : "horizontal")">
     <div class="kaskon-input-label">
-        @((MarkupString)Label)
+        <span class="kaskon-input-hint">
+            @((MarkupString)Label)
+        </span>
         @if (Required)
         {
             <span style="color:darkred"> *</span>

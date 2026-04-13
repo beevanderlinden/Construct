@@ -197,7 +197,7 @@
         Console.WriteLine($"Path: {node.Path}");
         // voorlopig
         // als het een .cprj bestand is dan openen we 'm
-        if (node.Path.EndsWith(".cprj"))
+        if (node.Path!.EndsWith(".cprj"))
         {
             try
             {

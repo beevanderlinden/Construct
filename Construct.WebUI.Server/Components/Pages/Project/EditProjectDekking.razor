@@ -1,0 +1,61 @@
+﻿@using Construct.Domain.Entities
+@using Eurocode.Belastingen
+@using Eurocode.Grondslagen
+@using Microsoft.AspNetCore.Components
+@inject IToastService ToastService
+
+
+<KaskonInputContainer Label="dekking (standaard)">
+    
+</KaskonInputContainer>
+
+
+@if (dekkingChanged && Project?.Assemblages?.Any() == true)
+{
+    <KaskonInputContainer Label="bijwerken">
+        <FluentButton Appearance="Appearance.Accent" OnClick="UpdateAssemblages">
+            Pas alle assemblages aan naar nieuwe dekking
+        </FluentButton>
+    </KaskonInputContainer>
+
+}
+
+
+
+@code {
+    [Parameter]
+    public ProjectEntity? Project { get; set; }
+
+    private DekkingContext DekkingContext
+    {
+        get => Project?.DefaultDekking?? new();
+        set
+        {
+            if (Project != null && Project.DefaultDekking != value)
+            {
+                Project.DefaultDekking = value;
+                dekkingChanged = true;
+            }
+        }
+    }
+
+    private bool dekkingChanged = false;
+
+    private void UpdateAssemblages()
+    {
+        if (Project?.Assemblages == null)
+            return;
+
+        foreach (var assemblage in Project.Assemblages)
+        {
+            // Assemblages die een gebruiksklasse property hebben
+            var prop = assemblage.GetType().GetProperty("PlaatDekking");
+            if (prop != null && prop.PropertyType == typeof(DekkingContext))
+            {
+                prop.SetValue(assemblage, Project.DefaultDekking);
+            }
+        }
+        dekkingChanged = false;
+        ToastService.ShowSuccess("Alle assemblages zijn bijgewerkt naar de nieuwe dekking.");
+    }
+}

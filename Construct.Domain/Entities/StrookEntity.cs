@@ -95,20 +95,23 @@ namespace Construct.Domain.Entities
             Beam.Compute();
 
             // haal de absolute Vz op
-            var v1Max = Beam.ResultCollectionLegacy.Values.Max(x => Math.Abs(x.LeftReaction));
-            var v2Max = Beam.ResultCollectionLegacy.Values.Max(x => Math.Abs(x.RightReaction));
-            var mMin = Beam.ResultCollectionLegacy.Values.Min(x => x.MomentDiagram.Min(p => p.M));
+            //var v1Max = Beam.ResultCollectionLegacy.Values.Max(x => Math.Abs(x.LeftReaction));
+            //var v2Max = Beam.ResultCollectionLegacy.Values.Max(x => Math.Abs(x.RightReaction));
+            //var mMin = Beam.ResultCollectionLegacy.Values.Min(x => x.MomentDiagram.Min(p => p.M));
 
-            // juiste krachten
-            Snedekrachten.Vz = Math.Max(v1Max, v2Max);
-
-            Snedekrachten.My = mMin;
+           
 
             // bijwerken toetsen
             UpdateForceCollectionOpt(beam: Beam);
-            
-            
-            
+
+
+            // juiste krachten
+            Snedekrachten.Vz = Math.Max(
+                ForceCollection.Max(f=>f.Forces.Vz),
+                Math.Abs(ForceCollection.Min(f=>f.Forces.Vz))
+                );
+            Snedekrachten.My = ForceCollection.Min(fc=>fc.Forces.My);
+
             UpdateWapeningOpt();
             UpdateBendingResults(); // testfase
 
@@ -116,53 +119,7 @@ namespace Construct.Domain.Entities
             UpdateScheurwijdteCollectie();
             UpdateDwarskrachtCollectie();
 
-
-            ApplyBijlegWapening();
-
-            //var resultaten = new List<BeamResult>();
-
-            //if (Father == null) return;
-
-            //foreach (var comb in Father!.Belastingen.BelastingCombinaties)
-            //{
-            // hier roep je jouw methode aan
-            //    var result = Beam.ComputeForCombination(comb);
-
-            // resultaat bewaren
-            //    resultaten.Add(result);
-            //}
-
-            // voorbeeld: tonen
-            //foreach (var r in resultaten)
-            //{
-            //var mMin = r.MomentDiagram.Min(m=>m.M);
-            //var mMax = r.MomentDiagram.Max(m=>m.M);
-
-            //var mMin = r.MomentDiagram.Aggregate((a, b) => a.M < b.M ? a : b);
-            //var mMax = r.MomentDiagram.Aggregate((a, b) => a.M > b.M ? a : b);
-
-
-            //Console.WriteLine($"{r.CombinationName} → Mmin = {mMin.M:0.0} (x= {mMin.x:0.000}, " +
-            //    $"Mmax = {mMax.M:0.0} (x={mMax.x:0.000})");
-            //}
-
-            // veldmoment Frequent
-
-            //var mFreqEdEntry = resultaten. 
-            //var frequentResults = resultaten
-            //    .Where(r => r.Combination.Type == BelastingCombinatieTypeEnum.Frequent); 
-
-            // Stap 2: pak alle MomentDiagram entries
-            //var allMoments = frequentResults
-            //    .SelectMany(r => r.MomentDiagram)
-            //    .ToList();
-
-            // Stap 3: vind minimale moment + positie
-            //var mFreqEdEntry = allMoments.Aggregate((a, b) => a.M < b.M ? a : b);
-
-            //Console.WriteLine($"M Frequent Ed: M = {mFreqEdEntry.M:0.0} kNm op x = {mFreqEdEntry.x:0.000}");
-
-
+            //ApplyBijlegWapening();
 
         }
 
@@ -218,11 +175,15 @@ namespace Construct.Domain.Entities
             if (Father == null) 
                 return;
 
-            WapBoven.ReferentieDekking = Father.PlaatDekking.Boven.DekkingToe;
-            WapBoven.Tekst = "r6-150";
-            
-            WapOnder.ReferentieDekking = Father.PlaatDekking.Onder.DekkingToe;
-            WapOnder.Tekst = "r8-150";
+            // ✅ Check of Father een BetonAssemblageEntity is (alleen beton heeft PlaatDekking)
+            if (Father is BetonAssemblageEntity betonFather)
+            {
+                //WapBoven.ReferentieDekking = betonFather.PlaatDekking.Boven.DekkingToe;
+                //WapBoven.Tekst = "r6-150";
+                
+                //WapOnder.ReferentieDekking = betonFather.PlaatDekking.Onder.DekkingToe;
+                //WapOnder.Tekst = "r8-150";
+            }
 
             PlaatWapening.Boven ??= new();
             PlaatWapening.Onder ??= new();
@@ -248,13 +209,25 @@ namespace Construct.Domain.Entities
         {
             ForceCollection.Clear();
             ForceCollectionFrequent.Clear();
+
+            
+
+            // Check if beam has computed results
+            if (beam.ResultCollectionLegacy == null || beam.ResultCollectionLegacy.Values.Count == 0)
+                return;
+
             var vA = beam.ResultCollectionLegacy.Values.Select(r => Math.Abs(r.LeftReaction)).ToList();
             var vB = beam.ResultCollectionLegacy.Values.Select(r => Math.Abs(r.RightReaction)).ToList();
 
             // GROOTSTE NEGATIEVE MOMENT + POSITIE
-            var minMomentEntry = beam.ResultCollectionLegacy.Values
+            var allMoments = beam.ResultCollectionLegacy.Values
                 .SelectMany(r => r.MomentDiagram)
-                .Aggregate((a, b) => a.M < b.M ? a : b);
+                .ToList();
+
+            if (allMoments.Count == 0)
+                return;
+
+            var minMomentEntry = allMoments.Aggregate((a, b) => a.M < b.M ? a : b);
 
             // Punt C (grootste veldmoment)
             SectionForces fC = new(my: minMomentEntry.M);
@@ -281,13 +254,17 @@ namespace Construct.Domain.Entities
 
 
             // GROOTSTE FREQUENTE MOMENT
-            var mFreqEdEntry = beam.ResultCollectionLegacy.Values
-                .Where(x=>x.Combination.Type == BelastingCombinatieTypeEnum.Frequent)
+            var frequentMoments = beam.ResultCollectionLegacy.Values
+                .Where(x => x.Combination.Type == BelastingCombinatieTypeEnum.Frequent)
                 .SelectMany(r => r.MomentDiagram)
-                .Aggregate((a, b) => a.M < b.M ? a : b);
-            SectionForces fMFr = new(my: mFreqEdEntry.M);
-            ForceCollectionFrequent.Add(new(fMFr, mFreqEdEntry.x));
+                .ToList();
 
+            if (frequentMoments.Count > 0)
+            {
+                var mFreqEdEntry = frequentMoments.Aggregate((a, b) => a.M < b.M ? a : b);
+                SectionForces fMFr = new(my: mFreqEdEntry.M);
+                ForceCollectionFrequent.Add(new(fMFr, mFreqEdEntry.x));
+            }
         }
         
 
@@ -328,7 +305,7 @@ namespace Construct.Domain.Entities
                     PosLabel = fx.Pos.ToString("0.000", CultureInfo.InvariantCulture),
                     Profiel = this.Profiel,
                     AsLangs = this.WapOnder.As,
-                    NutHoogte = this.Profiel.Hoogte - this.WapOnder.ZRef,
+                    NutHoogte = this.Profiel.Hoogte - this.WapOnder.ReferentieAfstand,
                     //PosLabel = fx.Pos.ToString("0.000", CultureInfo.InvariantCulture),
 
                 };
@@ -345,6 +322,9 @@ namespace Construct.Domain.Entities
 
             var beton = Father.Materiaal as BetonContext;
 
+            // ✅ Check of Father een BetonAssemblageEntity is
+            var betonFather = Father as BetonAssemblageEntity;
+
             ScheurwijdteCollectie.Clear();
             foreach (var fx in ForceCollectionFrequent)
             {
@@ -354,7 +334,7 @@ namespace Construct.Domain.Entities
                     Wapening = WapOnder,
                     Snedekrachten = fx.Forces,
                     Profiel = this.Profiel,
-                    Dekking = this.Father.PlaatDekking.Onder,
+                    Dekking = betonFather?.PlaatDekking.Onder, // ✅ Null-safe access
                     PosLabel = fx.Pos.ToString("0.000", CultureInfo.InvariantCulture),
                     
                 };
@@ -399,36 +379,60 @@ namespace Construct.Domain.Entities
 
     public class DekkingContext : BaseEurocodeContext
     {
+        public override string Heading { get; set; } = "Dekking/Duurzaamheid";
         public event Action? OnChanged;
 
         private BetonDekkingContext _onder = new();
         public BetonDekkingContext Onder
         {
             get => _onder;
-            set { _onder = value; OnChanged?.Invoke(); }
+            set => SetNestedProperty(ref _onder, value);
         }
 
         private BetonDekkingContext _boven = new();
         public BetonDekkingContext Boven
         {
             get => _boven;
-            set { _boven = value; OnChanged?.Invoke(); }
+            set => SetNestedProperty(ref _boven, value);
+        }
+
+        public override void Init()
+        {
+            // Subscribe to child property changes
+            if (_onder != null)
+            {
+                _onder.Init();
+            }
+            if (_boven != null)
+            {
+                _boven.Init();
+            }
+            
+            base.Init(); // Roept SubscribeAllNestedProperties aan
         }
 
         protected override void Bereken()
         {
-
+            // Bereken children eerst
+            _onder?.BerekenEnValideer();
+            _boven?.BerekenEnValideer();
         }
 
         protected override bool Valideer()
         {
-            if (!Onder.BerekenEnValideer())
+            // Check de IsValidated property van children
+            if (_onder != null && !_onder.IsValidated)
+            {
+                AddMeldingWaarschuwing("Dekking onder niet akkoord");
                 return false;
+            }
 
-            if (!Boven.BerekenEnValideer())
+            if (_boven != null && !_boven.IsValidated)
+            {
+                AddMeldingWaarschuwing("Dekking boven niet akkoord");
                 return false;
-            
-            
+            }
+
             return true;
         }
     }

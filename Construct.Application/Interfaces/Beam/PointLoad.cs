@@ -139,7 +139,7 @@ namespace Construct.Application.Interfaces.Beam
         public double Length { get; set; }
         public double StartReaction { get; set; }
         public double EndReaction { get; set; }
-        public List<ILoad> Loads { get; set; } = new();
+        public List<ILoad> Loads { get; set; } = [];
 
         public double MomentAt(double x)
         {

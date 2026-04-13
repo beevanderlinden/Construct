@@ -1,4 +1,5 @@
 ﻿@using Construct.Application.Interfaces
+@using Eurocode.BetonConstructies
 @using Construct.WebUI.Server.Shared.SampleData
 @using Microsoft.FluentUI.AspNetCore.Components
 @inject Construct.WebUI.Server.Shared.SampleData.DataSource SampleData
@@ -19,45 +20,52 @@
 
 *@
 
-
-<EditForm Model="@Model" OnValidSubmit="@HandleValidSubmit" FormName="project-info_fluent">
-    <DataAnnotationsValidator />
-    @*  <FluentValidationSummary /> *@
-
-
-
-    <KaskonInputContainer Label="projectnummer" Required>
-        <FluentTextField @bind-Value="Model.Nummer" Size="40" Required Maxlength="20" />
-        <FluentValidationMessage For="@(() => Model.Nummer)" />
-    </KaskonInputContainer>
-
-
-  
-    <KaskonInputContainer Label="projectnaam" Required>
-        <FluentTextField @bind-Value="Model.Naam" Size="40" Required Maxlength="40"/>
-        <FluentValidationMessage For="@(() => Model.Naam)" />
-    </KaskonInputContainer>
-   
-    <KaskonInputContainer Label="plaatsnaam" Required>
-        <FluentTextField @bind-Value="Model.Plaatsnaam" Size="40" Required Maxlength="40"/>
-        <FluentValidationMessage For="@(() => Model.Plaatsnaam)" />
-    </KaskonInputContainer>
+@if(Model != null)
+{
+    <EditForm Model="@Model" OnValidSubmit="@HandleValidSubmit" FormName="project-info_fluent">
+        <DataAnnotationsValidator />
+        @*  <FluentValidationSummary /> *@
 
 
 
-
-
-    <p>&nbsp;</p>
-    <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" @onsubmit="HandleValidSubmit">Bijwerken</FluentButton>
-
-    @if (Env.IsDevelopment())
-    {
-        <FluentButton @onclick="AutofillTestData">Autofill test data</FluentButton>
-    }
+        <KaskonInputContainer Label="projectnummer" Required>
+            <FluentTextField @bind-Value="Model.Nummer" Size="40" Required Maxlength="20" />
+            <FluentValidationMessage For="@(() => Model.Nummer)" />
+        </KaskonInputContainer>
 
 
 
-</EditForm>
+        <KaskonInputContainer Label="projectnaam" Required>
+            <FluentTextField @bind-Value="Model.Naam" Size="40" Required Maxlength="40" />
+            <FluentValidationMessage For="@(() => Model.Naam)" />
+        </KaskonInputContainer>
+
+        <KaskonInputContainer Label="plaatsnaam" Required>
+            <FluentTextField @bind-Value="Model.Plaatsnaam" Size="40" Required Maxlength="40" />
+            <FluentValidationMessage For="@(() => Model.Plaatsnaam)" />
+        </KaskonInputContainer>
+
+
+
+
+
+        <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" @onsubmit="HandleValidSubmit">Bijwerken</FluentButton>
+
+        @if (Env.IsDevelopment())
+        {
+            <FluentButton @onclick="AutofillTestData">Autofill test data</FluentButton>
+        }
+
+
+
+    </EditForm>
+
+}
+else if(ProjectState?.CurrentProject != null)
+{
+    <p>Huidig project: @ProjectState.CurrentProject.ProjectInfo.Nummer</p>
+}
+
 
 
 
@@ -108,23 +116,9 @@
 
     private async Task HandleValidSubmit()
     {
-        Console.WriteLine("HandleValidSubmit called");
         await UpdateModel();
-
-        
+        Console.WriteLine($"[ProjectInfo] Bijgewerkt ({Model})");
         StateHasChanged(); 
-
-
-
-        // Process the valid form
-        //await UpdateToolboxProject();
-
-        
-        // 
-
-
-        
-
     }
 
 }

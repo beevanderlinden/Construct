@@ -11,14 +11,9 @@
 }
 else
 {
-    <FluentStack Orientation="Orientation.Vertical" VerticalGap="20">
-        <FluentLabel Typo="Typography.H3">
-            <FluentIcon Value="@(new Icons.Regular.Size24.BuildingFactory())" Color="Color.Accent" />
-            Materialen
-        </FluentLabel>
+    <ProjectMaterialen Project="@ProjectState.CurrentProject" />
 
-        <ProjectMaterialen Project="@ProjectState.CurrentProject" />
-    </FluentStack>
+   
 }
 
 @code {

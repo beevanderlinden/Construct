@@ -1,12 +1,15 @@
 ﻿@page "/Project/print"
 @using System.Diagnostics
 @using System.IO
+@using System.Text
 @using CommonLibrary
 @using CommonLibrary.Models
 @using Construct.Application.Interfaces
 @using Construct.Application.Services
 @using Construct.Domain.Common
+@using Construct.Domain.Entities.Parts
 @using Construct.WebUI.Server.Components.Beam
+@using Construct.WebUI.Server.Components.Pages.Print
 @using Eurocode.HoutConstructies
 @using Eurocode.StaalConstructies
 @using EurocodeRazorClassLibrary.Custom
@@ -29,6 +32,8 @@
 @inject IWebHostEnvironment WebHostEnvironment
 @inject IJSRuntime JS
 @inject ISvgToBitmapService SvgService
+@inject NavigationManager NavigationManager
+
 
 
 
@@ -39,14 +44,16 @@
 else
 {
     @* Nieuw secundair menu - alleen zichtbaar als preview actief is *@
-    <Construct.WebUI.Server.Components.Pages.Print.PrintPageMenu IsVisible="@(!ShowInfo && !string.IsNullOrEmpty(Html))"
+    <PrintPageMenu IsVisible="@(!ShowInfo && !string.IsNullOrEmpty(Html))"
                    IsLoading="@isLoading"
                    InfoButtonText="@BtnShowInfoTekst"
+                   Bookmarks="@pageBookmarks"
                    OnPrintClick="@PrintPreviewAsync"
                    OnDownloadRtfClick="@DownloadRtfAsync"
                    OnRefreshClick="@GenerateDocuments"
-                   OnToggleInfoClick="@ToggleInfo"
-                   OnTestMarkdownClick="@TestMarkdownDocumentAsync" />
+                OnToggleInfoClick="@ToggleInfo"
+                OnTestMarkdownClick="@TestMarkdownDocumentAsync"
+                OnTestPrintClick="@TestStaticPrintAsync" />
 
     @if (ShowInfo)
     {
@@ -79,6 +86,9 @@ else
     private bool ShowInfo = false;
     private string BtnShowInfoTekst => ShowInfo? "Verberg info": "Bewerk info";
 
+    // ✅ NIEUW: Lijst met bookmarks voor navigatie
+    private List<Construct.WebUI.Server.Components.Pages.Print.PrintPageMenu.PageBookmark>? pageBookmarks;
+
     // download content
     private string? stringContent = null;
     private byte[]? binaryContent = null;
@@ -109,7 +119,8 @@ else
     {
         if (previewComponent != null)
         {
-            await previewComponent.PrintAsync(fileName);
+            string bestandsNaam = $"{ProjectState?.CurrentProject?.ProjectInfo?.Nummer}_Document_{documentNummer}.pdf";   
+            await previewComponent.PrintAsync(bestandsNaam);
         }
     }
 
@@ -179,10 +190,11 @@ else
         cover.RevisionContent.Revisions = myDocument.Revisions.ToList();
 
         //Projectlabels zijn FIXED
-        if (myDocument.ProjectLabels != null && myDocument.ProjectLabels.Count >= 2)
+        if (myDocument.ProjectLabels != null && myDocument.ProjectLabels.Count >= 3)
         {
             myDocument.ProjectLabels[0].StringValue = ProjectState?.CurrentProject?.ProjectInfo?.Nummer ?? "NULL";
             myDocument.ProjectLabels[1].StringValue = ProjectState?.CurrentProject?.ProjectInfo?.Naam ?? "NULL";
+            myDocument.ProjectLabels[2].StringValue = ProjectState?.CurrentProject?.ProjectInfo?.Plaatsnaam ?? "...";
         }
         var lblDocNr = myDocument.DocumentLabels.FirstOrDefault(l => l.Label.Equals("documentnummer"));
         if (lblDocNr != null)
@@ -202,6 +214,14 @@ else
         // afbeeldingen
         cover.CompanyLogoPath = Path.Combine(WebHostEnvironment.WebRootPath, "images", "logos", "kaskon.nl.jpg");
 
+        var svgLogoPath = Path.Combine(WebHostEnvironment.WebRootPath, "images", "LogoKaskon.svg");
+        if (File.Exists(svgLogoPath))
+        {
+            var svgXml = File.ReadAllText(svgLogoPath);
+            svgXml = svgXml.Replace(@"width=""100%""", @"width=""100mm"" class=""no-theme-adapt"" style=""display:block;margin:0 auto""");
+            cover.SvgLogoXml = svgXml;
+        }
+
     }
 
     private async Task GenerateDocuments()
@@ -214,7 +234,11 @@ else
         // maak documenten
         isLoading = true;
         SvgImageCache cache = new();
-        this.content = await GenerateDocumentContent();
+
+        // ✅ NIEUW: Valideer document inhoud
+        var validationResult = await ValidateDocumentContent();
+
+        this.content = await GenerateDocumentContent(validationResult);
 
         Log.WriteLine("Genereer Migradoc.document");
         this.document = GetDocument(content, cache);
@@ -227,6 +251,9 @@ else
 
         await Task.Delay(20);
         Log.StopBusy("Document gereed");
+
+        // ✅ NIEUW: Toon validatie resultaten als toast
+        ShowValidationResults(validationResult);
     }
 
     private async Task OpenDialogHtmlAsync()
@@ -408,6 +435,72 @@ else
             ToastService.ShowError($"Fout bij laden MD: {ex.Message}");
             Log.WriteLine($"Error: {ex}");
         }
+    }
+
+    private async Task TestStaticPrintAsync()
+    {
+        try
+        {
+            ToastService.ShowInfo("Genereer test document met 4 pagina's...");
+
+            // Genereer statische HTML met 4 pagina's
+            var htmlBuilder = new StringBuilder();
+
+            htmlBuilder.AppendLine("<html>");
+            htmlBuilder.AppendLine("<head>");
+            htmlBuilder.AppendLine("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />");
+            htmlBuilder.AppendLine("</head>");
+            htmlBuilder.AppendLine("<body>");
+            htmlBuilder.AppendLine("<div class='preview-container'>");
+
+            // Pagina 1 - Voorblad
+            var guid1 = Guid.NewGuid();
+            htmlBuilder.AppendLine($"<button class='ec-accordion' id='{guid1}' onclick='toggleAccordion(\"{guid1}\")'>Voorblad</button>");
+            htmlBuilder.AppendLine($"<div class='ec-panel' id='pnl{guid1}'>");
+            htmlBuilder.AppendLine("<h1 class='document-title'>Test Document</h1>");
+            htmlBuilder.AppendLine("<h2 class='document-subtitle'>Statische HTML Print Test</h2>");
+            htmlBuilder.AppendLine("<p class='ec-par'>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>");
+            htmlBuilder.AppendLine("</div>");
+
+            // Pagina 2 - Uitgangspunten
+            var guid2 = Guid.NewGuid();
+            htmlBuilder.AppendLine($"<button class='ec-accordion' id='{guid2}' onclick='toggleAccordion(\"{guid2}\")'>Uitgangspunten</button>");
+            htmlBuilder.AppendLine($"<div class='ec-panel' id='pnl{guid2}'>");
+            htmlBuilder.AppendLine("<h1 class='kop1'>Uitgangspunten</h1>");
+            htmlBuilder.AppendLine("<p class='ec-par'>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>");
+            htmlBuilder.AppendLine("</div>");
+
+            // Pagina 3 - Test Element
+            var guid3 = Guid.NewGuid();
+            htmlBuilder.AppendLine($"<button class='ec-accordion' id='{guid3}' onclick='toggleAccordion(\"{guid3}\")'>Test Element</button>");
+            htmlBuilder.AppendLine($"<div class='ec-panel' id='pnl{guid3}'>");
+            htmlBuilder.AppendLine("<h1 id='test-element-1' class='kop1'><span class='titel'>T-1</span> <span class='subtitel'>test element</span></h1>");
+            htmlBuilder.AppendLine("<p class='ec-par'>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.</p>");
+            htmlBuilder.AppendLine("</div>");
+
+            // Pagina 4 - Vervolg
+            var guid4 = Guid.NewGuid();
+            htmlBuilder.AppendLine($"<button class='ec-accordion' id='{guid4}' onclick='toggleAccordion(\"{guid4}\")'>T-1 (vervolg)</button>");
+            htmlBuilder.AppendLine($"<div class='ec-panel' id='pnl{guid4}'>");
+            htmlBuilder.AppendLine("<h1 class='kop1'>T-1 (vervolg)</h1>");
+            htmlBuilder.AppendLine("<p class='ec-par'>Totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit.</p>");
+            htmlBuilder.AppendLine("</div>");
+
+            htmlBuilder.AppendLine("</div>"); // Close preview-container
+            htmlBuilder.AppendLine("</body>");
+            htmlBuilder.AppendLine("</html>");
+
+            this.Html = htmlBuilder.ToString();
+
+            ToastService.ShowSuccess("Test document gegenereerd! Klik op 'Afdrukken' om de print preview te testen.");
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Fout bij genereren test document: {ex.Message}");
+            Log.WriteLine($"Error: {ex}");
+        }
         finally
         {
             isLoading = false;
@@ -546,15 +639,52 @@ else
         return table;
     }
 
+
+    public TableContent GetTableFireResistance(SlabPart slab)
+    {
+        var w = 180.0 / 6.0;
+        var width = $"{w:0.000}mm";
+        var h = slab.Dikte.ToString("0");
+        var hReq = slab.GetMinimaleDikteVoorREI(slab.Rei).ToString("0");
+        var a = (slab.PlaatWapening?.Onder?.BasisWapening?.ReferentieAfstand ?? 0).ToString("0.#");
+        var aReq = slab.GetAfstandBenodigdVoorREI(slab.Rei).ToString("0");
+
+
+
+        TableContent table = new();
+        table.Headers.Add(new TableCellHeaderContent() { CellContent = new("brandwerendheid", "3cm") });
+        table.Headers.Add(new TableCellHeaderContent() { CellContent = new("*h~prov~*", "1.5cm") });
+        table.Headers.Add(new TableCellHeaderContent() { CellContent = new("*h~req~*", "1.5cm") });
+
+        table.Headers.Add(new TableCellHeaderContent() { CellContent = new("*a~prov~*", "1.5cm") });
+        table.Headers.Add(new TableCellHeaderContent() { CellContent = new("*a~req~*", "1.5cm") });
+
+        table.Headers.Add(new TableCellHeaderContent() { CellContent = new("artikel", "3cm") });
+
+
+        table.Rows.Add([
+            new() { Markdown = "REI " + slab.Rei.ToString() + " minuten", Width = width },
+            new() { Markdown = h, Width = width },
+            new() { Markdown = hReq, Width = width },
+
+            new() { Markdown = a, Width = width },
+            new() { Markdown = aReq, Width = width },
+
+            new() { Markdown = "EC2 - 2 - tabel 5.8", Width = width}
+        ]);
+        return table;
+
+    }
+
     public TableContent GetTableContentDekkingOpt(DekkingContext dekkingContext)
     {
         string w = "3cm";
-        
+
         TableContent table = new();
         dekkingContext.BerekenEnValideer();
-        table.Headers.Add(new() { CellContent = new("pos", "3cm") });
+        table.Headers.Add(new() { CellContent = new("dekking", "3cm") });
         table.Headers.Add(new() { CellContent = new("milieuklasse(n)", "2cm") });
-        table.Headers.Add(new() { CellContent = new("constructiekl.", "3cm") });
+        table.Headers.Add(new() { CellContent = new("constructiekl.", "2cm") });
         table.Headers.Add(new() { CellContent = new("*c<sub>nom</sub>*", "3cm") });
         table.Headers.Add(new() { CellContent = new("*c<sub>prov</sub>*", "3cm") });
         table.Headers.Add(new() { CellContent = new("opmerking", "3cm") });
@@ -571,16 +701,19 @@ else
             }
 
             List<string> opm = [];
-            if (d.IsKwaliteitsBeheersing) opm.Add("kwaliteitsbeheersing");
-            if (d.IsPlaatGeometrie) opm.Add("plaatgeometrie");
+            if (d.IsKwaliteitsBeheersing) opm.Add("prefab");
+            if (d.IsPlaatGeometrie) opm.Add("plaat");
             if (d.GestortTegenBestaandBeton) opm.Add("tegen bestaand beton");
             opm.Add("korrel" + d.GrootsteKorrelDiameterUserFriendlyName);
+            if (d.OntwerpLevensduur != OntwerpLevensduurEnum.Vijftig) opm.Add(d.OntwerpLevensduur.GetDisplayName());
+            opm.Add(d.Beton.UserFriendlyName);
+            if (d.DekkingNom > d.DekkingToe) opm.Add("**{color:red}⚠️ onvoldoende dekking**");
 
             table.Rows.Add(
                     [
-                        new(pos, "20mm"),
-                        new(d.MilieuklassenUserFriendlyName, "20mm"),
-                        new(d.ConstructieklasseUserFriendlyNameComplete, w),
+                        new(pos, "15mm"),
+                        new(d.MilieuklassenUserFriendlyName, "25mm"),
+                        new(d.ConstructieklasseUserFriendlyName, "20mm"),
                         new(d.DekkingNom.ToString("0 mm"), "15mm"),
                         new(d.DekkingToe.ToString("0 mm"),"15mm"),
                         new(string.Join(", ", opm),"50mm")
@@ -647,7 +780,7 @@ else
 
         table.Rows.Add([
             new() { Markdown = "lengte L<sub>t,proj.Z</sub> :", Width = width },
-            new() { Markdown = t.LengteTotaal.ToString("0 mm"), Width = width },
+            new() { Markdown = t.LtProjZ.ToString("0 mm"), Width = width },
             new() { Markdown = "lengte L<sub>t,schuin</sub> :", Width = width },
             new() { Markdown = t.LengteSchuin.ToString("0 mm"), Width = width },
             new() { Markdown = "hoogte :", Width = width },
@@ -720,15 +853,25 @@ else
 
             };
 
+        var doc = proj.Documenten.FirstOrDefault();
+
+        string headerLogoSvg = "";
+        var svgLogoPathForHeader = Path.Combine(WebHostEnvironment.WebRootPath, "images", "LogoKaskon.svg");
+        if (File.Exists(svgLogoPathForHeader))
+        {
+            var svgXml = File.ReadAllText(svgLogoPathForHeader);
+            svgXml = svgXml.Replace(@"width=""100%""", @"height=""4mm"" width=""20mm"" class=""no-theme-adapt header-logo"" style=""display:inline;vertical-align:middle;transform:translateY(-1mm)""");
+            svgXml = svgXml.Replace("\r\n", "").Replace("\r", "").Replace("\n", "");
+            headerLogoSvg = svgXml;
+        }
+
         content.PageHeader = new()
             {
+                SvgLogo = headerLogoSvg,
                 Text1 = proj.ProjectInfo.Nummer ?? "....",
                 Text2 = "is pagina nummer",
-                Text3 = proj.ProjectInfo.Naam ?? "",
+                Text3 = $"{proj.ProjectInfo.Nummer} | {doc?.DocumentNumber}",
             };
-
-
-        var doc = proj.Documenten.FirstOrDefault();
 
         content.PageFooter = new()
             {
@@ -783,7 +926,8 @@ else
 
     public string GetHeaderHtml(PageHeaderContent header, int pageNr)
     {
-        return GetHeaderHtml(header.Text1, $"pag.{pageNr}", header.Text3);
+        var left = !string.IsNullOrEmpty(header.SvgLogo) ? header.SvgLogo : header.Text1;
+        return GetHeaderHtml(left, $"pag. {pageNr}", header.Text3);
     }
 
     public string GetHeaderHtml(string? left, string? center, string? right)
@@ -803,23 +947,27 @@ else
 
 
 
-        section.Elements.Add(new ParagraphContent("Uitgangspunten", "Kop 1"));
+        string title = $"<span id='uitgangspunten' class='titel'>Uitgangspunten</span>";
+        section.Elements.Add(new HeadingContent(title, 1));
+
         section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
+
+
 
 
         section.Elements.Add(new ParagraphContent("Gebruikte normen", "Kop 3"));
 
         var prefix = proj?.ProjectInfo.Grondslagen.NormPrefix ?? "CEN";
         var parNormen = new ParagraphContent();
-        parNormen.Markdown += $"{prefix}-EN 1990: Eurocode 0, Grondslag van het constructief ontwerp\r\n";
-        parNormen.Markdown += $"{prefix}-EN 1991: Eurocode 1, Belastingen op constructies<br />";
-        parNormen.Markdown += $"{prefix}-EN 1992: Eurocode 2, Ontwerp en berekening van betonconstructies<br />";
-        parNormen.Markdown += $"{prefix}-EN 206-1: Beton- specificatie, eigenschappen, vervaardiging en conformiteit<br />";
-        parNormen.Markdown += $"{prefix}-EN 13369: Algemene bepalingen voor vooraf vervaardigde betonproducten<br />";
+        parNormen.Markdown += $"- **{prefix}-EN 1990** : Eurocode 0, Grondslag van het constructief ontwerp\r\n";
+        parNormen.Markdown += $"- **{prefix}-EN 1991** : Eurocode 1, Belastingen op constructies<br />";
+        parNormen.Markdown += $"- **{prefix}-EN 1992** : Eurocode 2, Ontwerp en berekening van betonconstructies<br />";
+        parNormen.Markdown += $"- **{prefix}-EN 206-1** : Beton- specificatie, eigenschappen, vervaardiging en conformiteit<br />";
+        parNormen.Markdown += $"- **{prefix}-EN 13369** : Algemene bepalingen voor vooraf vervaardigde betonproducten<br />";
 
         if(prefix != "CEN")
         {
-            parNormen.Markdown += $"*bovengenoemde normen zijn inclusief de bijbehorende Nationale Bijlage (NB)*<br /><br />";
+            parNormen.Markdown += $"bovengenoemde normen zijn inclusief de bijbehorende Nationale Bijlage (NB)<br /><br />";
         }
 
 
@@ -832,7 +980,8 @@ else
         string width2 = "9cm";
         section.Elements.Add(new ParagraphContent("Grondslag van het constructief ontwerp", "Kop 3"));
         var tblGrondslagen = new TableContent(){
-            IsPivotTable = true,
+            LayoutOnly = true,
+            IsPivotTable = !true,
             HideHeaders = true,
         };
         tblGrondslagen.Headers =
@@ -915,11 +1064,13 @@ else
             [new("*req*", width1), new("benodigd (required)", width2)],
             [new("*min/max/nom*", width1), new("minimaal/maximaal/nominaal", width2)],
     ];
-        section.Elements.Add(units);
+        //section.Elements.Add(units);
+
+
 
 
         // check alle assemblages voor gelijke materialen
-        section.Elements.Add(new ParagraphContent("Project materialen", "Kop 3"));
+        //section.Elements.Add(new ParagraphContent("Project materialen", "Kop 3"));
         var projectMaterialen = ProjectState?.CurrentProject.Materialen.Values.ToList();
         section.Elements.Add(GetTableContentMaterialen(projectMaterialen));
 
@@ -928,6 +1079,97 @@ else
 
         content.Sections.Add(section);
 
+    }
+
+    public void SetInhoudsopgave(DocumentContent content, List<Construct.WebUI.Server.Components.Pages.Print.PrintPageMenu.PageBookmark>? bookmarks)
+    {
+        if (ProjectState?.CurrentProject is not ProjectEntity proj)
+        {
+            return;
+        }
+
+        if (bookmarks == null || bookmarks.Count == 0)
+        {
+            return;
+        }
+
+        var section = new SectionContent();
+
+        var title = "<span id='inhoudsopgave' class='titel'>Inhoudsopgave</span>";
+        section.Elements.Add(new HeadingContent(title, 1));
+        section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, 2), 3)); // Inhoudsopgave is altijd pagina 2
+
+        // ✅ Filter: Titelpagina EN Inhoudsopgave zelf NIET in de inhoudsopgave
+        var tocBookmarks = bookmarks
+            .Where(b => b.Id != "titelpagina" && b.Id != "inhoudsopgave")
+            .ToList();
+
+        // ✅ Gebruik flexbox layout voor mooie dotted leader lines (nu wel met div support in parser)
+        foreach (var bookmark in tocBookmarks)
+        {
+            var linkHtml = $@"<div style='display: flex; align-items: flex-end; margin-bottom: 2mm;'>
+<a href='#{bookmark.Id}' onclick=""scrollToBookmark('{bookmark.Id}'); return false;"" class='bookmark-link'>{bookmark.Title}</a>
+<span style='flex: 1; border-bottom: 1px dotted rgba(0,0,0,0.22); margin: 0 6px 3px;'></span>
+<span style='white-space: nowrap;'>pag. {bookmark.PageNumber}</span>
+</div>";
+            section.Elements.Add(new ParagraphContent(linkHtml));
+        }
+
+        // ✅ Voeg de inhoudsopgave sectie toe AAN HET BEGIN (positie 0)
+        // Zo komt de TOC voor uitgangspunten en assemblages
+        content.Sections.Insert(0, section);
+    }
+
+
+    /// <summary>
+    /// Voeg een validatie sectie toe met alle verzamelde berichten
+    /// </summary>
+    private void AddValidationSection(DocumentContent content, DocumentValidationResult validationResult)
+    {
+        var section = new SectionContent();
+
+        var title = $"<span id='document-validatie' class='titel'>Document validatie</span>";
+        section.Elements.Add(new HeadingContent(title, 1));
+        section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
+        section.AddParagraph("Er zijn meldingen in het rapport gevonden. Hieronder een samenvatting van de onderdelen die extra aandacht verdienen.\r\n\r\n");
+
+        // Samenvatting
+        if (validationResult.HasErrors)
+        {
+            section.AddParagraph($"**{Melding.emojiError} Document bevat {validationResult.TotalErrors} error(s)**");
+        }
+        if (validationResult.HasWarnings)
+        {
+            section.AddParagraph($"**{Melding.emojiWaarschuwing} Document bevat {validationResult.TotalWarnings} waarschuwing(en)**");
+        }
+
+        // Per assemblage details
+        foreach (var validation in validationResult.AssemblageValidations.Where(v => v.HasErrors || v.HasWarnings))
+        {
+            section.AddParagraph($"Merk: {validation.Merk} - {validation.Naam}", "Kop 3");
+
+            // Errors
+            if (validation.Errors.Any())
+            {
+                //section.AddParagraph("**Errors:**");
+                foreach (var error in validation.Errors)
+                {
+                    section.AddParagraph($"- {Melding.emojiError} {error.Bericht}");
+                }
+            }
+
+            // Warnings
+            if (validation.Warnings.Any())
+            {
+                //section.AddParagraph("**Waarschuwingen:**");
+                foreach (var warning in validation.Warnings)
+                {
+                    section.AddParagraph($"- {Melding.emojiWaarschuwing} {warning.Bericht}");
+                }
+            }
+        }
+
+        content.Sections.Add(section);
     }
 
     public bool ValidateProject(DocumentContent content)
@@ -966,7 +1208,145 @@ else
 
     private async Task<DocumentContent> GenerateDocumentContent(bool createToc = !true)
     {
-        PageNr = 0;
+        return await GenerateDocumentContent(null, createToc);
+    }
+
+    /// <summary>
+    /// Valideer alle assemblages in het document en verzamel berichten
+    /// </summary>
+    private async Task<DocumentValidationResult> ValidateDocumentContent()
+    {
+        var result = new DocumentValidationResult();
+
+        if (ProjectState?.CurrentProject?.Assemblages == null)
+            return result;
+
+        foreach (var assemblage in ProjectState.CurrentProject.Assemblages)
+        {
+            try
+            {
+                // ✅ Bijwerken zorgt ervoor dat assemblage.Validation wordt gemaakt
+                assemblage?.Bijwerken();
+
+                // ✅ Gebruik de validatie die de assemblage zelf heeft gemaakt
+                if (assemblage?.Validation != null)
+                {
+                    result.AssemblageValidations.Add(assemblage.Validation);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Maak een foutmelding als er een exception optreedt
+                var validation = result.AddAssemblage(
+                    assemblage?.Merk ?? "Merk(?)", 
+                    assemblage?.Naam ?? "Naam(?)", 
+                    assemblage
+                );
+                validation.AddError($"Fout bij validatie: {ex.Message}");
+            }
+        }
+
+        await Task.CompletedTask;
+        return result;
+    }
+
+    /// <summary>
+    /// Toon validatie resultaten als toast notifications
+    /// </summary>
+    private void ShowValidationResults(DocumentValidationResult validationResult)
+    {
+        if (validationResult.IsValid && !validationResult.HasWarnings)
+        {
+            ToastService.ShowSuccess(validationResult.GetSummary());
+            return;
+        }
+
+        // Toon samenvatting
+        if (validationResult.HasErrors)
+        {
+            ToastService.ShowError($"{validationResult.TotalErrors} error(s) gevonden in document");
+        }
+
+        if (validationResult.HasWarnings)
+        {
+            ToastService.ShowWarning($"{validationResult.TotalWarnings} waarschuwing(en) gevonden in document");
+        }
+
+        // Toon per assemblage (max 5)
+        var topIssues = validationResult.AssemblageValidations
+            .Where(a => a.HasErrors || a.HasWarnings)
+            .Take(5);
+
+        foreach (var validation in topIssues)
+        {
+            var message = validation.GetSummary();
+            if (validation.HasErrors)
+                ToastService.ShowError(message);
+
+            if (validation.HasWarnings)
+            {
+                var assemblage = validation.Data as AssemblageEntity;
+                var tr = ToastResult.Ok(assemblage);
+                message = "Dit merk is niet akkoord.";
+                ToastService.ShowCommunicationToast(new ToastParameters<CommunicationToastContent>()
+                {
+                    Intent = ToastIntent.Warning,
+                    Title = "Merk : " + validation.Merk,
+                    Timeout = 8000,
+                    PrimaryAction = "⚙️ Merk bijwerken",
+                    OnPrimaryAction = EventCallback.Factory.Create<ToastResult>(this, () => ClickedPrimary(tr)),
+                    Content = new CommunicationToastContent()
+                    {
+                        //Subtitle = validation.Merk,
+                        Details = message,
+                    },
+
+                });
+            }
+
+            if (!validation.HasWarnings && !validation.HasErrors)
+            {
+                var tr = ToastResult.Ok(validation.Data as AssemblageEntity);
+                ToastService.ShowCommunicationToast(new ToastParameters<CommunicationToastContent>()
+                {
+                    Intent = ToastIntent.Success,
+                    Title = validation.Merk,
+                    Timeout = 8000,
+                    PrimaryAction = "✅ bewerkt",
+                    OnPrimaryAction = EventCallback.Factory.Create<ToastResult>(this, () => ClickedPrimary(tr)),
+                    Content = new CommunicationToastContent()
+                    {
+                        Subtitle = validation.Merk,
+                        Details = message,
+                    },
+
+                });
+            }
+        }
+    }
+
+    private void ClickedPrimary(ToastResult? result)
+    {
+        if (result is null) return;
+        var assemblage = result.Data as AssemblageEntity;
+        if (result.Data is AssemblageEntity assembly)
+        {
+            NavigationManager.NavigateTo($"/Project/assemblages/{assemblage?.Id}");
+        }
+        else
+        {
+            NavigationManager.NavigateTo($"/Project/assemblages");
+        }
+
+    }
+
+    private async Task<DocumentContent> GenerateDocumentContent(DocumentValidationResult? validationResult, bool createToc = !true)
+    {
+        PageNr = 1; // voorblad is pagina 1.
+
+        // ✅ NIEUW: Initialiseer bookmarks lijst
+        pageBookmarks = new List<Construct.WebUI.Server.Components.Pages.Print.PrintPageMenu.PageBookmark>();
+
         if (ProjectState?.CurrentProject != null)
         {
             var proj = ProjectState.CurrentProject;
@@ -978,7 +1358,17 @@ else
             content.Font = new("roboto", "3mm");
 
             // Mapping voor voorblad
-            UpdateCoverPage(); PageNr++;
+            UpdateCoverPage(); 
+
+            // ✅ Bookmark voor Titelpagina
+            pageBookmarks.Add(new() 
+            { 
+                Id = "titelpagina", 
+                Title = "Titelpagina", 
+                PageNumber = PageNr 
+            });
+
+            PageNr++;
 
             if (!ValidateProject(content)) 
                 return content;
@@ -996,12 +1386,43 @@ else
             TableContent table = new();
 
 
+            // ✅ NIEUW: Voeg validatie sectie toe indien er berichten zijn
+            if (validationResult != null && (validationResult.HasWarnings || validationResult.HasErrors))
+            {
+                // ✅ Bookmark voor Document validatie
+                pageBookmarks.Add(new() 
+                { 
+                    Id = "document-validatie", 
+                    Title = "Document validatie", 
+                    PageNumber = PageNr 
+                });
 
+                AddValidationSection(content, validationResult);
 
+            }
+
+            // ✅ STAP 2: Genereer eerst alle content (uitgangspunten + assemblages)
+            // Dan pas de inhoudsopgave zodat we alle paginanummers hebben
+
+            // Bookmark voor Uitgangspunten
+            pageBookmarks.Add(new() 
+            { 
+                Id = "uitgangspunten", 
+                Title = "Uitgangspunten", 
+                PageNumber = PageNr 
+            });
 
             SetUitgangspunten(content, proj.ProjectInfo.Grondslagen, proj.Assemblages);
 
-            foreach (AssemblageEntity a in proj.Assemblages.OrderBy(a=>a.Merk))
+
+            // ✅ Custom sort: eerst op merk-prefix, dan alfabetisch binnen prefix
+            var orderedAssemblages = proj.Assemblages
+                .OrderBy(a => GetMerkSortPriority(a.Merk))
+                .ThenBy(a => a.Merk)
+                .ToList();
+
+
+            foreach (AssemblageEntity a in orderedAssemblages)
             {
                 // haal zoveel mogelijk uit de base
                 if (a != null)
@@ -1009,22 +1430,95 @@ else
                     a.Bijwerken();
 
                     section = new SectionContent();
-                    string title = $"<span class='titel'>{a.Merk}</span> <span class='subtitel'>{a.Naam}</span>";
+                    // Voeg een unieke ID toe aan de heading voor bookmarks
+                    var merkId = $"assemblage-{a.Id}";
+
+                    // ✅ Voeg bookmark toe aan lijst
+                    pageBookmarks.Add(new() 
+                    { 
+                        Id = merkId, 
+                        Title = $"{a.Merk} - {a.Naam}", 
+                        PageNumber = PageNr 
+                    });
+
+                    string title = $"<span id='{merkId}' class='titel'>{a.Merk}</span> <span class='subtitel'>{a.Naam}</span>";
                     section.Elements.Add(new HeadingContent(title, 1));
                     section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
 
-                    a.Belastingen.BelastingGevallen.AddToSection(section, isDraaiTabel: !true, "Belastinggevallen", "Kop 3");
+                    if (a.Omschrijving != null)
+                    {
+                        section.AddParagraph(a.Omschrijving);
+                    }
 
-                    section.AddParagraph("Materialen", "Kop 3");
+
+                    // HIER DE SVG
+                    if (a is BordesEntity bordesEntity)
+                    {
+                        par = new ParagraphContent();
+                        Construct.Domain.Entities.BoundingBox boundingBox = new();
+
+                        var svgWidth = 180.0;
+                        var svgWidthPixels = svgWidth * 96.0 / 25.4;
+                        var maxHeightPx = 100.0 * 96.0 / 25.4;
+                        string svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; width: {svgWidthPixels:0}; height: auto; max-height: {maxHeightPx:0}";
+
+                        string xml = SvgGenerator.GenerateBordesSvgXml(bordesEntity, boundingBox, svgWidthPixels, 9999, svgStyle);
+                        par.Markdown = xml;
+                        section.Elements.Add(par);
+                    }
+                    if (a is SteekTrapEntity ste)
+                    {
+                        par = new ParagraphContent();
+                        Construct.Domain.Entities.BoundingBox boundingBox = new();
+
+                        var svgWidth = 180.0;
+                        var svgWidthPixels = svgWidth * 96.0 / 25.4;
+                        var maxHeightPx = 100.0 * 96.0 / 25.4;
+                        string svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; width: {svgWidthPixels:0}; height: auto; max-height: {maxHeightPx:0}";
+
+                        var (svgXml, base64Png) =
+                            TrapSvgGenerator.GenerateTrapSvgXmlWithPng(ste, boundingBox, svgWidthPixels, 9999, svgStyle);
+                        par.Markdown = svgXml;
+                        section.Elements.Add(par);
+
+
+                    }
+
+
+
+
+                    a.Belastingen.BelastingGevallen.AddToSection(section, isDraaiTabel: !true);
+                    a.Belastingen.BelastingCombinaties.AddToSection(section, isDraaiTabel: !true);
+
+
+                    //section.AddParagraph("Materialen", "Kop 3");
                     var materialen = new List<BaseMateriaal>() { a.Materiaal };
                     section.Elements.Add(GetTableContentMaterialen(materialen));
+
 
 
                     if (a.AssemblageType == AssemblageEntity.AssemblageTypeEnum.BetonAssemblage)
                     {
                         // dekking en duurzaamheid
-                        section.AddParagraph("Dekking en duurzaamheid", "Kop 3");
-                        section.Elements.Add(GetTableContentDekkingOpt(a.PlaatDekking));
+                        //section.AddParagraph("Dekking en duurzaamheid", "Kop 3");
+
+                        // ✅ Cast naar BetonAssemblageEntity om PlaatDekking te kunnen gebruiken
+                        if (a is BetonAssemblageEntity betonAssemblage)
+                        {
+                            section.Elements.Add(GetTableContentDekkingOpt(betonAssemblage.PlaatDekking));
+
+                            if (betonAssemblage.MainPart is SlabPart slab)
+                            {
+                                 // ✅ Brandwerendheid
+                                //section.AddParagraph("Brandwerendheid", "Kop 3");
+                                section.Elements.Add(GetTableFireResistance(slab));
+                            }
+
+                        }
+
+                       
+                        
+
                     }
 
                     // als het een ligger is dan specifieke ligger data
@@ -1048,7 +1542,7 @@ else
 
                         svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; width: {svgWidthPixels:0}; height: 30mm;";
 
-                        var svgDocs = ligger.Beam.ToSvgDocumentsOpt((int)svgWidthPixels, 9999, svgStyle, ligger.Beam.LoadContext?.BelastingGevallen, [(Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A | Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B)], []);
+                        var svgDocs = ligger.Beam.ToSvgDocumentsOpt((int)svgWidthPixels, 9999, svgStyle, ligger.Beam.LoadContext?.BelastingGevallen, [(Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A | Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B)]);
 
                         foreach (var svgDoc in svgDocs)
                         {
@@ -1120,7 +1614,7 @@ else
 
                     string xml = SvgGenerator.GenerateBordesSvgXml(bordes, boundingBox, svgWidthPixels, 9999, svgStyle);
                     par.Markdown = xml;
-                    section.Elements.Add(par);
+                    //section.Elements.Add(par);
 
                     svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; width: {svgWidthPixels:0}; height: 30mm;";
 
@@ -1131,28 +1625,10 @@ else
                         string title = $"<span class='titel'>{a.Merk} (vervolg)</span> <span class='subtitel'>{strook.Naam}</span>";
                         section.AddHeading(title, "Kop 1");
                         section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
-
                         section.AddParagraph(strook.Naam.ToUpperInvariant(), "Kop 3");
 
 
-
-                        var wap = strook.WapOnder;
-                        // section.AddParagraph($"A<sub>s,prov</sub> = {wap.As.ToString("0")}");
-                        // section.AddParagraph($"A<sub>s,basis</sub> = {wap.AsBasis.ToString("0")}");
-                        // section.AddParagraph($"A<sub>s,bijleg</sub> = {wap.AsBijleg.ToString("0")}");
-
-
-                        var pw = strook.PlaatWapening;
-                        // section.AddParagraph($"Onder.Basis : {pw.Onder?.BasisWapening.Tekst} ({pw.Onder?.BasisWapening.As:0}), ref={pw.Onder?.BasisWapening.ZRef:0.#}");
-                        // section.AddParagraph($"Onder.Bijleg : {pw.Onder?.BijlegWapening?.Tekst} ({pw.Onder?.BijlegWapening?.As:0}) ref={pw.Onder?.BijlegWapening?.ZRef:0.#}");
-                        // section.AddParagraph($"Onder.Totaal : HOE DAN?");
-
-
-
-
-
-                        //var svgDocs = strook.ToSvgDocuments(svgStyle, widthPx: svgWidthPixels);
-                        var svgDocs = strook.Beam.ToSvgDocumentsOpt((int)svgWidthPixels, 9999, svgStyle, a.Belastingen.BelastingGevallen, [(Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A | Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B)], []);
+                        var svgDocs = strook.Beam.ToSvgDocumentsOpt((int)svgWidthPixels, 9999, svgStyle, a.Belastingen.BelastingGevallen, [(Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A | Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B)]);
 
                         foreach (var svgDoc in svgDocs)
                         {
@@ -1191,14 +1667,6 @@ else
                             }
 
 
-
-
-                            //strook.DwarskrachtCollectie.AddToSection(section, isDraaiTabel: false, title: null, style: "Kop 3");
-
-                            //strook.DwarskrachtCollectie.AddToSection(section, isDraaiTabel: !false, title: null, style: "Kop 3");
-
-
-                            
                         }
                         else
                         {
@@ -1216,150 +1684,141 @@ else
                             strook.ScheurwijdteCollectie.AddToSection(section, isDraaiTabel: false, title: null, style: "Kop 3");
                         }
 
-                        // TODO: Secties volgorde gaat iets mis... nadat je de plaatwap heb geimplementeerd 
-
-
-
-
-                //         foreach (var svgDoc in svgDocs)
-                //         {
-                //             //continue;
-                //             switch (svgDoc.Name.Trim().ToLower())
-                //             {
-                //                 case "figuur":
-                //                     section.Elements.Add(new ParagraphContent(svgDoc.Render()));
-
-                //                     if (svgDoc.Tag is Eurocode.Belastingen.BelastingGeval geval)
-                //                     {
-                //                         var loads = strook.Beam.Loads.Where(l => l.LoadCase == geval);
-
-                //                         TableContent tableContent = new()
-                //                         {
-                //                             HideHeaders = false,
-                //                             Title = geval.Naam
-                //                         };
-
-                //                         tableContent.Headers = [
-                //                             new(){CellContent = new("naam")},
-                //                             new(){CellContent = new("omschrijving")},
-                //                             new(){CellContent = new("pos1")},
-                //                             new(){CellContent = new("pos2")},
-                //                             new(){CellContent = new("waarde1")},
-                //                             new(){CellContent = new("waarde2")},
-                //                             new(){CellContent = new("eenh.")},
-                // ];
-
-
-                //                         foreach (var l in loads)
-                //                         {
-                //                             tableContent.Rows.Add(
-                //                             [
-                //                               new TableCellContent(l.Name, "20mm"),
-                //                               new TableCellContent(l.Description ?? "..." , "100mm"),
-                //                               new TableCellContent(l.UserFriendlyStartPos, "12mm"),
-                //                               new TableCellContent(l.UserFriendlyEndPos, "12mm"),
-                //                               new TableCellContent(l.UserFriendlyStartValue, "12mm"),
-                //                               new TableCellContent(l.UserFriendlyEndValue, "12mm"),
-                //                               new TableCellContent(l.Unit, "12mm")
-                //                             ]);
-
-                //                             // todo: bij deze tabellen worden de breedtes nog niet goed meegenomen in de MigraDoc en Html exporter
-                //                         }
-
-                //                         section.Elements.Add(tableContent);
-                //                     }
-                //                     break;
-
-                //                 case "vz":
-                //                     if (svgDoc.Tag == null) continue;
-
-                //                     if (svgDoc.Tag is Eurocode.Belastingen.BelastingCombinatieTypeEnum belastingCombinatieType)
-                //                     {
-                //                         if (
-                //                             belastingCombinatieType == Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A ||
-                //                             belastingCombinatieType == Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B ||
-                //                             belastingCombinatieType == (Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A | Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B)
-                //                         )
-                //                         {
-                //                             section.Elements.Add(new ParagraphContent("Dwarskrachtwapening", "Kop 3"));
-                //                             section.Elements.Add(new ParagraphContent(svgDoc.Render()));
-
-                //                             if (strook.BetonV.IsDwarskrachtWapeningBenodigd())
-                //                             {
-                //                                 par = new($"⚠️ Let op V~Ed~ ({strook.BetonV.Ved:0.#} kN) is groter dan V~Rd,c~ ({strook.BetonV.DwarskrachtWeerstandBeton:0.#} kN), dwarskrachtwapening benodigd: A~sw,req~ = {strook.BetonV.AswBerekend:0} mm²/m¹");
-
-                //                                 var benodigdeBreedte = strook.BetonV.Ved / strook.BetonV.DwarskrachtWeerstandBeton * strook.Profiel.BreedteDwarskracht * 1.1; // 110% voor
-                //                                 if (benodigdeBreedte <= 500)
-                //                                 {
-                //                                     par.Markdown += $"\r\n💡 Advies: Pas de strookbreedte aan ({benodigdeBreedte:0} mm)";
-                //                                     strook.BetonV.AddToSection(section);
-                //                                 }
-                //                             }
-                //                             else
-                //                             {
-                //                                 par = new($"V~Ed~ ({strook.BetonV.Ved:0.#} kN) is kleiner dan V~Rd,c~ ({strook.BetonV.DwarskrachtWeerstandBeton:0.#} kN), *geen dwarskrachtwapening nodig.*");
-                //                             }
-                //                             section.Elements.Add(par);
-                //                         }
-                //                     }
-
-                //                     break;
-
-                //                 case "my":
-                //                     section.Elements.Add(new ParagraphContent("Momentwapening", "Kop 3"));
-                //                     section.Elements.Add(new ParagraphContent(svgDoc.Render()));
-
-                //                     if (strook.BendingResults.Count > 0)
-                //                     {
-                //                         strook.BendingResults.AddToSection(section, isDraaiTabel: false, title: null, style: "Kop 3");
-                //                     }
-                //                     if (strook.ScheurwijdteCollectie.Count > 0)
-                //                     {
-                //                         strook.ScheurwijdteCollectie.AddToSection(section, isDraaiTabel: false, title: null, style: "Kop 3");
-                //                     }
-
-                //                     break;
-                //             }
-
-                //         }
                     }
 
+
+                    if (bordes.Tand != null)
+                    {
+
+                        var tand = bordes.Tand;
+
+                        // de diameter is gelijk aan de verdeelwapening, we berekenen de hohmaat (maximaal 150mm)
+                        bordes.Tand.WapeningAlgemeen.Tekst = $"Ø{bordes.DetailWapeningDiameter:0.#}-{bordes.DetailWapeningHohMax}";
+
+
+                        tand.Bijwerken();
+                        tand.BuigingHals.BerekenEnValideer();
+                        tand.BuigingTand.BerekenEnValideer();
+
+
+                        string titleTand = $"<span class='titel'>{a.Merk} (vervolg)</span>";
+                        section.AddHeading(titleTand, "Kop 1");
+                        section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
+                        section.AddHeading("Trapoplegging tand", "Kop 3");
+
+                        // Bereken maximale fundamentele waarde voor Trap1
+                        var t1 = bordes.Trap1;
+                        var t2 = bordes.Trap2;
+                        double maxTrap1 = BordesEntity.BerekenMaximaleFundamenteleWaarde(t1.Reacties.G, t1.Reacties.Q, bordes.Belastingen.BelastingCombinaties);
+                        double maxTrap2 = BordesEntity.BerekenMaximaleFundamenteleWaarde(t2.Reacties.G, t2.Reacties.Q, bordes.Belastingen.BelastingCombinaties);
+
+                        var maatgevend = maxTrap1 > maxTrap2 ? t1 : t2;
+                        section.AddParagraph("Berekening en wapening is **per strekkende meter**");
+                        section.AddParagraph($"Reactie uit trap : *R<sub>Gk</sub>* = {maatgevend.Reacties.G:0.#} kN en *R<sub>Qk</sub>* = {maatgevend.Reacties.Q:0.#} kN zodat *R<sub>Ed</sub>* = {Math.Max(maxTrap1, maxTrap2):0.#} kN");
+                        section.AddParagraph($"Ophangkracht : *F<sub>ophang,Ed</sub>* = {tand.OphangKracht:0.#} kN (factor voor ophangkracht = {tand.FactorOphangKracht:0.#}), *A~s,req,ophang~* = {tand.OphangWapeningHalsBenodigd:0} mm²");
+
+
+
+                        // Tand
+                        section.AddParagraph("Momentwapening tand", "Kop 4");
+                        section.AddParagraph($"- afmetingen : *b* = {tand.ProfielTand.B:0} mm | *h* = {tand.ProfielTand.H:0} mm | *L~tand~* = {tand.TandLengte:0} mm | *a~b~* = {tand.LengteOplegmateriaal:0} mm | *l* = {tand.ArmVoorTand:0} mm | *l~ov~* = {tand.OverspanningVoorTand:0} mm | *a* = {tand.BuigingTand.LengteMaatBijGedrongenLiggerInMM} mm | *z* = {tand.BuigingTand.Z:0.#} mm");
+                        section.AddParagraph($"- krachten :  *F~Ed~* = {tand.OplegReactie:0.0 kN} | *H~Ed~* = {tand.ReactieHorizontaal:0.0 kN} ({tand.PercentageHorizontaleBelasting:0%} van oplegreactie) | *M~Ed~* = { tand.MomentVoorTand:0.0 kNm}");
+                        section.AddParagraph($"- wapening : *A~s,req~* = {tand.BuigingTand.AsRequired:0} mm² | *A~s,prov~* = {tand.BuigingTand.AsApplied:0} mm²");
+
+                        tand.BuigingTand.AddToSection(section, false);
+
+                        // Dwarskracht
+                        // de V~Ed,red~ moet onder V~Rd,c~ blijven (uitgangspunt is geen beugels)
+                        // 
+                        section.AddParagraph($"Dwarskracht tand", "Kop 4");
+                        if (Math.Abs(tand.DwarskrachtTand.Ved) > tand.DwarskrachtTand.DwarskrachtWeerstandBeton)
+                        {
+                            section.Elements.Add(tand.DwarskrachtTand.ToMigraDocTable());
+
+                            section.AddParagraph("**Let op! dwarskrachtwapening nodig in tand, niet akkoord**");
+                            section.AddParagraph($"A~sw,ben~ = {tand.DwarskrachtTand.AswBenPerMeter:0} mm²/m¹");
+
+                            foreach (var melding in tand.DwarskrachtTand.Meldingen)
+                            {
+                                section.AddParagraph(melding.ToMarkupString().Value);
+                                section.AddParagraph(melding.ToString());
+                            }
+                        }
+                        else
+                        {
+                            section.AddParagraph($"Dwarskracht *V~Ed~* = {Math.Abs(tand.DwarskrachtTand.Ved):0.0 kN} is kleiner dan *V~Rd,c~* ({tand.DwarskrachtTand.DwarskrachtWeerstandBeton:0.0 kN}), geen dwarskrachtwapening nodig.");
+                            foreach (var melding in tand.DwarskrachtTand.Meldingen)
+                            {
+                                section.AddParagraph(melding.ToMarkupString().Value);
+                            }
+                        }
+
+
+                        // Oplegging
+                        tand.Oplegging.BerekenEnValideer();
+                        section.AddParagraph("Oplegging tand", "Kop 4");
+                        section.AddParagraph(tand.ConclusieOplegging);
+
+
+                        // Controle verdeelwapening
+                        var arm2 = bordes.BreedteVersterkteStrook * 0.001 / 2.0; // in meters
+                        var momentTotHartVersterkteStroook = tand.MomentVoorTand + Math.Abs(tand.OplegReactie) * arm2;
+                        BendingResults controleVerdeelWapening = new()
+                            {
+                                Beton = bordes.Beton!,
+                                Profiel = bordes.BasisStrook?.Profiel,
+                                Wapening = bordes.PlaatWapening?.Boven?.VerdeelWapening!,
+                                Snedekrachten = new(){My = momentTotHartVersterkteStroook},
+                            };
+
+                        section.AddParagraph("Bovenwapening plaat", "Kop 3");
+                        section.AddParagraph($"Het inklemmingsmoment uit de tand tot aan hart strook = {tand.MomentVoorTand:0.#} kNm + {Math.Abs(tand.OplegReactie):0.#} kN x {arm2:0.##} m = {momentTotHartVersterkteStroook:0.#} kNm");
+                        section.AddParagraph($"Verdeelwapening boven benodigd *A~s,req~* = {controleVerdeelWapening.AsRequired:0} mm²");
+                        section.AddParagraph($"Verdeelwapening boven toegepast *A~s,prov~* = {controleVerdeelWapening.AsApplied:0} mm² ({bordes.PlaatWapening?.Boven?.VerdeelWapening?.SanitizedTekst()})");
+
+
+                        if (!controleVerdeelWapening.IsValidated)
+                        {
+                            controleVerdeelWapening.AddToSection(section, false);
+                        }
+
+                        section.AddParagraph("Wapening overzicht / opgave", "Kop 3");
+                        section.AddParagraph("Bij alle randen de hoofdwapening ombuigen of haarspelden toepassen. Bij elke omgebogen wapening een staaf Ø8 in de hoek toepassen.");
+
+
+                        svgWidth = 180.0;
+                        svgWidthPixels = svgWidth * 96.0 / 25.4;
+                        maxHeightPx = 100.0 * 96.0 / 25.4;
+                        svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; width: {svgWidthPixels:0}; height: auto; max-height: {maxHeightPx:0}";
+
+                        var xmlWap = SvgGenerator.GenerateBordesSvgXml(bordes, boundingBox, svgWidthPixels, 9999, svgStyle, false, true);
+                        section.AddParagraph(xmlWap);
+
+                    } // einde tand
+                        
+
                     content.Sections.Add(section);
-                }
+                } // einde bordes
 
 
                 if (a is SteekTrapEntity steekTrap)
                 {
-                    //section = new SectionContent();
-                    //section.Elements.Add(new HeadingContent(steekTrap.Merk ?? "TRAP", 1));
-
-                    // materialen
-                    //section.AddParagraph("Materialen", "Kop 3");
-                    //section.Elements.Add(GetTableContentBeton(steekTrap.Beton));
-
-                    // dekking en duurzaamheid
-                    //section.AddParagraph("Dekking en duurzaamheid", "Kop 3");
-                    //section.Elements.Add(GetTableContentDekking(steekTrap.DekkingBoven));
-
-                    // geometrie en belasting
-                    //section.AddParagraph("Geometrie", "Kop 3");
-                    //section.Elements.Add(GetTableGeometrie(steekTrap));
 
                     // afbeelding
-                    double widthMM = 100; // breedte van de svg
-                    double widthPx = widthMM * 96 / 25.4;
+                    //double widthMM = 100; // breedte van de svg
+                    //double widthPx = widthMM * 96 / 25.4;
 
-                    par = new ParagraphContent();
-                    Construct.Domain.Entities.BoundingBox boundingBox = new();
+                    //par = new ParagraphContent();
+                    //Construct.Domain.Entities.BoundingBox boundingBox = new();
 
-                    string svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; top: 0mm; width:{widthMM:0}mm; height: auto;";
+                    //string svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; top: 0mm; width:{widthMM:0}mm; height: auto;";
 
 
 
-                    var (svgXml, base64Png) = 
-                    TrapSvgGenerator.GenerateTrapSvgXmlWithPng(steekTrap, boundingBox, widthPx, 9999, svgStyle);
-                    par.Markdown = svgXml;
-                    section.Elements.Add(par);
+                    //var (svgXml, base64Png) = 
+                    //TrapSvgGenerator.GenerateTrapSvgXmlWithPng(steekTrap, boundingBox, widthPx, 9999, svgStyle);
+                    //par.Markdown = svgXml;
+                    //section.Elements.Add(par);
 
 
                     //  BELASTINGEN
@@ -1389,50 +1848,7 @@ else
                     // BELASTINGCOMBINATIES
                     //steekTrap.Belastingen.BelastingCombinaties.AddToSection(section, false, "Belastingcombinaties", "Kop 3");
 
-                    // schil
-                    section.AddParagraph("Berekening schil", "Kop 3");
-
-                    //section.AddParagraph("Krachten", "Kop 4");
-                    var tblSchil = new TableContent();
-                    tblSchil.Headers = [
-                        new() { CellContent=new("geval/combinatie", MigraDoc.DocumentObjectModel.Unit.FromCentimeter(6))},
-                    new() { CellContent = new("*M~y~* [kNm]", "6cm")},
-                    new() { CellContent = new("*V~z~* [kN]", "6cm")},
-    ];
-
-
-
-                    tblSchil.Rows.Add(new() { new("Permanent (BG1)", "6cm"), new($"{steekTrap.Krachten.Mk1:0.0}", "2cm"), new($"{steekTrap.Krachten.Vk1:0.0}", "6cm") });
-                    tblSchil.Rows.Add(new() { new("Veranderlijk (BG2)"), new($"{Math.Max(steekTrap.Krachten.Mk2, steekTrap.Krachten.Mk3):0.0}", "6cm"), new($"{steekTrap.Krachten.Vk2:0.0}", "6cm") });
-
-                    tblSchil.Rows.Add(new() { new($"Quasi-blijvend"), new($"{steekTrap.Krachten.Mqp:0.0}", "6cm"), new($"{steekTrap.Krachten.Vqp:0.0}", "6cm"), });
-                    tblSchil.Rows.Add(new() { new($"Frequent"), new($"{steekTrap.Krachten.Mfreq:0.0}", "6cm"), new($"{steekTrap.Krachten.Vfreq:0.0}", "6cm"), });
-                    tblSchil.Rows.Add(new() { new($"Fundamenteel"), new($"**{steekTrap.Krachten.MEd:0.0}**", "6cm"), new($"**{steekTrap.Krachten.VEd:0.0}**", "6cm") });
-
-
-
-                    //tblSchil.Rows.Add(new(){new("omhullende")});
-
-
-                    //tblSchil.Rows.Add(new() { new($"{steekTrap.Krachten.MaatgevendeCombinatieKarakteristiek?.Naam ?? "not found"}"), new($"{steekTrap.Krachten.Mk:0.0}"),new(), new("omhullekarakteristiek~")});
-                    //tblSchil.Rows.Add(new() { new($"{steekTrap.Krachten.MaatgevendeCombinatieFrequent?.Naam ?? "not found"}"), new($"{steekTrap.Krachten.Mfreq:0.0}"), new(),new("M~Ed,frequent~") });
-                    //tblSchil.Rows.Add(new() { new($"{steekTrap.Krachten.MaatgevendeCombinatieFundamenteel?.Naam ?? "not found"}"), new($"{steekTrap.Krachten.MEd:0.0}"), new(),new("M~Ed,fundamenteel~") });
-                    section.Elements.Add(tblSchil);
-
-                    section.AddParagraph("Oplegreacties", "Kop 3");
-
-                    var tblReacties = new TableContent();
-                    tblReacties.Headers = [
-                        new(new("reacties", "6cm")),
-                    new(new("*R~z,Gk~* [kN/m¹]", "6cm"){Style = new(){Alignment = MigraDoc.DocumentObjectModel.ParagraphAlignment.Center}}),
-                    new(new("*R~z,Qk~* [kN/m¹]", "6cm"){Style = new(){Alignment = MigraDoc.DocumentObjectModel.ParagraphAlignment.Center}}),
-                    //new()
-    ];
-
-                    //tblOmhullende.Rows.Add(new() { new($"{steekTrap.Krachten.MaatgevendeCombinatieKarakteristiek?.Naam ?? "not found"}"), new($"{steekTrap.Krachten.Mk:0.0}"), new(), new("omhullekarakteristiek~") });
-                    tblReacties.Rows.Add(new() { new($"onder/boven"), new($"{steekTrap.Krachten.Vk1:0.0}", "6cm"), new($"{Math.Max(steekTrap.Krachten.Vk2, steekTrap.Krachten.Vk3):0.0}", "6cm"), });
-                    section.Elements.Add(tblReacties);
-
+                   
 
 
                     // PAGE BREAK (maak een heading 1, dan gaat het automatisch...)
@@ -1440,6 +1856,41 @@ else
 
                     section.Elements.Add(new HeadingContent(title, 1));
                     section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
+
+
+                    // schil
+                    section.AddParagraph("Berekening schil", "Kop 3");
+
+                    //section.AddParagraph("Krachten", "Kop 4");
+                    var tblSchil = new TableContent();
+                    tblSchil.Headers =
+                    [
+                        new() { CellContent=new("geval/combinatie", MigraDoc.DocumentObjectModel.Unit.FromCentimeter(6))},
+                        new() { CellContent = new("*M~y~* [kNm]", "6cm")},
+                        new() { CellContent = new("*V~z~* [kN]", "6cm")},
+                    ];
+
+                    tblSchil.Rows.Add(new() { new("Permanent (BG1)", "6cm"), new($"{steekTrap.Krachten.Mk1:0.0}", "2cm"), new($"{steekTrap.Krachten.Vk1:0.0}", "6cm") });
+                    tblSchil.Rows.Add(new() { new("Veranderlijk (BG2)"), new($"{Math.Max(steekTrap.Krachten.Mk2, steekTrap.Krachten.Mk3):0.0}", "6cm"), new($"{steekTrap.Krachten.Vk2:0.0}", "6cm") });
+                    tblSchil.Rows.Add(new() { new($"Quasi-blijvend"), new($"{steekTrap.Krachten.Mqp:0.0}", "6cm"), new($"{steekTrap.Krachten.Vqp:0.0}", "6cm"), });
+                    tblSchil.Rows.Add(new() { new($"Frequent"), new($"{steekTrap.Krachten.Mfreq:0.0}", "6cm"), new($"{steekTrap.Krachten.Vfreq:0.0}", "6cm"), });
+                    tblSchil.Rows.Add(new() { new($"Fundamenteel"), new($"**{steekTrap.Krachten.MEd:0.0}**", "6cm"), new($"**{steekTrap.Krachten.VEd:0.0}**", "6cm") });
+                    section.Elements.Add(tblSchil);
+
+
+                    section.AddParagraph("Oplegreacties", "Kop 3");
+
+                    var tblReacties = new TableContent();
+                    tblReacties.Headers =
+                    [
+                        new(new("reacties", "6cm")),
+                        new(new("*R~z,Gk~* [kN/m¹]", "6cm"){Style = new(){Alignment = MigraDoc.DocumentObjectModel.ParagraphAlignment.Center}}),
+                        new(new("*R~z,Qk~* [kN/m¹]", "6cm"){Style = new(){Alignment = MigraDoc.DocumentObjectModel.ParagraphAlignment.Center}}),
+                    ];
+
+                    tblReacties.Rows.Add(new() { new($"onder/boven"), new($"{steekTrap.Krachten.Vk1:0.0}", "6cm"), new($"{Math.Max(steekTrap.Krachten.Vk2, steekTrap.Krachten.Vk3):0.0}", "6cm"), });
+                    section.Elements.Add(tblReacties);
+
 
 
                     // toetsen
@@ -1485,7 +1936,7 @@ else
                             new(new("*w<sub>max</sub>*", "1cm")),
                             new(new("*w<sub>bijk</sub>*", "2cm")),
                             new(new("toel.","2cm")),
-                            new(new("UC", "2cm"))
+                            new(new("U.C.", "2cm"))
                         ];
                         // dummy
 
@@ -1495,8 +1946,11 @@ else
                         var db1 = dbv.CombinatieContexts.FirstOrDefault(c => c.CombinatieType == Eurocode.Belastingen.BelastingCombinatieTypeEnum.QuasiBlijvend);
                         var db2 = dbv.CombinatieContexts.FirstOrDefault(c => c.CombinatieType == Eurocode.Belastingen.BelastingCombinatieTypeEnum.Frequent);
 
-                        var uc1 = db1?.Wmax / dbv.GrenswaardeEind;
-                        var uc2 = db2?.Wbijk / dbv.GrenswaardeBijkomend;
+                        var uc1 = Math.Abs(db1?.Wmax ?? 0) / dbv.GrenswaardeEind;
+                        var uc2 = Math.Abs(db2?.Wbijk ?? 0) / dbv.GrenswaardeBijkomend;
+
+                        string uc1Tekst = uc1 > 1.00499 ? $"**{uc1:0.00} ‼️** " : $"{uc1:0.00}";
+                        string uc2Tekst = uc2 > 1.00499 ? $"**{uc2:0.00} ‼️** " : $"{uc2:0.00}";
 
                         var width1 = "2cm";
                         var width2 = "4cm";
@@ -1512,7 +1966,7 @@ else
                             new($"**{db1?.Wmax:0.0}**" ,width3), //wmax
                             new($"{db1?.Wbijk:0.0}", width3), //bijk
                             new($"{dbv.GrenswaardeEind:0.0}",width3), //toel.
-                            new($"({uc1:0.00})", width3) });
+                            new(uc1Tekst, width3) });
 
                         tblDoorbuiging.Rows.Add(new() {
                             new($"{steekTrap.DoorbuigingValidatie.LengteMM:0}", width1),
@@ -1524,7 +1978,7 @@ else
                             new($"**{db2?.Wbijk:0.0}**" ,width3), //wbijk
                             new($"{dbv.GrenswaardeBijkomend:0.0}",width3), //toel.
 
-                            new($"({uc2:0.00})", width3) });
+                            new(uc2Tekst, width3) });
 
 
                         section.Elements.Add(tblDoorbuiging);
@@ -1545,15 +1999,6 @@ else
                     }
 
 
-
-
-
-
-                    // section.AddParagraph("Slankheid", "Kop 4");
-                    // section.Elements.Add(steekTrap.Slankheid.ToMigraDocTable(!false));
-                    // var contextMeldingen = steekTrap.Slankheid.ToParagraphContent();
-                    // if (contextMeldingen != null)
-                    //     section.Elements.Add(contextMeldingen);
 
 
 
@@ -1669,15 +2114,30 @@ else
             
             
             
+            
+            
             }
 
 
 
            
+           
+            // ✅ STAP 2: Genereer inhoudsopgave als LAATSTE (zodat we alle paginanummers hebben)
+            // Deze wordt op positie 0 ingevoegd (voor uitgangspunten)
+            
+            // ✅ Bookmark voor Inhoudsopgave (VOOR SetInhoudsopgave zodat het in navigatie komt)
+            pageBookmarks.Insert(0, new() 
+            { 
+                Id = "inhoudsopgave", 
+                Title = "Inhoudsopgave", 
+                PageNumber = 2  // Inhoudsopgave is altijd pagina 2
+            });
+            
+            SetInhoudsopgave(content, pageBookmarks);
 
             stopWatch.Stop();
-            toastMessage += $" ({stopWatch.ElapsedMilliseconds} ms)";
-            ToastService.ShowSuccess(toastMessage);
+            //toastMessage += $" ({stopWatch.ElapsedMilliseconds} ms)";
+            //ToastService.ShowSuccess(toastMessage);
 
             return content;
 
@@ -1714,6 +2174,32 @@ else
             return document;
         }
     }   
+
+    /// <summary>
+    /// Bepaalt de sorteer-prioriteit op basis van het merk-prefix.
+    /// Lagere waarde = eerder in document.
+    /// </summary>
+    /// <param name="merk">Het merknummer (bijv. "T-1", "B-2", "AT-3")</param>
+    /// <returns>Prioriteit getal voor sortering</returns>
+    private int GetMerkSortPriority(string? merk)
+    {
+        if (string.IsNullOrEmpty(merk))
+            return 9999; // Onbekend/leeg altijd achteraan
+
+        // Haal de prefix uit het merk (alles voor het eerste cijfer of '-')
+        var prefix = new string(merk.TakeWhile(c => !char.IsDigit(c) && c != '-').ToArray()).ToUpperInvariant();
+
+        // ✅ Definieer custom volgorde hier - makkelijk aan te passen!
+        return prefix switch
+        {
+            "TR" => 1,      // Trap elementen eerst
+            "AT" => 2,     // AT elementen daarna
+            "BD" => 3,      // Bordes elementen daarna
+            "L" => 4,      // Ligger elementen
+            "V" => 5,      // Vloer elementen (bijvoorbeeld)
+            _ => 99        // Onbekende prefixes achteraan
+        };
+    }
 
 
 

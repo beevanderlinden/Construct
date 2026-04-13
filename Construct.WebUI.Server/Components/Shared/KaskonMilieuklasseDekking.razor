@@ -1,0 +1,104 @@
+@using System.Collections.Generic
+@using Microsoft.AspNetCore.Components
+
+@* Herbruikbaar component voor milieuklasse/dekking en meldingen *@
+<KaskonInputContainer Label="milieuklasse | dekking">
+    @if (
+        Boven?.MilieuklassenUserFriendlyName == Onder?.MilieuklassenUserFriendlyName &&
+        Boven?.DekkingToe == Onder?.DekkingToe &&
+        Boven?.DekkingNom == Onder?.DekkingNom
+    )
+    {
+        <div>
+            <div class="form-control-text">
+                @Boven?.MilieuklassenUserFriendlyName | <i>c<sub>nom</sub></i> = @Boven?.DekkingNom mm, <i>c<sub>prov</sub></i> = <strong>@Boven?.DekkingToe mm</strong>
+                <span>
+                    <FluentButton Appearance="Appearance.Stealth"
+                                  Title="Toon details"
+                                  OnClick="@(() => _dekkingDialogHidden = false)"
+                                  IconStart="@(new Icons.Regular.Size28.MoreHorizontal())">
+                    </FluentButton>
+                </span>
+            </div>
+        </div>
+        
+    }
+    else
+    {
+        <div class="form-control-text">
+            boven: @Boven?.MilieuklassenUserFriendlyName | <i>c<sub>nom</sub></i> = @Boven?.DekkingNom mm, <i>c<sub>prov</sub></i> = @Boven?.DekkingToe mm
+            <span>
+                <FluentButton Appearance="Appearance.Stealth"
+                              Title="Toon details"
+                              OnClick="@(() => _dekkingDialogHidden = false)"
+                              IconStart="@(new Icons.Regular.Size32.MoreHorizontal())">
+                </FluentButton>
+            </span>
+        </div>
+        <div class="form-control-text">
+            onder: @Onder?.MilieuklassenUserFriendlyName | <i>c<sub>nom</sub></i> = @Onder?.DekkingNom mm, <i>c<sub>prov</sub></i> = @Onder?.DekkingToe mm
+            <span>
+                <FluentButton Appearance="Appearance.Stealth"
+                              Title="Toon details"
+                              OnClick="@(() => _dekkingDialogHidden = false)"
+                              IconStart="@(new Icons.Regular.Size32.MoreHorizontal())">
+                </FluentButton>
+            </span>
+        </div>
+    }
+
+   
+
+</KaskonInputContainer>
+
+@if ((Onder?.Meldingen?.Count ?? 0) > 0 || (Boven?.Meldingen?.Count ?? 0) > 0)
+{
+    <KaskonInputContainer Label="meldingen">
+        @foreach (var melding in Boven?.Meldingen ?? new List<dynamic>())
+        {
+            <div>
+                boven: @((MarkupString)melding.Bericht)
+            </div>
+        }
+        @foreach (var melding in Onder?.Meldingen ?? new List<dynamic>())
+        {
+            <div>
+                onder: @((MarkupString)melding.Bericht)
+            </div>
+        }
+    </KaskonInputContainer>
+}
+
+
+@if (!_dekkingDialogHidden)
+{
+    <div class="modal-backdrop custom-blur" @onclick="@(() => _dekkingDialogHidden = true)">
+        <div class="modal-content-base modal-content-wide" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h1>Betondekking - @Merk</h1>
+                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="@(() => _dekkingDialogHidden = true)">
+                    ×
+                </button>
+            </div>
+            <div class="modal-body">
+                <BetonDekkingDuoEditor DekkingBoven="@Boven" 
+                                       DekkingOnder="@Onder"
+                                       OnChanged="OnChanged" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" @onclick="@(() => _dekkingDialogHidden = true)">
+                    Sluiten
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public dynamic? Boven { get; set; }
+    [Parameter] public dynamic? Onder { get; set; }
+    [Parameter] public string? Merk { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private bool _dekkingDialogHidden = true;
+}

@@ -1,0 +1,48 @@
+﻿@using Microsoft.FluentUI.AspNetCore.Components
+@implements IDialogContentComponent
+
+<FluentDialogBody>
+    <FluentStack VerticalGap="16">
+        <p style="margin: 0; font-size: 16px; font-weight: 500;">
+            Wilt u het huidige project opslaan?
+        </p>
+        <p style="margin: 0; color: var(--neutral-foreground-secondary);">
+            Niet opgeslagen wijzigingen gaan verloren.
+        </p>
+    </FluentStack>
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Stealth" @onclick="OnCancel">
+        Annuleer
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" @onclick="OnNo">
+        Nee
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Accent" @onclick="OnYes">
+        Ja
+    </FluentButton>
+</FluentDialogFooter>
+
+@code {
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    private async Task OnCancel()
+    {
+        await Dialog.CancelAsync();
+    }
+
+    private async Task OnNo()
+    {
+        await Dialog.CloseAsync(false); // false = niet opslaan
+    }
+
+    private async Task OnYes()
+    {
+        await Dialog.CloseAsync(true); // true = opslaan
+    }
+}
+
+
+

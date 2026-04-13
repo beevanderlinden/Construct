@@ -5,13 +5,18 @@ using Microsoft.Graph.Models;
 using Microsoft.JSInterop;
 using System.IO.Compression;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Construct.Application.Services
 {
     public class ProjectFileService : IProjectFileService
     {
-
         private readonly IAppSettingService _appSettingService;
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            Converters = { new JsonStringEnumConverter() },
+            WriteIndented = true
+        };
 
         public ProjectFileService(IAppSettingService appSettingService)
         {
@@ -168,20 +173,6 @@ namespace Construct.Application.Services
                 Console.WriteLine($"Fout bij lezen van {pad}: {ex.Message}");
                 return null;
             }
-
-            //try
-            //{
-            //    await using var stream = File.OpenRead(pad);
-            //    using var gzipStream = new GZipStream(stream, CompressionMode.Decompress);
-            //    var wrapper = await JsonSerializer.DeserializeAsync<ProjectFileRoot>(gzipStream);
-            //    return wrapper?.ProjectInfo;
-            //}
-            //catch (Exception ex)
-            //{
-            //    // eventueel logging
-            //    Console.WriteLine($"Fout bij lezen van {pad}: {ex.Message}");
-            //    return null;
-            //}
         }
 
         public async Task<ProjectInfoEntity?> LeesProjectInfoUitBytesAsync(byte[] data)
@@ -190,7 +181,7 @@ namespace Construct.Application.Services
             {
                 using var inputStream = new MemoryStream(data);
                 using var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress);
-                var wrapper = await JsonSerializer.DeserializeAsync<ProjectFileRoot>(gzipStream);
+                var wrapper = await JsonSerializer.DeserializeAsync<ProjectFileRoot>(gzipStream, _jsonOptions);
                 return wrapper?.ProjectInfo;
             }
             catch (Exception ex)

@@ -1,0 +1,399 @@
+﻿@using Construct.Domain.Entities
+@using Construct.Domain.Extensions
+@using Construct.Application.Services
+@using System.Globalization
+
+@if (Tand != null && Father != null)
+{
+    @((MarkupString)SvgString)
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public TandOplegging? Tand { get; set; }
+
+    [Parameter]
+    public AssemblageEntity? Father { get; set; }
+
+    [Parameter]
+    public int ActualWidthPx { get; set; } = 800;
+
+    [Parameter]
+    public int ActualHeightPx { get; set; } = 600;
+
+    [Parameter]
+    public bool ToonMaatlijnen { get; set; } = true;
+
+    [Parameter]
+    public bool ToonBuigvorm { get; set; } = true;
+
+    private string SvgString = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        if (Tand != null && Father != null)
+        {
+            GenerateSvg();
+        }
+    }
+
+    private void GenerateSvg()
+    {
+        if (Tand == null || Father == null) return;
+
+        // SVG elementen
+        var svgPaths = new List<BaseSvg>();
+        var dimLines = new List<SvgDimLine>();
+        var teksten = new List<SvgText>();
+
+        // Onderscheid twee types tanden
+        bool isBordes = Father is BordesEntity;
+        bool isSteekTrap = Father is SteekTrapEntity;
+
+        if (isBordes)
+        {
+            GenerateBordesTand(svgPaths, dimLines, teksten);
+        }
+        else if (isSteekTrap)
+        {
+            GenerateSteekTrapTand(svgPaths, dimLines, teksten);
+        }
+
+        // Bepaal viewBox (wordt gezet in de Generate methodes)
+        double minX = svgPaths.Any() ? svgPaths.Min(p => p.GetBoundingBox().MinX) : -120;
+        double minY = -100;
+        double maxX = svgPaths.Any() ? svgPaths.Max(p => p.GetBoundingBox().MaxX) : 300;
+        double maxY = svgPaths.Any() ? svgPaths.Max(p => p.GetBoundingBox().MaxY) : 300;
+
+        var bb = new BoundingBox
+        {
+            MinX = minX - 20,
+            MinY = minY,
+            MaxXValue = maxX + 50,
+            MaxYValue = maxY + 50
+        };
+
+        var viewBox = new SvgHelper.SvgViewBox(bb.MinX, bb.MinY, bb.Width, bb.Height);
+
+        // Maak een nieuwe viewbox aan met marges
+        var vbWithMargins = viewBox.WithMarginsByText(
+            leftLines: 6,
+            rightLines: 2,
+            topLines: 4,
+            bottomLines: 2,
+            fontSizePx: 12,
+            lineHeight: 1.5,
+            actualWidthPx: ActualWidthPx,
+            actualHeightPx: ActualHeightPx
+        );
+
+        // SVG genereren
+        var svgHelper = new SvgHelper();
+
+        string beschrijving = Father is BordesEntity 
+            ? $"Tandoplegging Bordes - hoogte: {Tand.TandHoogte:0} mm, lengte: {Tand.TandLengte:0} mm"
+            : $"Tandoplegging SteekTrap - tandhoogte: {Tand.TandHoogte:0} mm, tandlengte: {Tand.TandLengte:0} mm, hals: {Tand.HalsDikte:0} mm";
+
+        var info = new SvgDocumentInfo
+        {
+            Title = "Tand detail",
+            Description = beschrijving
+        };
+
+        var style = "";
+        var status = "";
+
+        SvgString = svgHelper.GetSvgStringOptimal(
+            info,
+            vbWithMargins,
+            svgPaths,
+            dimLines,
+            teksten,
+            ActualWidthPx,
+            ActualHeightPx,
+            style,
+            status
+        );
+    }
+
+    /// <summary>
+    /// Genereert tand voor Bordes: rechthoek met inkassing linksboven (geen hals)
+    /// </summary>
+    private void GenerateBordesTand(List<BaseSvg> svgPaths, List<SvgDimLine> dimLines, List<SvgText> teksten)
+    {
+        if (Tand == null || Father is not BordesEntity bordes) return;
+
+        double tandHoogte = Tand.TandHoogte;
+        double tandLengte = Tand.TandLengte;
+        double bordesHoogte = bordes.Hoogte;
+
+        // Rechthoek met inkassing linksboven:
+        // ┌─────────────┐  0
+        // │   inkassing │  
+        // ├─────┐       │  tandHoogte
+        // │     │  tand │
+        // └─────┴───────┘  bordesHoogte
+        // 0   x1       x2
+
+        double x1 = tandLengte / 3; // breedte inkassing
+        double x2 = tandLengte;
+
+        List<Punt> tandPunten = [
+            new(0, 0),                    // linksboven
+            new(x2, 0),                   // rechtsboven
+            new(x2, bordesHoogte),        // rechtsonder
+            new(x1, bordesHoogte),        // onder inkassing rechts
+            new(x1, tandHoogte),          // boven inkassing rechts
+            new(0, tandHoogte)            // linksboven inkassing
+        ];
+
+        var tandPath = SvgGenerator.MakePath(tandPunten, scaleY: 1, close: true, fill: "lightgray", stroke: "black");
+        tandPath.StrokeWidth = 2;
+        svgPaths.Add(tandPath);
+
+        // Buigvorm voor bordes tand
+        if (ToonBuigvorm)
+        {
+            List<Punt> buigvormPunten = [
+                new(0, 0),                // linksboven
+                new(x2, 0),               // rechtsboven
+                new(x2, bordesHoogte),    // rechtsonder
+                new(0, bordesHoogte)      // linksonder
+            ];
+
+            var buigvormPath = SvgGenerator.MakePath(buigvormPunten, scaleY: 1, close: false, fill: "none", stroke: "red");
+            buigvormPath.StrokeWidth = 1.5;
+            buigvormPath.StrokeDashArray = "8,4";
+            svgPaths.Add(buigvormPath);
+        }
+
+        // Maatlijnen
+        if (ToonMaatlijnen)
+        {
+            // Verticaal links
+            var dimLineGroupVertical = new SvgDimLineGroup
+            {
+                Points = new List<(double X, double Y)>
+                {
+                    (-10, 0),
+                    (-10, tandHoogte),
+                    (-10, bordesHoogte)
+                },
+                Offset = -30,
+                Mode = DimLineMode.Vertical,
+                Scale = 1.0,
+                Texts = new List<string> { $"{tandHoogte:0}", $"{bordesHoogte - tandHoogte:0}" },
+                StrokeWidth = 0.5
+            };
+            dimLines.AddRange(dimLineGroupVertical.GenerateDimLines());
+
+            // Horizontaal boven
+            var dimLineGroupHorizontal = new SvgDimLineGroup
+            {
+                Points = new List<(double X, double Y)>
+                {
+                    (0, -10),
+                    (x1, -10),
+                    (x2, -10)
+                },
+                Offset = -30,
+                Mode = DimLineMode.Horizontal,
+                Scale = 1.0,
+                Texts = new List<string> { $"{x1:0}", $"{x2 - x1:0}" },
+                StrokeWidth = 0.5
+            };
+            dimLines.AddRange(dimLineGroupHorizontal.GenerateDimLines());
+
+            // Label inkassing
+            teksten.Add(new SvgText(
+                text: "inkassing",
+                x: x1 / 2,
+                y: (tandHoogte + bordesHoogte) / 2,
+                angle: 0,
+                scale: 1.0,
+                anchor: "middle",
+                dominantBaseLine: "middle",
+                pts: 10
+            ));
+
+            // Label tand
+            teksten.Add(new SvgText(
+                text: "tand",
+                x: (x1 + x2) / 2,
+                y: (tandHoogte + bordesHoogte) / 2,
+                angle: 0,
+                scale: 1.0,
+                anchor: "middle",
+                dominantBaseLine: "middle",
+                pts: 10
+            ));
+        }
+    }
+
+    /// <summary>
+    /// Genereert tand voor SteekTrap: vorm met tand rechtsboven, inkassing met kraag
+    /// Gezien van rechtsboven rechtsom: tandhoogte naar beneden, tandlengte naar links,
+    /// OptredeMaat + schilddikte naar beneden, 300mm naar links (kraag)
+    /// </summary>
+    private void GenerateSteekTrapTand(List<BaseSvg> svgPaths, List<SvgDimLine> dimLines, List<SvgText> teksten)
+    {
+        if (Tand == null || Father is not SteekTrapEntity trap) return;
+
+        double tandHoogte = Tand.TandHoogte;
+        double tandLengte = Tand.TandLengte;
+        double halsDikte = Tand.HalsDikte;
+        double optredeMaat = trap.OptredeMaat;
+        double schildDikte = trap.SchilDikte;
+        double kraagLengte = 300; // extra uitstekende kraag bij inkassing
+
+        // Coördinaten (x=0 is links, y=0 is boven)
+        // Rechtsboven is het startpunt van de tand
+        double x0 = 0;
+        double x3 = kraagLengte + halsDikte + tandLengte;  // rechterkant
+        double x2 = kraagLengte + halsDikte;                 // tussen hals en tand
+        double x1 = kraagLengte;  // linkerkant kraag
+
+        double y0 = 0;                                           // bovenkant tand
+        double y1 = tandHoogte;                                  // onderkant tand / bovenkant inkassing
+        double y2 = optredeMaat;
+        double y3 = optredeMaat + schildDikte; // onderkant totaal
+
+        // Punten rechtsom vanaf rechtsboven:
+        // 1. rechtsboven tand
+        // 2. tandhoogte naar beneden (rechtsonder tand)
+        // 3. tandlengte naar links (linksonder tand / rechtsboven inkassing)
+        // 4. OptredeMaat + schilddikte naar beneden (rechtsonder inkassing)
+        // 5. 300mm naar links (linksonder inkassing - kraag)
+        // 6. omhoog naar bovenkant inkassing (linksboven kraag)
+        // 7. naar rechts naar hals (rechtsboven kraag)
+        // 8. naar onder tot onderkant (linksonder hals)
+        // 9. naar links tot x=0 (linksonder totaal)
+        // 10. naar boven tot y1 (linksboven hals)
+        // 11. naar boven tot y0 (linksboven)
+        // 12. naar rechts terug naar start
+
+        List<Punt> tandPunten = [
+            new(x0, y3),
+            new(x2, y3),
+            new(x2, y1),
+            new(x3, y1),
+
+            new(x3, y0),        // 1. rechtsboven tand
+            new(x1, y0),
+            new(x1, y2),
+            new(x0, y2)
+            
+        ];
+
+        var tandPath = SvgGenerator.MakePath(tandPunten, scaleY: 1, close: !true, fill: "lightgray", stroke: "black");
+        tandPath.StrokeWidth = 2;
+        svgPaths.Add(tandPath);
+
+        // Buigvorm voor steektrap tand
+        if (ToonBuigvorm)
+        {
+            List<Punt> buigvormPunten = [
+                new(x3, y0),    // rechtsboven tand
+                new(x3, y2),    // rechtsonder (helemaal naar beneden)
+                new(0, y2),          // linksonder hals
+                new(0, y0),          // linksboven (helemaal naar boven)
+                new(x2, y0),      // bovenkant bij hals
+                new(x2, y1)       // tot aan tandHoogte
+            ];
+
+            var buigvormPath = SvgGenerator.MakePath(buigvormPunten, scaleY: 1, close: false, fill: "none", stroke: "red");
+            buigvormPath.StrokeWidth = 1.5;
+            buigvormPath.StrokeDashArray = "8,4";
+            svgPaths.Add(buigvormPath);
+        }
+
+        // Maatlijnen
+        if (ToonMaatlijnen)
+        {
+            // Verticaal rechts (tand + inkassing)
+            var dimLineGroupVerticalRechts = new SvgDimLineGroup
+            {
+                Points = new List<(double X, double Y)>
+                {
+                    (x3, y0),
+                    (x3, y1),
+                    (x3, y2),
+                    (x2, y3)
+                },
+                Offset = -30,
+                Mode = DimLineMode.Vertical,
+                Scale = 1.0,
+               
+                StrokeWidth = 0.5
+            };
+            dimLines.AddRange(dimLineGroupVerticalRechts.GenerateDimLines());
+
+
+
+        
+
+            // Horizontaal boven
+            var dimLineGroupHorizontaalBoven = new SvgDimLineGroup
+            {
+                Points = new List<(double X, double Y)>
+                {
+                    (x1, y0),
+                    (x2, y0),
+                    (x3, y0)
+                },
+                Offset = -30,
+                Mode = DimLineMode.Horizontal,
+                Scale = 1.0,
+                StrokeWidth = 0.5
+            };
+            dimLines.AddRange(dimLineGroupHorizontaalBoven.GenerateDimLines());
+
+           
+
+            // Labels
+            teksten.Add(new SvgText(
+                text: "tand",
+                x: (x2 + x3) / 2,
+                y: y1 / 2,
+                angle: 0,
+                scale: 1.0,
+                anchor: "middle",
+                dominantBaseLine: "middle",
+                pts: 10
+            ));
+
+            teksten.Add(new SvgText(
+                text: "inkassing",
+                x: (x2 + x3) / 2,
+                y: (y1 + y2) / 2,
+                angle: 0,
+                scale: 1.0,
+                anchor: "middle",
+                dominantBaseLine: "middle",
+                pts: 10
+            ));
+
+            teksten.Add(new SvgText(
+                text: "hals",
+                x: x2 / 2,
+                y: (y1 + y2) / 2,
+                angle: 0,
+                scale: 1.0,
+                anchor: "middle",
+                dominantBaseLine: "middle",
+                pts: 10
+            ));
+
+            teksten.Add(new SvgText(
+                text: "kraag",
+                x: (x1 + x2) / 2,
+                y: (y1 + y2) / 2,
+                angle: 0,
+                scale: 1.0,
+                anchor: "middle",
+                dominantBaseLine: "middle",
+                pts: 8
+            ));
+        }
+    }
+}

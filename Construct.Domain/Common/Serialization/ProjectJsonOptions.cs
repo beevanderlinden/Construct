@@ -14,17 +14,27 @@ namespace Construct.Domain
         public static readonly JsonSerializerOptions Default = CreateDefaultOptions();
         public static readonly JsonSerializerOptions Fast = CreateFastOptions();
 
+        // ✅ Static constructor - registreer converters NA opties creation
+        static ProjectJsonOptions()
+        {
+            // MaterialenDictionaryConverter wordt geregistreerd in Program.cs
+            // Dit moet gedaan worden in Program.cs omdat die Application kan zien
+        }
+
 
 
         private static JsonSerializerOptions CreateDefaultOptions()
         {
             return new JsonSerializerOptions
             {
-                WriteIndented = !true,
-                //Converters =
-                //{
-                //    new BaseMateriaalJsonConverter()
-                //},
+                WriteIndented = true,
+                Converters =
+                {
+                    new BaseMateriaalJsonConverter(),    // ✅ Polymorphic converter voor BaseMateriaal (Beton/Staal/Hout)
+                    new MaterialenDictionaryConverter(),  // ✅ NIEUW: Custom converter voor Dictionary<Guid, BaseMateriaal>
+                    new BelastingCombinatieItemConverter(),  // ✅ NIEUW: Custom converter om circular references te voorkomen
+                    new JsonStringEnumConverter()  // ✅ Serialiseer enums als strings
+                },
                 ReferenceHandler = ReferenceHandler.IgnoreCycles,
                 NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
                 PropertyNameCaseInsensitive = true,
@@ -63,12 +73,20 @@ namespace Construct.Domain
             return new JsonSerializerOptions
             {
                 WriteIndented = false,
-                IncludeFields = false, // alleen properties
+                IncludeFields = false,
                 IgnoreReadOnlyFields = true,
                 IgnoreReadOnlyProperties = true,
                 ReferenceHandler = ReferenceHandler.IgnoreCycles,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+                PropertyNameCaseInsensitive = true,  // ✅ NIEUW: Zorg voor case-insensitive deserialisatie
+                Converters =
+                {
+                    new BaseMateriaalJsonConverter(),    // ✅ Polymorphic converter voor BaseMateriaal (Beton/Staal/Hout)
+                    new MaterialenDictionaryConverter(),  // ✅ NIEUW: Custom converter voor Dictionary<Guid, BaseMateriaal>
+                    new BelastingCombinatieItemConverter(),  // ✅ NIEUW: Custom converter om circular references te voorkomen
+                    new JsonStringEnumConverter()  // ✅ Serialiseer enums als strings
+                },
             };
         }
     }

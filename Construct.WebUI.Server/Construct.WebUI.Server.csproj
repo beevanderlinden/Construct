@@ -32,6 +32,7 @@
 
   <ItemGroup>
     <Content Include="Components\App.razor.BAK_WERKT_NIET" />
+    <Content Include="Components\Shared\.css" />
     <Content Include="Shared\Data\EurocodeData.cs" />
     <Content Include="Shared\SampleData\DataSource.cs" />
     <Content Include="Shared\ViewModels\AssemblagesViewModel.cs" />
@@ -44,9 +45,6 @@
 
   <ItemGroup>
     <PackageReference Include="Kaskon.BeamClassLibrary" Version="1.0.0" />
-    <PackageReference Include="Kaskon.CommonLibrary" Version="2.2.39" />
-    <PackageReference Include="Kaskon.Eurocode1.Belastingen" Version="1.29.1" />
-    <PackageReference Include="Kaskon.EurocodeComponenten" Version="2.2.3" />
 	<PackageReference Include="Kaskon.Algemeen" Version="1.0.0" />
 	<PackageReference Include="Markdig" Version="0.44.0" />
 	<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.10" />
@@ -70,6 +68,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\EurocodeRazorClassLibrary\EurocodeRazorClassLibrary.csproj" />
     <ProjectReference Include="..\Construct.Infrastructure\Construct.Infrastructure.csproj" />
   </ItemGroup>
 

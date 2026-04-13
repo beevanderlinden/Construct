@@ -1,0 +1,140 @@
+﻿@using Construct.Domain.Entities
+@using Construct.Domain.Entities.Parts
+@using Eurocode.Belastingen
+@using Eurocode.BetonConstructies
+@using Eurocode.Grondslagen
+@using Microsoft.AspNetCore.Components
+@inject IToastService ToastService
+
+
+<KaskonInputContainer Label="gebruiksklasse (standaard)">
+    <FluentSelectEnum TEnum="Eurocode.Belastingen.GebruiksklasseEnum" Style="max-width:120mm"
+                      @bind-EnumSelectedValue="@SelectedGebruiksklasse" />
+</KaskonInputContainer>
+
+
+<KaskonInputContainer Label="brandwerendheid">
+    <FluentSelect TOption="string" @bind-Value="@SelectedMinimaleREIString" Style="max-width:120mm">
+        <FluentOption TOption="string" Value="0">geen eis</FluentOption>
+        @foreach (var rij in PlaatBrandwerendheid.Tabel)
+        {
+            <FluentOption TOption="string" Value="@rij.Rei.ToString()">REI @rij.Rei min</FluentOption>
+        }
+    </FluentSelect>
+    @if (Project?.ProjectInfo?.MinimaleREI > 0)
+    {
+        var reiRij = PlaatBrandwerendheid.Tabel.FirstOrDefault(r => r.Rei >= Project.ProjectInfo.MinimaleREI);
+        if (reiRij.Rei > 0)
+        {
+            <span class="form-control-text" style="margin-left: 8px;">
+                h<sub>s</sub> &ge; @reiRij.HsMin mm &nbsp;&nbsp; a &ge; @reiRij.AMin mm
+            </span>
+        }
+    }
+</KaskonInputContainer>
+
+
+    @if (gebruiksklasseChanged && Project?.Assemblages?.Any() == true)
+    {
+        <KaskonInputContainer Label="bijwerken">
+            <FluentButton Appearance="Appearance.Accent" OnClick="UpdateAssemblages">
+                Pas alle assemblages aan naar nieuwe gebruiksklasse
+            </FluentButton>
+        </KaskonInputContainer>
+    }
+
+    @if (brandwerendheidChanged && Project?.Assemblages?.Any() == true)
+    {
+        <KaskonInputContainer Label="bijwerken">
+            <FluentButton Appearance="Appearance.Accent" OnClick="UpdateAssemblagesBrandwerendheid">
+                Hervalideer alle assemblages op brandwerendheid
+            </FluentButton>
+        </KaskonInputContainer>
+    }
+
+
+
+@code {
+    [Parameter]
+    public ProjectEntity? Project { get; set; }
+
+    private GebruiksklasseEnum? SelectedGebruiksklasse
+    {
+        get => Project?.DefaultGebruiksklasse ?? null;
+        set
+        {
+            if (Project != null && Project.DefaultGebruiksklasse != value)
+            {
+                Project.DefaultGebruiksklasse = value;
+                gebruiksklasseChanged = true;
+            }
+        }
+    }
+
+    private bool gebruiksklasseChanged = false;
+    private bool brandwerendheidChanged = false;
+
+    private string? SelectedMinimaleREIString
+    {
+        get => (Project?.ProjectInfo?.MinimaleREI ?? 0).ToString();
+        set
+        {
+            if (Project?.ProjectInfo != null
+                && int.TryParse(value, out var rei)
+                && Project.ProjectInfo.MinimaleREI != rei)
+            {
+                Project.ProjectInfo.MinimaleREI = rei;
+                brandwerendheidChanged = true;
+            }
+        }
+    }
+
+    private void UpdateAssemblages()
+    {
+        if (Project?.Assemblages == null)
+            return;
+
+        foreach (var assemblage in Project.Assemblages)
+        {
+            // Assemblages die een gebruiksklasse property hebben
+            var prop = assemblage.GetType().GetProperty("Gebruiksklasse");
+            if (prop != null && prop.PropertyType == typeof(Eurocode.Belastingen.GebruiksklasseEnum?))
+            {
+                prop.SetValue(assemblage, Project.DefaultGebruiksklasse);
+            }
+        }
+        gebruiksklasseChanged = false;
+        ToastService.ShowSuccess("Alle assemblages zijn bijgewerkt naar de nieuwe gebruiksklasse.");
+    }
+
+    private void UpdateAssemblagesBrandwerendheid()
+    {
+        if (Project?.Assemblages == null) return;
+
+        var target = Project.ProjectInfo.MinimaleREI;
+
+        foreach (var assemblage in Project.Assemblages)
+        {
+            if (assemblage is BetonAssemblageEntity ba)
+            {
+                if(ba.MainPart is SlabPart slab)
+                {
+                    assemblage.Bijwerken();
+                    if (slab.Rei < target)
+                    {
+                        ToastService.ShowWarning($"Merk {assemblage.Merk} brandwerend <  {target} minuten! (REI {slab.Rei})");
+                    }
+                    else
+                    {
+                        ToastService.ShowSuccess($"Merk {assemblage.Merk} brandwerend OK (REI {slab.Rei})");
+                    }
+                }                
+            }
+        }
+        
+
+
+        brandwerendheidChanged = false;
+        //ToastService.ShowSuccess("Alle assemblages zijn hergevalideerd op brandwerendheid.");
+    }
+}

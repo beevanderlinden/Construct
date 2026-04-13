@@ -1,0 +1,719 @@
+﻿@using Eurocode.BetonConstructies
+@using Construct.Domain.Entities
+@using Construct.Application.Services
+@using static Construct.Application.Services.SvgGenerator
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="beton-balk-visualisatie" style="@ContainerStyle">
+    <svg id="@_svgId" data-dim-ref="@_svgId"
+         viewBox="@ViewBox" 
+         preserveAspectRatio="xMidYMid meet"
+         style="width: 100%; height: auto; max-width:900px; max-height:900px; border: 1px solid var(--neutral-stroke-rest);">
+        @((MarkupString)GenerateSvgXml())
+    </svg>
+    
+    @if (ToonLegenda)
+    {
+        <div class="wapening-legenda">
+            <h4>Wapeningsoverzicht</h4>
+            @if (BeugelWapening != null)
+            {
+                <div class="legenda-item">
+                    <span>Beugels: @BeugelWapening.ToString()</span>
+                </div>
+            }
+            @if (WapeningBoven != null)
+            {
+                <div class="legenda-item">
+                    <span>Boven: @WapeningBoven.SanitizedTekst()</span>
+                </div>
+            }
+            @if (WapeningOnder != null)
+            {
+                <div class="legenda-item">
+                    <span>Onder: @WapeningOnder.SanitizedTekst()</span>
+                </div>
+            }
+            @if (WapeningZijLinks != null)
+            {
+                <div class="legenda-item">
+                    <span>Links: @(WapeningZijLinks?.SanitizedTekst() ?? "")</span>
+                </div>
+            }
+            @if (WapeningZijRechts != null)
+            {
+                <div class="legenda-item">
+                    <span>Rechts: @(WapeningZijRechts?.SanitizedTekst() ?? "")</span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public double Breedte { get; set; } = 300;
+    [Parameter] public double Hoogte { get; set; } = 400;
+    [Parameter] public WapeningContext? WapeningBoven { get; set; }
+    [Parameter] public WapeningContext? WapeningOnder { get; set; }
+    [Parameter] public WapeningContext? WapeningZijLinks { get; set; }
+    [Parameter] public WapeningContext? WapeningZijRechts { get; set; }
+    [Parameter] public BeugelWapeningContext? BeugelWapening { get; set; }
+    [Parameter] public bool ToonMaatvoering { get; set; } = true;
+    [Parameter] public bool ToonLegenda { get; set; } = true;
+    [Parameter] public string ContainerStyle { get; set; } = "";
+    [Parameter] public string FocusElement { get; set; } = "";
+
+    /// <summary>Toont een hout-arcering (jaarringen-patroon) in plaats van de betonkleur.</summary>
+    [Parameter] public bool ToonHoutPatroon { get; set; } = false;
+
+    /// <summary>Callback wanneer de gebruiker de Breedte-input in de maatvoering wijzigt.</summary>
+    [Parameter] public EventCallback<double> BreedteChanged { get; set; }
+    [Parameter] public double? BreedteMin  { get; set; }
+    [Parameter] public double? BreedteMax  { get; set; }
+    [Parameter] public double? BreedteStep { get; set; }
+
+    /// <summary>Callback wanneer de gebruiker de Hoogte-input in de maatvoering wijzigt.</summary>
+    [Parameter] public EventCallback<double> HoogteChanged { get; set; }
+    [Parameter] public double? HoogteMin  { get; set; }
+    [Parameter] public double? HoogteMax  { get; set; }
+    [Parameter] public double? HoogteStep { get; set; }
+
+    private readonly string _svgId = $"sv-{Guid.NewGuid():N}";
+    private DotNetObjectReference<BetonBalkDoorsnedeVisualisatie>? _dimRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (BreedteChanged.HasDelegate || HoogteChanged.HasDelegate)
+        {
+            _dimRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("svgHelpers.registerDimRef", _svgId, _dimRef);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnDimInputChanged(string key, double value)
+    {
+        if (key == "Breedte") await BreedteChanged.InvokeAsync(value);
+        else if (key == "Hoogte") await HoogteChanged.InvokeAsync(value);
+    }
+
+    public void Dispose() => _dimRef?.Dispose();
+
+    private double margin = 50;
+    private string ViewBox => $"{-margin} {-margin} {Breedte + 2 * margin} {Hoogte + 2 * margin}";
+
+    private string GenerateSvgXml()
+    {
+        List<BaseSvg> svgElements = [];
+        var svgHelper = new SvgHelper();
+
+        // 1. BETON RECHTHOEK
+        var betonPunten = new List<Punt>
+        {
+            new(0, 0),
+            new(Breedte, 0),
+            new(Breedte, Hoogte),
+            new(0, Hoogte)
+        };
+
+        var betonPath = MakePath(betonPunten, scaleY: 1, close: true,
+            fill: ToonHoutPatroon ? "url(#hout-patroon)" : "#e0e0e0",
+            stroke: ToonHoutPatroon ? "#7a4f1e" : "black");
+        betonPath.StrokeWidth = 2;
+        svgElements.Add(betonPath);
+
+        // 2. BEUGELS
+        if (BeugelWapening != null)
+        {
+            svgElements.AddRange(GenerateBeugels());
+        }
+
+        // 3. BOVENWAPENING
+        if (WapeningBoven != null)
+        {
+            svgElements.AddRange(GenerateHoofdwapening(WapeningBoven, isTop: true));
+        }
+
+        // 4. ONDERWAPENING
+        if (WapeningOnder != null)
+        {
+            svgElements.AddRange(GenerateHoofdwapening(WapeningOnder, isTop: false));
+        }
+
+        // 5. ZIJWAPENING
+        if (WapeningZijLinks != null)
+        {
+            svgElements.AddRange(GenerateZijwapening(WapeningZijLinks, isLeft: true));
+        }
+
+        if (WapeningZijRechts != null)
+        {
+            svgElements.AddRange(GenerateZijwapening(WapeningZijRechts, isLeft: false));
+        }
+
+        // 6. MAATVOERING
+        if (ToonMaatvoering)
+        {
+            svgElements.AddRange(GenerateMaatvoering());
+        }
+
+        // 7. DYNAMISCHE FOCUS MAATLIJNEN
+        if (!string.IsNullOrEmpty(FocusElement))
+        {
+            svgElements.AddRange(GenerateFocusMaatlijnen());
+        }
+
+        var svgContent = svgHelper.GetSvgContentXml(svgElements);
+
+        if (ToonHoutPatroon)
+        {
+            // Inject hout-arcering patroon (jaarringen-effect) in de <defs>
+            const string houtPatroon =
+                "<pattern id='hout-patroon' patternUnits='userSpaceOnUse' width='18' height='13'>" +
+                "<rect width='18' height='13' fill='#e8c98a'/>" +
+                "<path d='M0,3.5 C2,1.5 6,5.5 11,3.5 C14,2 18,3.5 18,3.5' stroke='#9a6020' stroke-width='0.75' fill='none' opacity='0.65'/>" +
+                "<path d='M0,8   C3,6   7,10  12,8   C15,6.5 18,8   18,8'   stroke='#9a6020' stroke-width='0.75' fill='none' opacity='0.65'/>" +
+                "<path d='M0,13  C2,11  6,15  11,13  C14,11.5 18,13  18,13'  stroke='#9a6020' stroke-width='0.75' fill='none' opacity='0.65'/>" +
+                "</pattern>";
+            svgContent = svgContent.Replace("</defs>", houtPatroon + "</defs>");
+        }
+
+        return
+            "<style>" +
+            ".wapening-staaf{cursor:pointer;transition:fill .15s ease,stroke .15s ease}" +
+            ".wapening-staaf:hover{fill:var(--accent-fill-rest,#0078d4);stroke:white}" +
+            ".wapening-beugel{cursor:pointer;transition:stroke .15s ease}" +
+            ".wapening-beugel:hover{stroke:var(--accent-fill-rest,#0078d4);stroke-width:1.5}" +
+            "</style>" +
+            svgContent;
+    }
+
+    private List<BaseSvg> GenerateBeugels()
+    {
+        List<BaseSvg> elements = [];
+        if (BeugelWapening == null) return elements;
+
+        double dekL1 = BeugelWapening.DekkingLinks;
+        double dekL2 = BeugelWapening.DekkingLinks + BeugelWapening.Diameter;
+
+        double dekR1 = BeugelWapening.DekkingRechts;
+        double dekR2 = BeugelWapening.DekkingRechts + BeugelWapening.Diameter;
+
+        double dekB1 = BeugelWapening.DekkingBoven;
+        double dekB2 = BeugelWapening.DekkingBoven + BeugelWapening.Diameter;
+
+        double dekO1 = BeugelWapening.DekkingOnder;
+        double dekO2 = BeugelWapening.DekkingOnder + BeugelWapening.Diameter;
+
+        double x1 = dekL1;
+        double x2 = Breedte - dekR1;
+        double y1 = dekB1;
+        double y2 = Hoogte - dekO1;
+
+        double d = BeugelWapening.Diameter;
+        double rBinnen = 2 * d;  // Binnenstraal = 2 × diameter
+        double rBuiten = 3 * d;  // Buitenstraal = 3 × diameter
+
+        // Helper functie om een rechthoek met ronde hoeken te maken
+        void MaakAfgerondeRechthoek(double straal, string kleur, double x1, double x2, double y1, double y2)
+        {
+            var pathData = new System.Text.StringBuilder();
+
+            if (BeugelWapening.Linksom)
+            {
+                // Start linksboven
+                pathData.Append($"M {x1} {y1 + straal} ");
+                pathData.Append($"A {straal} {straal} 0 0 1 {x1 + straal} {y1} ");
+                pathData.Append($"L {x2 - straal} {y1} ");
+                pathData.Append($"A {straal} {straal} 0 0 1 {x2} {y1 + straal} ");
+                pathData.Append($"L {x2} {y2 - straal} ");
+                pathData.Append($"A {straal} {straal} 0 0 1 {x2 - straal} {y2} ");
+                pathData.Append($"L {x1 + straal} {y2} ");
+                pathData.Append($"A {straal} {straal} 0 0 1 {x1} {y2 - straal} ");
+                pathData.Append("Z");
+            }
+            else
+            {
+                // Start linksboven (rechtsom)
+                pathData.Append($"M {x1 + straal} {y1} ");
+                pathData.Append($"L {x2 - straal} {y1} ");
+                pathData.Append($"A {straal} {straal} 0 0 1 {x2} {y1 + straal} ");
+                pathData.Append($"L {x2} {y2 - straal} ");
+                pathData.Append($"A {straal} {straal} 0 0 1 {x2 - straal} {y2} ");
+                pathData.Append($"L {x1 + straal} {y2} ");
+                pathData.Append($"A {straal} {straal} 0 0 1 {x1} {y2 - straal} ");
+                pathData.Append($"L {x1} {y1 + straal} ");
+                pathData.Append($"A {straal} {straal} 0 0 1 {x1 + straal} {y1} ");
+            }
+
+            elements.Add(new SvgPath
+            {
+                D = pathData.ToString(),
+                Fill = "none",
+                Stroke = kleur,
+                StrokeWidth = 0.5,
+                StrokeLineCap = "round",
+                StrokeLineJoin = "round",
+                Class = "wapening-beugel"
+            });
+        }
+
+        // Teken binnencontour (r = 2d)
+        MaakAfgerondeRechthoek(rBuiten, "#666", x1, x2, y1, y2);
+
+        x1 = dekL2;
+        x2 = Breedte - dekR2;
+        y1 = dekB2;
+        y2 = Hoogte - dekO2;
+
+        // Teken buitencontour (r = 3d)  
+        MaakAfgerondeRechthoek(rBinnen, "#666", x1, x2, y1, y2);
+
+        // Sneden voor 3-, 4- of 5-snedige beugels
+        if (BeugelWapening.AantalSneden == 3)
+        {
+            double midX = Breedte / 2;
+            elements.Add(new SvgLine
+            {
+                X1 = midX,
+                Y1 = y1,
+                X2 = midX,
+                Y2 = y2,
+                Stroke = "#666",
+                StrokeWidth = 0.5,
+                Class = "wapening-beugel"
+            });
+        }
+        else if (BeugelWapening.AantalSneden == 4)
+        {
+            double spacing = (x2 - x1) / 3;
+            elements.Add(new SvgLine
+            {
+                X1 = x1 + spacing, Y1 = y1, X2 = x1 + spacing, Y2 = y2,
+                Stroke = "#666", StrokeWidth = 0.5, Class = "wapening-beugel"
+            });
+            elements.Add(new SvgLine
+            {
+                X1 = x1 + 2 * spacing, Y1 = y1, X2 = x1 + 2 * spacing, Y2 = y2,
+                Stroke = "#666", StrokeWidth = 0.5, Class = "wapening-beugel"
+            });
+        }
+        else if (BeugelWapening.AantalSneden == 5)
+        {
+            double spacing = (x2 - x1) / 4;
+            elements.Add(new SvgLine
+            {
+                X1 = x1 + spacing, Y1 = y1, X2 = x1 + spacing, Y2 = y2,
+                Stroke = "#666", StrokeWidth = 0.5, Class = "wapening-beugel"
+            });
+            elements.Add(new SvgLine
+            {
+                X1 = x1 + 2 * spacing, Y1 = y1, X2 = x1 + 2 * spacing, Y2 = y2,
+                Stroke = "#666", StrokeWidth = 0.5, Class = "wapening-beugel"
+            });
+            elements.Add(new SvgLine
+            {
+                X1 = x1 + 3 * spacing, Y1 = y1, X2 = x1 + 3 * spacing, Y2 = y2,
+                Stroke = "#666", StrokeWidth = 0.5, Class = "wapening-beugel"
+            });
+        }
+
+        return elements;
+    }
+
+    /// <summary>
+    /// Berekent de X-posities van hoofdwapening (hart staven)
+    /// </summary>
+    private List<double> BerekenHoofdwapeningXPosities(WapeningContext wapening)
+    {
+        var posities = new List<double>();
+
+        var asPerGemiddeldeStaaf = Math.PI * Math.Pow(wapening.GemiddeldeDiameter / 2, 2);
+        int aantal = (int)Math.Ceiling(wapening.As / asPerGemiddeldeStaaf);
+        double diameter = wapening.GemiddeldeDiameter;
+        double dekking = wapening.DekkingToegepast;
+
+        if (aantal == 0) return posities;
+
+        // Intelligente deltaX berekening op basis van buigdoorndiameter vs langswapening diameter
+        double buigdoornDiameter = 4 * (BeugelWapening?.Diameter ?? 8);
+
+        double deltaX;
+        if (buigdoornDiameter <= diameter)
+        {
+            deltaX = 0;
+        }
+        else
+        {
+            double minDeltaX = buigdoornDiameter / 2 - diameter / 2;
+            double maxDeltaX = buigdoornDiameter / 2;
+            deltaX = Math.Min(minDeltaX, maxDeltaX);
+        }
+
+        double startX = dekking + diameter / 2 + deltaX;
+        double eindX = Breedte - (dekking + diameter / 2) - deltaX;
+        double spacing = aantal > 1 ? (eindX - startX) / (aantal - 1) : 0;
+
+        for (int i = 0; i < aantal; i++)
+        {
+            double x = aantal == 1 ? (startX + eindX) / 2 : startX + i * spacing;
+            posities.Add(x);
+        }
+
+        return posities;
+    }
+
+    private List<BaseSvg> GenerateHoofdwapening(WapeningContext wapening, bool isTop)
+    {
+        List<BaseSvg> elements = [];
+
+        double diameter = wapening.GemiddeldeDiameter;
+        double dekking = wapening.DekkingToegepast;
+
+        double y = isTop 
+            ? dekking + diameter / 2
+            : Hoogte - (dekking + diameter / 2);
+
+        // Gebruik helper om posities te berekenen
+        var xPosities = BerekenHoofdwapeningXPosities(wapening);
+
+        foreach (var x in xPosities)
+        {
+            elements.Add(new SvgCircle
+            {
+                Cx = x,
+                Cy = y,
+                R = diameter / 2,
+                Fill = "#999",
+                Stroke = "black",
+                StrokeWidth = 0.5,
+                CssClass = "wapening-staaf",
+                Title = $"Ø{diameter:0}"
+            });
+        }
+
+        return elements;
+    }
+
+    private List<BaseSvg> GenerateZijwapening(WapeningContext wapening, bool isLeft)
+    {
+        List<BaseSvg> elements = [];
+
+        var asPerGemiddeldeStaaf = Math.PI * Math.Pow(wapening.GemiddeldeDiameter / 2, 2);
+        
+        
+        
+        int aantal = (int)Math.Ceiling(wapening.As / asPerGemiddeldeStaaf);
+        
+        
+        double diameter = wapening.GemiddeldeDiameter;
+        double dekking = wapening.DekkingToegepast;
+
+        if (aantal == 0) return elements;
+
+        // Positie tegen binnenkant beugel
+
+        double x = isLeft
+            ? dekking + diameter / 2
+            : Breedte - (dekking + diameter / 2);
+
+        double topDekkingBoven = WapeningBoven?.DekkingToegepast ?? 38;
+        double topDiameter = WapeningBoven?.GemiddeldeDiameter ?? 10;
+        double bottomDekkingOnder = WapeningOnder?.DekkingToegepast ?? 38;
+        double bottomDiameter = WapeningOnder?.GemiddeldeDiameter ?? 12;
+
+        double topZone = (BeugelWapening?.DekkingBoven ?? 30) + (BeugelWapening?.Diameter ?? 0)  + topDiameter;
+        double bottomZone = Hoogte - ((BeugelWapening?.DekkingOnder ?? 30) + (BeugelWapening?.Diameter ?? 0)  + bottomDiameter);
+
+        double spacing = aantal > 0 ? (bottomZone - topZone) / (aantal + 1) : 0;
+
+        for (int i = 0; i < aantal; i++)
+        {
+            double y = topZone + (i + 1) * spacing;
+
+            elements.Add(new SvgCircle
+            {
+                Cx = x,
+                Cy = y,
+                R = diameter / 2,
+                Fill = "#999",
+                Stroke = "black",
+                StrokeWidth = 0.5,
+                CssClass = "wapening-staaf",
+                Title = $"\u00d8{diameter:0}"
+            });
+
+
+        }
+
+        return elements;
+    }
+
+    private List<BaseSvg> GenerateMaatvoering()
+    {
+        List<BaseSvg> elements = [];
+
+        // Breedte maatvoering (horizontaal)
+        if (BreedteChanged.HasDelegate)
+        {
+            elements.Add(new SvgDimLineInput
+            {
+                Mode = DimLineMode.Horizontal,
+                X1 = 0, Y1 = Hoogte, X2 = Breedte, Y2 = Hoogte,
+                Offset = 0, OffsetLines = -2,
+                Text = $"{Breedte:0}",
+                Scale = 1,
+                MarkerStart = "chevStart", MarkerEnd = "chevEnd",
+                InputKey = "Breedte",
+                Min = BreedteMin, Max = BreedteMax, Step = BreedteStep
+            });
+        }
+        else
+        {
+            elements.Add(new SvgDimLine
+            {
+                Mode = DimLineMode.Horizontal,
+                X1 = 0, Y1 = Hoogte, X2 = Breedte, Y2 = Hoogte,
+                Offset = 0, OffsetLines = -2,
+                Text = $"{Breedte:0}",
+                Scale = 1,
+                MarkerStart = "chevStart", MarkerEnd = "chevEnd"
+            });
+        }
+
+        // Hoogte maatvoering (verticaal)
+        if (HoogteChanged.HasDelegate)
+        {
+            elements.Add(new SvgDimLineInput
+            {
+                Mode = DimLineMode.Vertical,
+                X1 = Breedte, Y1 = 0, X2 = Breedte, Y2 = Hoogte,
+                Offset = 0, OffsetLines = -2,
+                Text = $"{Hoogte:0}",
+                Scale = 1,
+                MarkerStart = "chevStart", MarkerEnd = "chevEnd",
+                InputKey = "Hoogte",
+                Min = HoogteMin, Max = HoogteMax, Step = HoogteStep
+            });
+        }
+        else
+        {
+            elements.Add(new SvgDimLine
+            {
+                Mode = DimLineMode.Vertical,
+                X1 = Breedte, Y1 = 0, X2 = Breedte, Y2 = Hoogte,
+                Offset = 0, OffsetLines = -2,
+                Text = $"{Hoogte:0}",
+                Scale = 1,
+                MarkerStart = "chevStart", MarkerEnd = "chevEnd"
+            });
+        }
+
+        return elements;
+    }
+
+    private List<BaseSvg> GenerateFocusMaatlijnen()
+    {
+        List<BaseSvg> elements = [];
+
+        if (FocusElement.StartsWith("beugel-"))
+        {
+            // Beugel maatlijnen als gegroepeerde maatlijnen
+            if (BeugelWapening != null)
+            {
+                double dekL = BeugelWapening.DekkingLinks;
+                double dekR = BeugelWapening.DekkingRechts;
+                double dekB = BeugelWapening.DekkingBoven;
+                double dekO = BeugelWapening.DekkingOnder;
+                var baseY = Hoogte - dekO - BeugelWapening.Diameter * 1.5;
+                var baseX = Breedte - dekR - BeugelWapening.Diameter * 1.5;
+
+                // Horizontale maatlijnengroep: betonrand → beugel links → beugel rechts → betonrand
+                var horizontalGroup = new SvgDimLineGroup
+                {
+                    Mode = DimLineMode.Horizontal,
+                    Points = new List<(double, double)>
+                    {
+                        (0, baseY),                    // Linker betonrand
+                        (dekL, baseY),                 // Buitenkant beugel links
+                        (Breedte - dekR, baseY),      // Buitenkant beugel rechts
+                        (Breedte, baseY)              // Rechter betonrand
+                    },
+                    Offset = baseY - Hoogte,
+                    OffsetLines = -1,
+                    Scale = 1,
+                    MarkerStart = "chevStart",
+                    MarkerEnd = "chevEnd"
+                };
+                elements.Add(horizontalGroup);
+
+                // Verticale maatlijnengroep: betonrand → beugel boven → beugel onder → betonrand
+                var verticalGroup = new SvgDimLineGroup
+                {
+                    Mode = DimLineMode.Vertical,
+                    Points = new List<(double, double)>
+                    {
+                        (baseX, 0),                   // Bovenkant betonrand
+                        (baseX, dekB),                // Buitenkant beugel boven
+                        (baseX, Hoogte - dekO),      // Buitenkant beugel onder
+                        (baseX, Hoogte)              // Onderkant betonrand
+                    },
+                    Offset = baseX - Breedte,
+                    OffsetLines = -1,
+                    Scale = 1,
+                    MarkerStart = "chevStart",
+                    MarkerEnd = "chevEnd"
+                };
+                elements.Add(verticalGroup);
+            }
+        }
+        else if (FocusElement.StartsWith("wapening-boven-"))
+        {
+            // Bovenwapening maatlijnen: hart staaf → rand profiel
+            if (WapeningBoven != null)
+            {
+                double dekking = WapeningBoven.DekkingToegepast;
+                double diameter = WapeningBoven.GemiddeldeDiameter;
+                double y = dekking + diameter / 2;
+
+                // Bereken X-posities van alle staven
+                var xPosities = BerekenHoofdwapeningXPosities(WapeningBoven);
+
+                // Bouw puntenlijst: links profiel → alle staven → rechts profiel
+                List<(double, double)> horizontalPoints = [(0, y)];
+                foreach (var x in xPosities)
+                {
+                    horizontalPoints.Add((x, y));
+                }
+                horizontalPoints.Add((Breedte, y));
+
+                // Horizontale maatlijngroep: profiel → staaf1 → staaf2 → ... → staafN → profiel
+                var horizontalGroup = new SvgDimLineGroup
+                {
+                    Mode = DimLineMode.Horizontal,
+                    Points = horizontalPoints,
+                    Offset = y,
+                    OffsetLines = 1,
+                    Scale = 1,
+                    MarkerStart = "chevStart",
+                    MarkerEnd = "chevEnd"
+                };
+                elements.Add(horizontalGroup);
+
+                if (xPosities.Count > 1)
+                {
+                    for (int i = 0; i < xPosities.Count -1; i++)
+                    {
+                        var tussenruimte = new SvgDimLine()
+                        {
+                            Mode = DimLineMode.Horizontal,
+                            X1 = xPosities[i] + diameter / 2.0,
+                            X2 = xPosities[i+1] - diameter / 2.0,
+                            Y1 = y,
+                            Y2 = y,
+                            OffsetLines = -1,
+                            MarkerStart = "chevStart",
+                            MarkerEnd = "chevEnd"
+                        };
+                        elements.Add(tussenruimte);
+                    }
+                   
+
+                }
+
+
+            }
+        }
+        else if (FocusElement.StartsWith("wapening-onder-"))
+        {
+            // Onderwapening maatlijnen: hart staaf → rand profiel
+            if (WapeningOnder != null)
+            {
+                double dekking = WapeningOnder.DekkingToegepast;
+                double diameter = WapeningOnder.GemiddeldeDiameter;
+                double y = Hoogte - (dekking + diameter / 2);
+
+                // Bereken X-posities van alle staven
+                var xPosities = BerekenHoofdwapeningXPosities(WapeningOnder);
+
+                // Bouw puntenlijst: links profiel → alle staven → rechts profiel
+                List<(double, double)> horizontalPoints = [(0, y)];
+                foreach (var x in xPosities)
+                {
+                    horizontalPoints.Add((x, y));
+                }
+                horizontalPoints.Add((Breedte, y));
+
+                // Horizontale maatlijngroep: profiel → staaf1 → staaf2 → ... → staafN → profiel
+                var horizontalGroup = new SvgDimLineGroup
+                {
+                    Mode = DimLineMode.Horizontal,
+                    Points = horizontalPoints,
+                    Offset = -(dekking + diameter /2.0),
+                    OffsetLines = -1,
+                    Scale = 1,
+                    MarkerStart = "chevStart",
+                    MarkerEnd = "chevEnd"
+                };
+                elements.Add(horizontalGroup);
+
+                if (xPosities.Count > 1)
+                {
+                    for (int i = 0; i < xPosities.Count -1; i++)
+                    {
+                        var tussenruimte = new SvgDimLine()
+                        {
+                            Mode = DimLineMode.Horizontal,
+                            X1 = xPosities[i] + diameter / 2.0,
+                            X2 = xPosities[i+1] - diameter / 2.0,
+                            Y1 = y,
+                            Y2 = y,
+                            OffsetLines = 1,
+                            MarkerStart = "chevStart",
+                            MarkerEnd = "chevEnd"
+                        };
+                        elements.Add(tussenruimte);
+                    }
+                   
+
+                }
+                
+               
+            }
+        }
+        else if (FocusElement.StartsWith("wapening-zij-"))
+        {
+            // Zijwapening maatlijnen
+            if (WapeningZijLinks != null)
+            {
+                double dekking = WapeningZijLinks.DekkingToegepast;
+                double diameter = WapeningZijLinks.GemiddeldeDiameter;
+                double x = dekking + diameter / 2;
+                double x2 = Breedte - dekking - diameter / 2;
+
+                // Horizontale maatlijn: linkerkant → hart staaf
+                var horizontalGroup = new SvgDimLineGroup
+                {
+                    Mode = DimLineMode.Horizontal,
+                    Points = new List<(double, double)>
+                    {
+                        (0, Hoogte / 2),    // Linkerkant profiel
+                        (x, Hoogte / 2),
+                        (x2, Hoogte / 2),
+                        (Breedte, Hoogte / 2)
+                    },
+                    Offset = 0,
+                    OffsetLines = -1,
+                    Scale = 1,
+                    Stroke = "#ff00ff",
+                    MarkerStart = "chevStart",
+                    MarkerEnd = "chevEnd"
+                };
+                elements.Add(horizontalGroup);
+            }
+        }
+        
+        return elements;
+    }
+}

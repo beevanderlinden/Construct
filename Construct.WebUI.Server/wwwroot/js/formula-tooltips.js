@@ -38,3 +38,41 @@
         }
     });
 };
+
+// Render KaTeX formulas binnen een element
+window.renderKatexInElement = function (selector) {
+    const element = document.querySelector(selector);
+    if (!element) return;
+    
+    // Zoek alle elementen met formulas
+    const formulas = element.querySelectorAll('.katex-formula');
+    
+    formulas.forEach(formula => {
+        // Skip if already rendered
+        if (formula.classList.contains('katex-rendered')) {
+            return;
+        }
+        
+        const text = formula.textContent.trim();
+        
+        // Extract LaTeX from \(...\) delimiters
+        let latex = text;
+        if (text.startsWith('\\(') && text.endsWith('\\)')) {
+            latex = text.substring(2, text.length - 2);
+        }
+        
+        try {
+            katex.render(latex, formula, {
+                throwOnError: false,
+                displayMode: false
+            });
+            // Mark as rendered
+            formula.classList.add('katex-rendered');
+        } catch (e) {
+            console.error('KaTeX render error:', e);
+            formula.textContent = latex;
+        }
+    });
+};
+
+

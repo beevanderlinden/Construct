@@ -12,7 +12,7 @@ namespace Construct.Domain.Entities
         public double? ViewBoxWidth { get; set; }
         public double? ViewBoxHeight { get; set; }
 
-        public List<BaseSvg> Children { get; } = new();
+        public List<BaseSvg> Children { get; } = [];
 
         protected override void ApplyAttributes()
         {
@@ -37,7 +37,7 @@ namespace Construct.Domain.Entities
             foreach (var kv in Attributes)
                 sb.Append($" {kv.Key}=\"{kv.Value}\"");
 
-            sb.Append(">");
+            sb.Append('>');
 
             foreach (var c in Children)
                 sb.Append(c.Render());

@@ -1,22 +1,65 @@
 ﻿//using Kaskon.Toolbox.PrefabModels;
 
 //using Mechanica.LiggerSB;
+using System.Text.Json.Serialization;
+using Construct.Domain.Common;
+using Plotly.Blazor.ConfigLib;
+
 namespace Construct.Domain.Entities
 {
-    public class VerbindingAansluitendElement(AssemblageEntity father)
+    public class VerbindingAansluitendElement
     {
-
-        //private double _breedte = 100;
-        //private double _lengte = 1200;
-        //private double _hoogte = 105;
-        private AssemblageEntity? _aansluitendElement;
-        public AssemblageEntity? AansluitendElement
+        /// <summary>
+        /// Constructor voor JSON deserialisatie met parametermapping
+        /// Dit zorgt ervoor dat alle properties correct uit JSON worden gemapt
+        /// </summary>
+        [JsonConstructor]
+        public VerbindingAansluitendElement(
+            bool gebruikEigenOpgave = false,
+            double lengteEigenOpgave = 1200,
+            double breedteEigenOpgave = 100,
+            double hoogteEigenOpgave = 105,
+            double randafstand = 150,
+            bool gespiegeld = false,
+            AssemblageEntity? father = null)
         {
-            get => _aansluitendElement;
-            set => _aansluitendElement = value;
+            GebruikEigenOpgave = gebruikEigenOpgave;
+            LengteEigenOpgave = lengteEigenOpgave;
+            BreedteEigenOpgave = breedteEigenOpgave;
+            HoogteEigenOpgave = hoogteEigenOpgave;
+            Randafstand = randafstand;
+            Gespiegeld = gespiegeld;
+            Father = father ?? null!;
         }
 
-        public AssemblageEntity Father { get; init; } = father;
+        /// <summary>
+        /// Normale constructor met father parameter (voor programmatisch gebruik)
+        /// </summary>
+        /// 
+        public VerbindingAansluitendElement(AssemblageEntity father)
+        {
+            Father = father;
+        }
+
+        // ✅ NIEUW: AssemblageReference voor generieke assemblage-referentie-beheer
+        private readonly AssemblageReference _aansluitendElementRef = new();
+
+        public Guid? AansluitendElementId
+        {
+            get => _aansluitendElementRef.EntityId;
+            set => _aansluitendElementRef.EntityId = value;
+        }
+
+        [JsonIgnore]
+        public AssemblageEntity? AansluitendElement
+        {
+            get => _aansluitendElementRef.Entity;
+            set => _aansluitendElementRef.Attach(value);
+        }
+        
+
+        [JsonIgnore] 
+        public AssemblageEntity Father { get; set; } = null!;
 
 
 
@@ -26,10 +69,37 @@ namespace Construct.Domain.Entities
         public double BreedteEigenOpgave { get; set; } = 100;
         public double HoogteEigenOpgave { get; set; } = 105;
         public double Randafstand { get; set; } = 150;
+        public double EigenOpgaveG { get; set; } = 10.0;
+        public double EigenOpgaveQ { get; set; } = 5.0;
         public bool Gespiegeld { get; set; } = false;
 
 
-        
+        // helpers
+        public double G
+        {
+            get
+            {
+                if (GebruikEigenOpgave)
+                    return EigenOpgaveG;
+                else if (AansluitendElement is SteekTrapEntity trap)
+                    return trap.ReactieG;
+                else return 0;
+            }
+        }
+
+        public double Q
+        {
+            get
+            {
+                if (GebruikEigenOpgave)
+                    return EigenOpgaveQ;
+                else if (AansluitendElement is SteekTrapEntity trap)
+                    return trap.ReactieQ;
+                else return 0;
+            }
+        }
+
+        public double TandHoogte => Father.Hoogte - Hoogte;
 
 
         /// <summary>
@@ -72,7 +142,7 @@ namespace Construct.Domain.Entities
             {
                 if (GebruikEigenOpgave) return LengteEigenOpgave;
                 double lengte = 1200;
-                if (_aansluitendElement is SteekTrapEntity steekTrap)
+                if (AansluitendElement is SteekTrapEntity steekTrap)
                 {
                     lengte = steekTrap.Breedte; // de lengte van de aansluiting is de breedte van de trap
                 }
@@ -86,7 +156,7 @@ namespace Construct.Domain.Entities
                 if (GebruikEigenOpgave) return BreedteEigenOpgave;
 
                 double breedte = 100;
-                if (_aansluitendElement is SteekTrapEntity steekTrap)
+                if (AansluitendElement is SteekTrapEntity steekTrap)
                 {
                     breedte = steekTrap.TandOpleggingBovenzijde?.TandLengte ?? 100; // de breedte van de aansluiting is de tandlengte van de trap
                 }
@@ -100,7 +170,7 @@ namespace Construct.Domain.Entities
             {
                 if (GebruikEigenOpgave) return HoogteEigenOpgave;
                 double hoogte = 105;
-                if (_aansluitendElement is SteekTrapEntity steekTrap)
+                if (AansluitendElement is SteekTrapEntity steekTrap)
                 {
                     var oplegging = steekTrap.TandOpleggingBovenzijde ?? steekTrap.TandOpleggingOnderzijde ?? null;
                     if (oplegging == null) return hoogte;
@@ -114,14 +184,34 @@ namespace Construct.Domain.Entities
         public (double G, double Q) Reacties
         {
             get
-            {
-                if (AansluitendElement == null) return (0, 0);
-                else if (AansluitendElement is SteekTrapEntity steektrap)
+             {
+                if (AansluitendElement == null)
                 {
-                    return (steektrap.ReactieG, steektrap.ReactieQ);
-                }
-                else return (0, 0);
-            }
+                    if (GebruikEigenOpgave)
+                        return (EigenOpgaveG, EigenOpgaveQ);
+                    else 
+                        return (0, 0);
+                } 
+                else if (AansluitendElement is SteekTrapEntity steektrap)
+                 {
+                     return (steektrap.ReactieG, steektrap.ReactieQ);
+                 }
+                 else return (0, 0);
+             }
+        }
+
+
+
+        /// <summary>
+        /// Herstelt assemblage-referenties na JSON-deserialisatie.
+        /// Wordt aangeroepen vanuit BordesEntity.RestoreReferencesAfterDeserialization().
+        /// </summary>
+        /// <param name="project">Het project met alle beschikbare assemblages</param>
+        public void RestoreAssemblageReference(ProjectEntity project)
+        {
+            _aansluitendElementRef.Restore(
+                guid => project.Assemblages.FirstOrDefault(a => a.Id == guid)
+            );
         }
         
 

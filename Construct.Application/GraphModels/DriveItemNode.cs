@@ -5,7 +5,7 @@ namespace Construct.Application.GraphModels
     public class DriveItemNode
     {
         public DriveItem Item { get; set; } = default!;
-        public List<DriveItemNode> Children { get; set; } = new();
+        public List<DriveItemNode> Children { get; set; } = [];
         public string? Path { get; set; } = "";
         public string? WebUrl { get; set; } = "";
         public bool IsExpanded { get; set; } = false;

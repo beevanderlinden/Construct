@@ -158,11 +158,11 @@ namespace Mechanica.SimpleBeam
             {
                 if (StartMagnitude == EndMagnitude)
                 {
-                    return StartMagnitude.ToString("0.#", CultureInfo.InvariantCulture);
+                    return StartMagnitude.ToString("0.0", CultureInfo.InvariantCulture);
                 }
                 else
                 {
-                    return ($"{StartMagnitude:0.#} - {EndMagnitude:0.#}");
+                    return ($"{StartMagnitude:0.0} - {EndMagnitude:0.0}");
                 }
             }
         }
@@ -171,7 +171,7 @@ namespace Mechanica.SimpleBeam
         {
             get
             {
-                return StartMagnitude.ToString("0.#", CultureInfo.InvariantCulture);
+                return StartMagnitude.ToString("0.0", CultureInfo.InvariantCulture);
             }
         }
 
@@ -183,7 +183,7 @@ namespace Mechanica.SimpleBeam
                 {
                     return "—";
                 }
-                return EndMagnitude.ToString("0.#", CultureInfo.InvariantCulture);
+                return EndMagnitude.ToString("0.0", CultureInfo.InvariantCulture);
             }
         }
 
@@ -192,6 +192,22 @@ namespace Mechanica.SimpleBeam
             get
             {
                 return StartX.ToString("0.000", CultureInfo.InvariantCulture);
+            }
+        }
+
+        string UserFriendlyFromTo
+        {
+            get
+            {
+                return UserFriendlyStartPos + " - " + UserFriendlyEndPos;
+            }
+        }
+
+        string UserFriendlyFromToValue
+        {
+            get
+            {
+                return UserFriendlyValue;
             }
         }
 
@@ -1032,7 +1048,7 @@ namespace Mechanica.SimpleBeam
             var list = new List<(double x, double V)>();
             double L = beam.Length;
 
-            var positions = beam.GetPositions();
+            var positions = beam.GetPositions(8);
             positions.Add(beam.GetShearZeroPosition());
 
             foreach (var pos in positions.OrderBy(p=>p))
@@ -1092,7 +1108,7 @@ namespace Mechanica.SimpleBeam
             var normalMoments = new List<(double x, double M)>();
             var accidentalMoments = new List<(double x, double M)>();
 
-            var positions = beam.GetPositions(8);
+            var positions = beam.GetPositions(32);
             positions.Add(beam.GetShearZeroPosition());
 
             // Stap 1: Verzamel normale momenten om het minimum te vinden
@@ -1286,7 +1302,7 @@ namespace Mechanica.SimpleBeam
         }
 
 
-        public ObservableCollection<ILoad> Loads { get; internal set; } = new();
+        public ObservableCollection<ILoad> Loads { get; internal set; } = [];
 
         /// <summary>
         /// Convienience property voor MyEd (max. moment)
@@ -1386,8 +1402,16 @@ namespace Mechanica.SimpleBeam
                 return;
             }
 
+            // controleer of er bc's zijn. Anders crash... dit moet beter AI
+            if (LoadContext.BelastingCombinaties.Count == 0)
+            {
+                LoadContext.GenereerBelastingCombinaties(LoadContext, LoadContext.BelastingGevallen, LoadContext.CombinatiesTypes);
+                Console.WriteLine("Belastingcombinaties opnieuw aangemaakt!");
+
+            }
+
             // Meerdere combinaties
-            BeamResultCollection results = new();
+            BeamResultCollection results = [];
             ResultCollection resultCollection = new();
             foreach (var comb in LoadContext.BelastingCombinaties)
             {
@@ -1792,7 +1816,7 @@ namespace Mechanica.SimpleBeam
             }
 
 
-            List<double> punten = new() { 0, mid, b.Length };
+            List<double> punten = [0, mid, b.Length];
 
             
             Console.WriteLine($"R(A)={b.StartVerticalReaction:F2} kN, R(B)={b.EndVerticalReaction:F2} kN");
@@ -1830,7 +1854,7 @@ namespace Mechanica.SimpleBeam
                 while (!placed)
                 {
                     if (layerIndex >= layers.Count)
-                        layers.Add(new List<ILoad>());
+                        layers.Add([]);
 
                     var layer = layers[layerIndex];
 

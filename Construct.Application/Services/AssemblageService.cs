@@ -24,7 +24,7 @@ namespace Construct.Application.Services
 
         public async Task DeleteAsync(Guid guid)
         {
-            var assemblage = Assemblages.FirstOrDefault(p => p.Guid == guid);
+            var assemblage = Assemblages.FirstOrDefault(p => p.Id == guid);
             if (assemblage != null)
             {
                 Assemblages.Remove(assemblage);

@@ -1,36 +1,57 @@
 ﻿@using Construct.Application.Interfaces.Beam
+@using Construct.Domain.Entities.Parts
+@using CommonLibrary
+@inject IToastService ToastService
 
 
 @if (Visible && Model != null)
 {
     <CascadingValue Value="(Action)(() => StateHasChanged())">
 
+        <FluentButton Appearance="Appearance.Accent"
+                      OnClick="OnFinishedAsync"
+                      IconStart="@(new Icons.Regular.Size20.ArrowEnter())">
+            Afronden
+        </FluentButton>
+
+        <FluentButton Appearance="Appearance.Neutral"
+                      OnClick="OnModelBijwerken"
+                      IconStart="@(new Icons.Regular.Size20.CodeCircle())">
+            Bijwerken
+        </FluentButton>
+
         <FluentSplitter Orientation="Orientation.Horizontal" BarSize="8" Panel1MinSize="300px" Panel2MinSize="300px">
             <Panel1>
                 <div class="left-column full-height">
-
-                    <FluentButton 
-                        Appearance="Appearance.Accent" 
-                        OnClick="OnFinishedAsync" 
-                        IconStart="@(new Icons.Regular.Size20.ArrowEnter())">
-                        Afronden
-                    </FluentButton>
-
                     <FluentTabs ActiveTabId="@ActiveTabId"
                                 ActiveTabIdChanged="ChangeTabId"
                                 Style="width:100%; height:100%;"
                                 Orientation="Orientation.Horizontal">
 
                         <FluentTab Id="tab-Info" Label="info">
-                            <Header><FluentIcon Value="@(new Icons.Regular.Size32.BarcodeScanner())" />info</Header>
+                            <Header><FluentIcon Value="@(new Icons.Regular.Size20.Settings())" /> algemeen</Header>
                             <Content>
                                 <AssemblageInfoComponent1 @bind-Model="Model" />
                             </Content>
                         </FluentTab>
 
-                        <FluentTab Label="geometrie">
+                        <FluentTab Id="tab-belasting" Label="belasting" >
+                            <Header><FluentIcon Value="@(new Icons.Regular.Size20.ArrowTrendingDown())" />belasting</Header>
+                            <Content>
+                               
+                                <EditAssemblageBelastingen @bind-Model="Model" />
+
+
+                               
+                            </Content>
+                        </FluentTab>
+
+                            
+
+
+                        <FluentTab Id="tab-geometrie" Label="geometrie">
                             <Header>
-                                <FluentIcon Value="@(new Icons.Regular.Size32.Ruler())" />geometrie
+                                <FluentIcon Value="@(new Icons.Regular.Size20.BinderTriangle())" />geometrie
                             </Header>
                             <Content>
                                 @if (Model is BordesEntity bordes)
@@ -39,82 +60,325 @@
                                 }
                                 else if (Model is SteekTrapEntity steektrap)
                                 {
-                                    <p>Hier steektrap geometrie component</p>
+                                    <EditSteektrapGeometry @bind-SteekTrap="steektrap" />
                                 }
                                 else if (Model is LiggerEntity ligger)
                                 {
                                     <Construct.WebUI.Server.Components.Beam.BeemLoadCases Beam="ligger.Beam"/>
+                                }
+                                else if (Model is VrijRolEntity vrijRol)
+                                {
+                                    <p>Dit is puur voor demonstratie.</p>
+                                    <EditVgmGeometrie Vmn="@vrijRol.ForgetMeNot" />
 
-                                   @*  foreach (var bg in ligger.Beam.LoadContext.BelastingGevallen)
-                                    {
-                                        
-                                        <Construct.WebUI.Server.Components.Beam.BeemLoadCase Beam="@ligger.Beam"
-                                                                                             LoadCase="bg" />
-                                    } *@
-
-
-                                    
                                 }
 
 
                             </Content>
                         </FluentTab>
 
+
+                        @if (Model is BetonAssemblageEntity betonAssemblage)
+                        {
+                            if (betonAssemblage.MainPart is SlabPart slab)
+                            {
+                                 <FluentTab Id="tab-slab" Label="plaat">
+                                    <Header><FluentIcon Value="@(new Icons.Regular.Size20.PanelRightContract())" />plaat</Header>
+                                    <Content>
+                                        <div>Het hoofdonderdeel is een betonnen plaat. Dit zijn de eigenschappen van de plaatwapening.</div>
+
+                                        @if (slab.PlaatDekking != null)
+                                        {
+                                            <KaskonMilieuklasseDekking Boven="@slab.PlaatDekking.Boven"
+                                                                       Onder="@slab.PlaatDekking.Onder"
+                                                                       Merk="@Model.Merk" />
+
+                                            <KaskonSlabFireResistance Slab="slab" />
+                                        }
+                                       
+                                        @if (slab.PlaatWapening != null)
+                                        {
+                                            
+                                            <KaskonInputContainer Label="wapening">
+
+                                            </KaskonInputContainer>
+                                            <PlaatProfielVisualisatie Wapening="@slab.PlaatWapening"
+                                                                      Breedte="1000"
+                                                                      Hoogte="@slab.Dikte"
+                                                                      MaxDisplayHeight="300" />
+
+                                            <WapeningContextTabel PlaatWapening="@slab.PlaatWapening"
+                                                                  OnChanged="@(() => StateHasChanged())" />
+                                        }
+                                        else
+                                        {
+                                            <p>Geen plaatwapening gedefinieerd</p>
+                                        }
+                                    </Content>
+                                </FluentTab>
+                            }
+                        }
+
                         @if (Model is BordesEntity bordes)
                         {
-                            <FluentTab Label="platen">
-                                <Header><FluentIcon Value="@(new Icons.Regular.Size32.Clipboard())" />platen</Header>
+                            <div>VERWIJDER OF GENERIEK?</div>
+                            <FluentTab Id="tab-bordes-wapening" Label="plaatwapening">
+                                <Header><FluentIcon Value="@(new Icons.Regular.Size20.CircleSparkle())" />wapening</Header>
                                 <Content>
+                                    
+                                    <FluentButton Appearance="Appearance.Accent"
+                                                  OnClick="BerekenWapening"
+                                                  IconStart="@(new Icons.Regular.Size20.Calculator())"
+                                                  Style="width: 100%; margin-bottom: 1rem;">
+                                        Bereken wapening
+                                    </FluentButton>
 
-                                    <PlaatWapeningTabelPosComponent @bind-Model="@bordes.PlaatWapening" />
+                                   
 
-                                    <p>Plaatwapening: @bordes.PlaatWapening</p>
-                                    <p>Boven basis: @bordes.PlaatWapening?.Boven?.BasisWapening.Tekst</p>
-                                    <p>Boven bijleg: n.v.t.</p>
-
-                                    @if(bordes.PlaatWapening?.Onder is PlaatWapeningGroep g)
+                                    <!-- Resultaten sectie -->
+                                    @if (bordes.BijlegWapeningOnder != null || bordes.BijlegWapeningBoven != null || bordes.Tand?.WapeningAlgemeen != null)
                                     {
-                                        <p>basis: @g.BasisWapening.Tekst (@g.BasisWapening.AsBasis.ToString("0 mm²") = @g.BasisWapening.As.ToString("0 mm²"))</p>
-                                        <p>bijleg?: n.v.t.</p>
+                                        <div style="margin-top: 0.1rem; padding: 1rem; background: var(--neutral-layer-2); border-radius: 4px;">
+                                            <h3 style="margin-top: 0; margin-bottom: 1rem; color: var(--accent-fill-rest);">Samenvatting wapening</h3>
+                                            
+                                            <table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">
+                                                <colgroup>
+                                                    <col style="width: 30%;" />
+                                                    <col style="width: 10%;" />
+                                                    <col style="width: 10%;" />
+                                                    <col style="width: 20%;" />
+                                                    <col style="width: 10%;" />
+                                                    <col style="width: 10%;" />
+                                                    <col style="width: 10%;" />
 
+
+
+                                                </colgroup>
+                                                <thead>
+                                                    <tr style="background-color: var(--neutral-layer-3); border-bottom: 2px solid var(--neutral-stroke-divider);">
+                                                        <th>Onderdeel</th>
+                                                        <th><i>A<sub>s,req</sub></i> <br />[mm²]</th>
+                                                        <th><i>A<sub>s,prov</sub></i> <br />[mm²]</th>
+                                                        <th>wapening</th>
+                                                        <th><i>d</i><br />[mm]</th>
+                                                        <th><i>x/d</i></th>
+                                                        <td><i>U.C.</i></td>
+
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @if (bordes.Stroken != null)
+                                                    {
+                                                        @foreach(var s in bordes.Stroken)
+                                                        {
+                                                            var brMax = s.BendingResults?.OrderBy(br => br.Moment).LastOrDefault();
+                                                            @if (brMax != null)
+                                                            {
+                                                                <tr>
+                                                                    <td>@s.Naam (boven)</td>
+                                                                    <td>@brMax.AsRequired.ToString("0")</td>
+                                                                    <td>@brMax.AsApplied.ToString("0")</td>
+                                                                    <td>@brMax.AsProvidedText</td>
+                                                                    <td>@brMax.D.ToString("0.#")</td>
+                                                                    <td>@brMax.XuD.ToString("0.000")</td>
+                                                                    <td>@brMax.UnityCheck.ToString("0.00")</td>
+                                                                </tr>
+                                                            }
+                                                            var brMin = s.BendingResults?.OrderBy(br => br.Moment).FirstOrDefault();
+                                                            @if (brMin != null)
+                                                            {
+                                                                <tr>
+                                                                    <td>@s.Naam (onder)</td>
+                                                                    <td>@brMin.AsRequired.ToString("0")</td>
+                                                                    <td>@brMin.AsApplied.ToString("0")</td>
+                                                                    <td>@brMin.AsProvidedText</td>
+                                                                    <td>@brMin.D.ToString("0.#")</td>
+                                                                    <td>@brMin.XuD.ToString("0.000")</td>
+                                                                    <td>@brMin.UnityCheck.ToString("0.00")</td>
+
+                                                                </tr>
+                                                            }
+
+                                                        
+
+                                                       
+                                                        }
+                                                    }
+
+                                                    @{
+                                                        var tand = bordes.Tand;
+                                                        if (tand != null && tand.WapeningAlgemeen != null)
+                                                        {
+                                                            <tr>
+                                                                <td>tand</td>
+                                                                <td>@tand.TotaleWapeningBenodigd.ToString("0")</td>
+                                                                <td>@tand.WapeningAlgemeen.As.ToString("0")</td>
+                                                                <td>hs @tand.WapeningAlgemeen.SanitizedTekst()</td>
+                                                                <td>@tand.BuigingTand?.D.ToString("0.#")</td>
+                                                                <td>@tand.BuigingTand?.XuD.ToString("0.000")</td>
+                                                                <td>@tand.BuigingTand?.UnityCheck.ToString("0.00")</td>
+
+                                                            </tr>
+                                                        }
+                                                    }
+
+
+                                                    
+                                                </tbody>
+                                            </table>
+
+                                        </div>
                                     }
 
-                                    <p>Onder basis: @bordes.PlaatWapening?.Onder?.BasisWapening.Tekst</p>
-                                    <p>Onder bijleg: n.v.t.</p>
-                                    <p>Onder laag hoofdwap.: @bordes.PlaatWapening?.Onder?.LaagHoofdwapening</p>
-                                    <p>Onder c<sub>onder,laag1</sub> : @bordes.PlaatWapening?.Onder?.Dekking.DekkingToe.ToString("0 mm")</p>
-                                    <p>Onder c<sub>onder,laag2</sub> : @bordes.PlaatWapening?.Onder?.Dekking.DekkingToe.ToString("0 mm")</p>
-
-                                    <p>Onder Ø<sub>EQ</sub> : @bordes.PlaatWapening?.Onder?.BasisWapening.GemiddeldeDiameter.ToString("0.# mm")</p>
-                                    <p>Onder Ø<sub>verdeel</sub> : @bordes.PlaatWapening?.Onder?.DiameterVerdeel.ToString("0.# mm")</p>
 
 
+                                    <h3>Plaatwapening</h3>
+                                    <h3 style="margin-top: 2rem;">Wapening details en ondergrenzen</h3>
+                                    
+                                    @if (bordes.PlaatWapening != null)
+                                    {
+                                        <WapeningContextTabel PlaatWapening="@bordes.PlaatWapening" 
+                                                             TandWapening="@bordes.Tand?.WapeningAlgemeen"
+                                                             OnChanged="@(() => StateHasChanged())" />
 
-                                    <p>Plaatwapening @bordes.PlaatWapening</p>
-
+                                        <PlaatProfielVisualisatie Wapening="@bordes.PlaatWapening"
+                                                                  Breedte="500"
+                                                                  Hoogte="@bordes.Hoogte"
+                                                                  MaxDisplayHeight="300" />
+                                    }
+                                    else
+                                    {
+                                        <p>Geen plaatwapening gedefinieerd voor dit bordes</p>
+                                    }
+                                  
+                                  
                                 </Content>
                             </FluentTab>
                         }
 
-                        <FluentTab Label="toetsen">
-                            <Header><FluentIcon Value="@(new Icons.Regular.Size32.CheckmarkCircle())" />toetsing</Header>
-                            <Content>
-                                @foreach (var t in Model.Toetsen)
-                                {
-                                    <EurocodeRazorClassLibrary.Shared.MyGridFor Model="t" />
-                                }
-                            </Content>
-                        </FluentTab>
+                
 
-                       
+                        @if (Model.Toetsen != null && Model.Toetsen.Any())
+                        {
+                            
 
-                        @if (Model.Stroken.Any())
+
+                            <FluentTab Id="tab-toetsen" Label="toetsen">
+                                <Header>
+                                    <FluentIcon Value="@(new Icons.Regular.Size20.Check())" />toetsen
+                                    @if (Model.Validation != null && (Model.Validation.HasErrors || Model.Validation.HasWarnings))
+                                    {
+                                        <FluentBadge Appearance="Appearance.Accent" 
+                                                     BackgroundColor="@(Model.Validation.HasErrors ? "var(--error)" : "var(--warning)")"
+                                                     Color="white">
+                                            @(Model.Validation.Errors.Count + Model.Validation.Warnings.Count)
+                                        </FluentBadge>
+                                    }
+                                </Header>
+                                <Content>
+                                    
+                                    @if (Model is SteekTrapEntity tr)
+                                    {
+                                        <SteekTrapResultaten SteekTrap=@tr />
+
+
+                                    }
+
+
+                                    @* Validatie sectie *@
+                                    @if (Model.Validation != null && (Model.Validation.HasErrors || Model.Validation.HasWarnings))
+                                    {
+                                        <div style="margin-top: 1rem; padding: 1rem; background: var(--neutral-layer-2); border-radius: 4px;">
+                                            <h3 style="margin-top: 0;">Validatie resultaten</h3>
+                                            
+                                            @if (Model.Validation.HasErrors)
+                                            {
+                                                <div style="margin-bottom: 1rem;">
+                                                    <h4 style="color: var(--error); margin-bottom: 0.5rem;">
+                                                        ❌ Errors (@Model.Validation.Errors.Count)
+                                                    </h4>
+                                                    @foreach (var error in Model.Validation.Errors)
+                                                    {
+                                                        <div style="padding: 0.5rem; margin-bottom: 0.5rem; background: var(--neutral-layer-1); border-left: 3px solid var(--error); border-radius: 4px;">
+                                                            @error.Bericht
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                            
+                                            @if (Model.Validation.HasWarnings)
+                                            {
+                                                <div>
+                                                    <h4 style="color: var(--warning); margin-bottom: 0.5rem;">
+                                                        ⚠️ Waarschuwingen (@Model.Validation.Warnings.Count)
+                                                    </h4>
+                                                    @foreach (var warning in Model.Validation.Warnings)
+                                                    {
+                                                        <div style="padding: 0.5rem; margin-bottom: 0.5rem; background: var(--neutral-layer-1); border-left: 3px solid var(--warning); border-radius: 4px;">
+                                                            @((MarkupString)warning.Bericht)
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                    else if (Model.Validation != null)
+                                    {
+                                        <div style="margin-top: 1rem; padding: 1rem; background: var(--neutral-layer-2); border-radius: 4px; color: var(--success);">
+                                            <h3 style="margin: 0;">✓ Geen problemen gevonden</h3>
+                                        </div>
+                                    }
+
+                                    @* Bestaande toetsen *@
+                                    @if (Model.Toetsen != null && Model.Toetsen.Any())
+                                    {
+                                        <div style="margin-top: 1rem;">
+                                            <h3>Toetsen overzicht</h3>
+                                            @foreach (var t in Model.Toetsen.Where(t=>t!=null))
+                                            {
+                                                <KaskonInputContainer Label="@t.Heading">
+                                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                            @if (t.IsValidated)
+                                                            {
+                                                                <span>✅</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span>❌</span>
+                                                                @if (t.Meldingen != null)
+                                                                {
+                                                                    @foreach (var melding in t.Meldingen.Where(m=>m.Type == MeldingType.Waarschuwing))
+                                                                    {
+                                                                        @((MarkupString)
+                                                                        melding.Bericht)<br />
+                                                                    }
+                                                                }
+                                                            }
+                                                            
+                                                        </div>
+                                                        
+                                                        <FluentButton Appearance="Appearance.Lightweight"
+                                                                      IconStart="@(new Icons.Regular.Size20.MoreHorizontal())"
+                                                                      OnClick="() => ShowToetsDetails(t)"
+                                                                      Title="Toon details">
+                                                        </FluentButton>
+                                                    </div>
+                                                </KaskonInputContainer>
+                                            }
+                                        </div>
+                                    }
+                                </Content>
+                            </FluentTab>
+                           
+                        }
+
+                        @if (Model.Stroken != null && Model.Stroken.Any())
                         {
                             <FluentTab Label="stroken">
-                                <Header> <FluentIcon Value="@(new Icons.Regular.Size32.MoreHorizontal())" />stroken</Header>
+                                <Header> <FluentIcon Value="@(new Icons.Regular.Size20.LineHorizontal3())" />stroken</Header>
                                 <Content>
 
-                                    <FluentButton OnClick="Model.Bijwerken">Assemblage (@Model.GetType()).Bijwerken</FluentButton>
 
                                     <FluentAccordion ActiveId="@activeId" OnAccordionItemChange="HandleOnAccordionItemChange">
 
@@ -140,15 +404,13 @@
                     <div style="font-weight:600; font-size:1em; text-align:center;">
                         @Model.Merk
                     </div>
-                    <AssemblageSvg @bind-Model=Model Style="width:auto; height:auto; border:solid 0px;" ToonDownloadButtons="!true" />
+                    <AssemblageSvg @bind-Model=Model 
+                    Style="width:auto; height:auto; border:solid 0px;" 
+                    ToonDownloadButtons="false" 
+                    ToonWapening="_toonWapening" />
 
                     @* <StrookSvg @bind-Strook="SelectedStrook" Style="width:auto; height:auto; border: solid 1px red;" /> *@
 
-                    @if (SelectedStrook != null)
-                    {
-                        <span>@SelectedStrook.Naam</span>
-                        
-                    }
 
                 </div>
             </Panel2>
@@ -163,6 +425,7 @@
 
 }
 
+<ToetsDetailPopup @ref="_toetsDetailPopup" />
 
 @code {
     [Parameter, EditorRequired] public AssemblageEntity? Model { get; set; }
@@ -170,6 +433,51 @@
     [Parameter] public EventCallback<AssemblageEntity> ModelChanged { get; set; }
     [Parameter] public EventCallback<bool> EditorClosed{ get; set; }
     [Parameter] public string ActiveTabId { get; set; } = "tab-1";
+
+    // ✅ Wapening constraint diameter opties
+    private readonly List<double> _diametersBijleg = new() { 8, 10, 12, 16, 20, 25 };
+    private readonly List<double> _diametersDetail = new() { 6, 8, 10 };
+    private readonly List<double> _diametersHoofdVerdeel = new() { 6, 8, 10 };
+
+    private bool _toonWapening { get; set; } = false;
+
+    private string _berekeningMelding = string.Empty;
+    private int _renderKey = 0; // Force re-render counter
+
+    private ToetsDetailPopup? _toetsDetailPopup;
+
+    private void OnPresetApplied()
+    {
+        // Reset bijlegwapening na preset toepassing
+        if (Model is BordesEntity bordes)
+        {
+            bordes.BijlegWapeningOnder = null;
+            bordes.BijlegWapeningBoven = null;
+        }
+
+        StateHasChanged();
+    }
+
+    private void BerekenWapening()
+    {
+        if (Model is not BordesEntity bordes) return;
+
+        Console.WriteLine("[BEREKEN] Start berekening wapening...");
+        Console.WriteLine($"   VOOR: BijlegWapeningOnder = {bordes.BijlegWapeningOnder?.Tekst ?? "NULL"}");
+
+        // Bereken
+        bordes.Bijwerken();
+
+        Console.WriteLine($"   NA: BijlegWapeningOnder = {bordes.BijlegWapeningOnder?.Tekst ?? "NULL"}");
+        Console.WriteLine($"   NA: BijlegWapeningBoven = {bordes.BijlegWapeningBoven?.Tekst ?? "NULL"}");
+        Console.WriteLine($"   NA: Tand.WapeningAlgemeen = {bordes.Tand?.WapeningAlgemeen?.Tekst ?? "NULL"}");
+
+        // Force re-render
+        _renderKey++;
+        InvokeAsync(StateHasChanged);
+
+        Console.WriteLine($"[BEREKEN] Berekening voltooid! RenderKey={_renderKey}");
+    }
 
     private StrookEntity? _selectedStrook;
     public StrookEntity? SelectedStrook
@@ -191,7 +499,7 @@
     private void HandleOnAccordionItemChange(FluentAccordionItem item)
     {
         changed = item;
-        SelectedStrook = Model?.Stroken.FirstOrDefault(s => s.Id == item.Id);
+        SelectedStrook = Model?.Stroken?.FirstOrDefault(s => s.Id == item.Id);
     }
 
 
@@ -220,7 +528,7 @@
         {
             SelectedStrook = strook;
         }
-       
+
     }
 
     async Task OnFinishedAsync()
@@ -230,6 +538,48 @@
         Visible = false; // verberg de wizard
     }
 
+    private void OnModelBijwerken()
+    {
+        Model?.Bijwerken();
+
+        // ✅ Toon validatie resultaten
+        if (Model?.Validation != null)
+        {
+            var validation = Model.Validation;
+
+            // Toon errors
+            foreach (var error in validation.Errors)
+            {
+                ToastService.ShowError($"[{Model?.Merk}] {error.Bericht}", timeout: 5000);
+            }
+
+            // Toon warnings
+            if (validation.HasWarnings)
+            {
+                var warningSummary = $"[{Model.Merk}] :";
+                warningSummary += $" {validation.Warnings.Count} waarschuwing(en) gevonden.";
+                // foreach (var warning in validation.Warnings)
+                // {
+                //     warningSummary += $"\r\n {warning.Bericht}";
+                // }
+                ToastService.ShowWarning($"{warningSummary}", timeout: 5000);
+            }
+
+                        
+
+            // Toon success als alles OK is
+            if (!validation.HasErrors && !validation.HasWarnings)
+            {
+                ToastService.ShowSuccess($"✓ {Model?.Merk} bijgewerkt, geen problemen gevonden", timeout: 2000);
+            }
+           
+        }
+       
+
+        StateHasChanged();
+    }
+
+
     private async Task HandleBordesChanged(BordesEntity bordes)
     {
         if (Model != null)
@@ -238,25 +588,23 @@
             StateHasChanged();
         }
     }
-    
+
     async Task ChangeTabId(string tabId)
     {
         ActiveTabId = tabId;
+        _toonWapening = tabId.Contains("wapening", StringComparison.OrdinalIgnoreCase);
+        await Task.CompletedTask;
+        StateHasChanged();
     }
 
-     
-
-
+    private void ShowToetsDetails(BaseEurocodeContext toets)
+    {
+        _toetsDetailPopup?.Show(toets);
+    }
 
     // tijdelijk verwijderen na succes
     //private BordesEntity? _bordes;
     //private Construct.Application.Interfaces.Beam.SimpleBeam? _simpleBeam;
 
-    protected override void OnParametersSet()
-    {
-        
-    }   
-
-
-
 }
+

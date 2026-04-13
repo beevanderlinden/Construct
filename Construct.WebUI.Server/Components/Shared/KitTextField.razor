@@ -1,0 +1,12 @@
+<div class="kit-field kit-field--readonly">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <span class="kit-field-label">@((MarkupString)Label)</span>
+    }
+    <span class="kit-field-value">@Value</span>
+</div>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public string? Label { get; set; }
+}

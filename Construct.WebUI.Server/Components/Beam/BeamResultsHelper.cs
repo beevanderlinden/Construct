@@ -6,6 +6,7 @@ using ExportFactory.MigraDocContentModels;
 using Mechanica.SimpleBeam;
 using Microsoft.AspNetCore.Http;
 using System.Globalization;
+using Construct.Application.Services;
 
 namespace Construct.WebUI.Server.Components.Beam;
 
@@ -21,7 +22,7 @@ public static class BeamResultsHelper
     private static List<(double X, string Position, InternalForces Forces)> GetKritiekePunten(SBLigger beam)
     {
         // Verzamel alle moment/shear data
-        var allResults = beam.ResultCollection?.All?.ToList() ?? new();
+        var allResults = beam.ResultCollection?.All?.ToList() ?? [];
         
         if (allResults.Count == 0)
             return [];
@@ -262,6 +263,8 @@ public static class BeamResultsHelper
         [
             new(new("positie", "4cm")),
             new(new("vlak", "4cm")),
+            new(new("*d*")),
+            new(new("*x/d*")),
             new(new("*M~y,Ed~* [kNm]", "4cm")),
             new(new("*A~s,req~* [mm²]", "4cm")),
             new(new("*A~s,prov~* [mm²]", "4cm")),
@@ -297,7 +300,8 @@ public static class BeamResultsHelper
 
             // Placeholder: As_required: simpele schatting op basis van moment
             var betonProfiel = profiel as Profielen.Beton.BetonProfiel;
-            var wapening = My < 0 ? beam.PlaatWapening.Onder.BasisWapening : beam.PlaatWapening.Boven.BasisWapening;
+            var wapening = My < 0 ? beam.PlaatWapening?.Onder?.BasisWapening : beam.PlaatWapening?.Boven?.BasisWapening;
+
 
             var bending = new BendingResults((BetonContext)materiaal, betonProfiel, wapening, new() { My = My });
 
@@ -312,8 +316,10 @@ public static class BeamResultsHelper
             hoofd.Rows.Add([
                 new(p.Position, "2cm"),
                 new(vlak, "2cm"),
-                new(My.ToString("0.0", CultureInfo.InvariantCulture), "4cm"),
-                new(asReq.ToString("0", CultureInfo.InvariantCulture), "4cm"),
+                new(bending.D.ToString("0.0"), "1.5cm"),
+                new(bending.XuD.ToString("0.###"), width: "1.5cm"),
+                new(My.ToString("0.0", CultureInfo.InvariantCulture), "3cm"),
+                new(asReq.ToString("0", CultureInfo.InvariantCulture), "3cm"),
                 new($"{asProvTekst}", "4cm"),
                 new($"{uc:0.00}" + (uc > 1.01? "⚠️" : ""),"2cm")
             ]);
@@ -594,14 +600,14 @@ public static class BeamResultsHelper
         // Headers
         table.Headers =
         [
-            new(new("type", width)),
+            new(new("materiaal", width)),
             new(new("kwaliteit", width)),
             new(new("E-modulus [N/mm²]", width)),
             new(new("s.g. [kg/m³]", width))
         ];
 
         // Rijen
-        foreach (var m in materialen ?? Enumerable.Empty<BaseMateriaal>())
+        foreach (var m in (materialen ?? Enumerable.Empty<BaseMateriaal>()).Where(m => m is not null))
         {
             table.Rows.Add([
                 new(m.Type.ToString(), width),
@@ -642,7 +648,7 @@ public static class BeamResultsHelper
         ];
 
         // Rijen
-        foreach (var staal in staalMaterialen ?? Enumerable.Empty<StaalContext>())
+        foreach (var staal in (staalMaterialen ?? Enumerable.Empty<StaalContext>()).Where(m => m is not null))
         {
             table.Rows.Add([
                 new(staal.Type.ToString(), width),
@@ -686,7 +692,7 @@ public static class BeamResultsHelper
         ];
 
         // Rijen
-        foreach (var hout in houtMaterialen ?? Enumerable.Empty<HoutContext>())
+        foreach (var hout in (houtMaterialen ?? Enumerable.Empty<HoutContext>()).Where(m => m is not null))
         {
             table.Rows.Add([
                 new(hout.Type.ToString(), width),
@@ -730,7 +736,7 @@ public static class BeamResultsHelper
         ];
 
         // Rijen
-        foreach (var beton in betonMaterialen ?? Enumerable.Empty<BetonContext>())
+        foreach (var beton in (betonMaterialen ?? Enumerable.Empty<BetonContext>()).Where(m => m is not null))
         {
             table.Rows.Add([
                 new(beton.Type.ToString(), width),
@@ -743,6 +749,18 @@ public static class BeamResultsHelper
         }
 
         return table;
+    }
+
+    /// <summary>
+    /// Genereert een tabel met belastingen voor een belastinggeval
+    /// Wrapper rond LoadTableHelper voor backwards compatibility
+    /// </summary>
+    /// <param name="loads">IEnumerable van ILoad objecten</param>
+    /// <param name="title">Optionele titel voor de tabel</param>
+    /// <returns>TableContent voor MigraDoc/HTML export</returns>
+    public static TableContent GetTabelBelastingen(IEnumerable<ILoad> loads, string? title = null)
+    {
+        return LoadTableHelper.GetTabelBelastingen(loads, title);
     }
 }
 

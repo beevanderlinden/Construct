@@ -1,0 +1,25 @@
+@using Construct.Application.Services
+@using Construct.Domain.Entities
+@using Mechanica.LiggerSB
+
+@if (_doc != null)
+{
+    <div class="vgn-diagram">
+        @((MarkupString)_doc.Render())
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public VergeetMijNietje? Vmn { get; set; }
+    [Parameter] public VgnDiagramType Type { get; set; } = VgnDiagramType.V;
+    [Parameter] public int N { get; set; } = 10;
+
+    private SvgDocument? _doc;
+
+    protected override void OnParametersSet()
+    {
+        if (Vmn == null) return;
+        var samples = VgnDiagramService.Sample(Vmn, N);
+        _doc = VgnDiagramService.BuildDiagram(Vmn, samples, Type);
+    }
+}
