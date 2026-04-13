@@ -50,6 +50,150 @@
     }
 
 
+    public class HoekTrapSvgGenerator
+    {
+        /// <summary>
+        /// Genereert de SVG-elementen voor een hoektrap (L-vorm bovenaanzicht).
+        /// Retourneert het L-vormige pad en zeven ankercirkels.
+        /// </summary>
+        public static List<BaseSvg> GenerateHoektrapSvg(HoekTrapEntity trap)
+        {
+            List<BaseSvg> elements = [];
+
+            // L-vormig polygon met 6 punten
+            List<Punt> polygon =
+            [
+                new(0, 0),
+                new(trap.L1, 0),
+                new(trap.L1, trap.B1),
+                new(trap.B2, trap.B1),
+                new(trap.B2, trap.L2),
+                new(0, trap.L2)
+            ];
+
+            var path = SvgGenerator.MakePath(polygon, close: true);
+            path.Fill = "lightgray";
+            elements.Add(path);
+
+            // Ankerpunten als cirkels (diameter = 100, radius = 50)
+            double r = 50;
+            double offset = 100;
+
+            List<(double cx, double cy)> centers =
+            [
+                (offset,           offset),
+                (trap.L1 - offset, offset),
+                (trap.L1 - offset, trap.B1 * 0.5),
+                (trap.L1 - offset, trap.B1 - offset),
+                (offset,           trap.L2 - offset),
+                (trap.B2 * 0.5,    trap.L2 - offset),
+                (trap.B2 - offset, trap.L2 - offset)
+            ];
+
+            foreach (var (cx, cy) in centers)
+            {
+                elements.Add(new SvgCircle
+                {
+                    Cx = cx,
+                    Cy = cy,
+                    R = r,
+                    Fill = "none",
+                    Stroke = "var(--neutral-foreground-rest, black)"
+                });
+            }
+
+            return elements;
+        }
+
+        /// <summary>
+        /// Genereert een volledige SVG-string voor een hoektrap inclusief maatlijnen (L1, L2, B1, B2).
+        /// </summary>
+        public static string GenerateHoektrapSvgXml(
+            HoekTrapEntity trap,
+            BoundingBox bb,
+            double widthPx,
+            double heightPx,
+            string style = "width:auto; height:auto;")
+        {
+            SvgHelper svgHelper = new();
+            SvgDocumentInfo? info = new()
+            {
+                Id = trap.Id.ToString(),
+                Title = trap.Merk ?? "HOEKTRAP",
+                Description = "hoektrap",
+                Label = trap.Merk ?? "LABEL",
+            };
+
+            var svgElements = GenerateHoektrapSvg(trap);
+
+            List<SvgDimLine> dimLines =
+            [
+                // L1 — horizontale totaalbreedte (boven)
+                new()
+                {
+                    Mode = DimLineMode.Horizontal,
+                    X1 = 0, Y1 = 0, X2 = trap.L1, Y2 = 0,
+                    OffsetLines = 3,
+                    Text = $"{trap.L1:0}",
+                    StrokeColor = "var(--neutral-foreground-rest, black)"
+                },
+                // L2 — verticale totaalhoogte (links)
+                new()
+                {
+                    Mode = DimLineMode.Vertical,
+                    X1 = 0, Y1 = 0, X2 = 0, Y2 = trap.L2,
+                    OffsetLines = 3,
+                    Text = $"{trap.L2:0}",
+                    StrokeColor = "var(--neutral-foreground-rest, black)"
+                },
+                // B1 — hoogte rechter deel (rechts)
+                new()
+                {
+                    Mode = DimLineMode.Vertical,
+                    X1 = trap.L1, Y1 = 0, X2 = trap.L1, Y2 = trap.B1,
+                    OffsetLines = -3,
+                    Text = $"{trap.B1:0}",
+                    StrokeColor = "var(--neutral-foreground-rest, black)"
+                },
+                // B2 — breedte onderste deel (onder)
+                new()
+                {
+                    Mode = DimLineMode.Horizontal,
+                    X1 = 0, Y1 = trap.L2, X2 = trap.B2, Y2 = trap.L2,
+                    OffsetLines = -3,
+                    Text = $"{trap.B2:0}",
+                    StrokeColor = "var(--neutral-foreground-rest, black)"
+                },
+            ];
+
+            var x = Math.Min(bb.MinX, 0);
+            var y = Math.Min(bb.MinY, 0);
+            var w = Math.Max(bb.Width, trap.L1);
+            var h = Math.Max(bb.Height, trap.L2);
+            SvgHelper.SvgViewBox viewBox = new(x, y, w, h);
+
+            var vbWithMargins = viewBox.WithMarginsByText(
+                leftLines: 5,
+                rightLines: 5,
+                topLines: 5,
+                bottomLines: 5,
+                fontSizePx: 12,
+                lineHeight: 1.5,
+                actualWidthPx: widthPx,
+                actualHeightPx: heightPx
+            );
+
+            bb.MinX = vbWithMargins.X;
+            bb.MinY = vbWithMargins.Y;
+            bb.MaxXValue = vbWithMargins.X + vbWithMargins.Width;
+            bb.MaxYValue = vbWithMargins.Y + vbWithMargins.Height;
+
+            var status = trap.Akkoord ? "" : "has-warning";
+
+            return svgHelper.RenderBaseSvgs(info, vbWithMargins, [.. svgElements, .. dimLines], widthPx, heightPx, style);
+        }
+    }
+
 
 
     public static class PuntExtensions

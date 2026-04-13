@@ -434,6 +434,61 @@
         }
 
 
+        /// <summary>
+        /// Rendert een complete SVG-string vanuit een vlakke lijst van <see cref="BaseSvg"/>-objecten.
+        /// <see cref="SvgDimLine"/> wordt geschaald gerenderd; <see cref="SvgText"/> krijgt de schaal
+        /// automatisch toegewezen. Alle overige elementen worden direct gerenderd.
+        /// </summary>
+        public string RenderBaseSvgs(
+            SvgDocumentInfo? info,
+            SvgViewBox viewBox,
+            IEnumerable<BaseSvg> svgElements,
+            double widthPx,
+            double heightPx,
+            string style = "width:100%; height:600px")
+        {
+            var sb = new StringBuilder();
+
+            double scale = viewBox.GetScale(widthPx, heightPx);
+
+            sb.AppendSvgHeader(info, viewBox, null, null, style, "");
+
+            int s = 8;
+            int s2 = s / 2;
+            int s3 = s / 4;
+            string r = (0.5 * s3).ToSvg();
+
+            sb.AppendLine("  <defs>");
+            sb.AppendLine($"    <marker id=\"circle-cross\" viewBox=\"0 0 {s} {s}\" markerUnits=\"strokeWidth\" markerWidth=\"{s}\" markerHeight=\"{s}\" refX=\"{s2}\" refY=\"{s2}\" orient=\"auto\">");
+            sb.AppendLine($"      <circle cx=\"{s2}\" cy=\"{s2}\" r=\"{r}\" fill=\"none\" stroke=\"black\" stroke-width=\"0.5\"/>");
+            sb.AppendLine($"      <line x1=\"{s3}\" y1=\"{s2}\" x2=\"{s - s3}\" y2=\"{s2}\" stroke=\"black\" stroke-width=\"0.5\"/>");
+            sb.AppendLine($"      <line x1=\"{s2}\" y1=\"{s3}\" x2=\"{s2}\" y2=\"{s - s3}\" stroke=\"black\" stroke-width=\"0.5\"/>");
+            sb.AppendLine("    </marker>");
+            sb.AppendLine("  </defs>");
+
+            foreach (var svgObj in svgElements)
+            {
+                switch (svgObj)
+                {
+                    case SvgDimLine dimLine:
+                        sb.AppendLine(dimLine.Render(scale));
+                        break;
+                    case SvgText text:
+                        text.Scale = scale;
+                        sb.AppendLine(text.Render());
+                        break;
+                    default:
+                        sb.AppendLine(svgObj.Render());
+                        break;
+                }
+            }
+
+            sb.AppendSvgFooter();
+
+            return sb.ToString();
+        }
+
+
 
         public readonly record struct SvgViewBox(double X, double Y, double Width, double Height)
         {

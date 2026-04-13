@@ -30,6 +30,10 @@
         @bind-Open="@open" @onmenuchange=OnMenuChange Width="400px" >
         <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Steektrap (half)</FluentMenuItem>
         <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Steektrap (heel)</FluentMenuItem>
+        <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Hoektrap</FluentMenuItem>
+
+
+
 
         <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Bordes</FluentMenuItem>
         <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Kolom</FluentMenuItem>
@@ -172,6 +176,28 @@
     }
 
 
+    private HoekTrapEntity GetHoekTrap(double l1,double l2, double op, double aan, double schil)
+    {
+        var hoekTrap = new HoekTrapEntity()
+        {
+            Id = Guid.NewGuid(),
+            ProjectInfo = ProjectEntity!.ProjectInfo,
+            Naam = "hoektrap",
+            Merk = "HT-1",
+            Materiaal = GetOrAddBetonMaterial(),  // ✅ Voeg materiaal toe
+            MateriaalId = GetOrAddBetonMaterial().Id,  // ✅ En ID
+            Gebruiksklasse = ProjectEntity.DefaultGebruiksklasse,
+            OptredeAantal1 = 7,
+            OptredeAantal2 = 7,
+            SchilDikte = schil,
+            L1 = l1,
+            L2 = l2,
+        };
+        hoekTrap.Belastingen.GenereerBelastingCombinaties(hoekTrap.Belastingen, hoekTrap.Belastingen.BelastingGevallen, hoekTrap.Belastingen.CombinatiesTypes);
+        hoekTrap.LengteBoven = hoekTrap.AantredeMaat + hoekTrap.WelMaat;
+        return hoekTrap;
+    }
+
     private SteekTrapEntity GetSteekTrap(double lengte, double op, double aan, double schil)
     {
         var steekTrap = GetSteekTrap(5, schil);
@@ -218,6 +244,12 @@
 
             switch (args.Value.ToLower())
             {
+                case "hoektrap":
+                    var hoektrap = GetHoekTrap(2200, 1600, 180, 240, 150);
+
+                    CreateAssemblage(hoektrap);
+                    break; 
+
 
                 case "vrijrol":
                     var demoVgm = new VrijRolEntity()
