@@ -18,6 +18,7 @@ namespace Construct.Domain.Entities
 
     [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
     [JsonDerivedType(typeof(SteekTrapEntity), "steektrap")]
+    [JsonDerivedType(typeof(HoekTrapEntity), "hoektrap")]
     [JsonDerivedType(typeof(BordesEntity), typeDiscriminator: "Bordes")]
     [JsonDerivedType(typeof(KolomEntity), typeDiscriminator: "Kolom")]
     [JsonDerivedType(typeof(LiggerEntity), typeDiscriminator: "Ligger")]
