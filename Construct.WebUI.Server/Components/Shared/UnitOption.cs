@@ -44,6 +44,15 @@ public static class UnitSets
         new("kN/m", 1.0,    "1.0"),
     ];
 
+
+    public static readonly IReadOnlyList<UnitOption> KrachtPerOppervlak =
+   [
+        new("kN/m²", 1.0,    "0.5"),
+        new("kg/m²", 100,    "50"),
+
+    ];
+
+
     /// <summary>Moment — model opgeslagen in kNm</summary>
     public static readonly IReadOnlyList<UnitOption> Moment =
     [

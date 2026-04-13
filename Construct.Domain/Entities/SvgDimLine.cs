@@ -337,7 +337,14 @@ namespace Construct.Domain.Entities
 
             sb.AppendLine("</g>");
 
-            if (_length == 0) return "";
+            double geometricLength = Mode switch
+            {
+                DimLineMode.Aligned    => Math.Sqrt((X2 - X1) * (X2 - X1) + (Y2 - Y1) * (Y2 - Y1)),
+                DimLineMode.Horizontal => Math.Abs(X2 - X1),
+                DimLineMode.Vertical   => Math.Abs(Y2 - Y1),
+                _                      => 0
+            };
+            if (geometricLength == 0) return "";
 
             return sb.ToString();
         }

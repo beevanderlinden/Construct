@@ -135,7 +135,7 @@
                     X1 = 0, Y1 = 0, X2 = trap.L1, Y2 = 0,
                     OffsetLines = 3,
                     Text = $"{trap.L1:0}",
-                    StrokeColor = "var(--neutral-foreground-rest, black)"
+                    StrokeColor = "var(--neutral-foreground-rest, black)",
                 },
                 // L2 — verticale totaalhoogte (links)
                 new()
@@ -188,7 +188,6 @@
             bb.MaxXValue = vbWithMargins.X + vbWithMargins.Width;
             bb.MaxYValue = vbWithMargins.Y + vbWithMargins.Height;
 
-            var status = trap.Akkoord ? "" : "has-warning";
 
             return svgHelper.RenderBaseSvgs(info, vbWithMargins, [.. svgElements, .. dimLines], widthPx, heightPx, style);
         }

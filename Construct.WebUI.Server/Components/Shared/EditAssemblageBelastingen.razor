@@ -10,8 +10,17 @@ else
 
     <KaskonInputContainer Label="<b>permanent</b>"/>
 
+
+
+
     @if (Model is SteekTrapEntity _trap)
     {
+        <FluentSwitch @bind-Value="_trap.GebruikEigenGewicht" CheckedMessage="opgave gebruiker" UncheckedMessage="auto"></FluentSwitch><br />
+        <KitInputNumberWithUnit Label="eigen gewicht" @bind-Value="_trap.EigenGewichtPerM2" Units="UnitSets.KrachtPerOppervlak" Disabled="@(!_trap.GebruikEigenGewicht)"></KitInputNumberWithUnit>
+        <KitInputNumberWithUnit Label="afwerking" @bind-Value="_trap.AfwerkingVlaklast" Units="UnitSets.KrachtPerOppervlak"></KitInputNumberWithUnit>
+        <KitInputNumberWithUnit Label="permanent totaal" Value="_trap.PermanenteBelastingPerM2" Units="UnitSets.KrachtPerOppervlak" Disabled=true></KitInputNumberWithUnit>
+
+
         <KaskonInputContainer Label="bepaal e.g.">
             <FluentSwitch @bind-Value="_trap.GebruikEigenGewicht" CheckedMessage="opgave gebruiker" UncheckedMessage="auto"></FluentSwitch>
         </KaskonInputContainer>
@@ -51,13 +60,27 @@ else
 
      <KaskonInputContainer Label="<b>veranderlijk</b>"/>
 
+         
 
 
-    <KaskonInputContainer Label="gebruiksklasse">
-        <FluentSelectEnum LabelPosition="LabelPosition.Top"
-                          TEnum="Eurocode.Belastingen.GebruiksklasseEnum"
-                          @bind-EnumSelectedValue="Model.Gebruiksklasse"></FluentSelectEnum>
-    </KaskonInputContainer>
+
+    <KitInputEnum TEnum="Eurocode.Belastingen.GebruiksklasseEnum"
+                  Label="gebruiksklasse"
+                  @bind-Value="Model.Gebruiksklasse" />
+
+
+    <KitInputNumberWithUnit Label="<i>ψ<sub>0</sub></i>" 
+        Value="Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom0" 
+        Disabled=true></KitInputNumberWithUnit>
+    <KitInputNumberWithUnit Label="<i>ψ<sub>1</sub></i>" Value="Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom1" Disabled=true></KitInputNumberWithUnit>
+    <KitInputNumberWithUnit Label="<i>ψ<sub>2</sub></i>" Value="Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom2" Disabled=true></KitInputNumberWithUnit>
+
+    <br/>
+    <KitInputNumberWithUnit Label="vlaklast <i>q<sub>k</sub></i>" Value="@Model.Belastingen.BelastingGevallen.LastOrDefault()?.OpgelegdeBelastingen.Vlaklast" Units="UnitSets.KrachtPerOppervlak" Disabled=true></KitInputNumberWithUnit>
+    
+    <KitInputNumberWithUnit Label="puntlast <i>Q<sub>k</sub></i>" Value="@Model.Belastingen.BelastingGevallen.LastOrDefault()?.OpgelegdeBelastingen.Puntlast" Units="UnitSets.Kracht" DefaultUnit="kN" Disabled=true></KitInputNumberWithUnit>
+
+
 
     <KaskonInputContainer Label="momentaan factoren">
         <div class="form-control-text">
