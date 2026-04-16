@@ -1,6 +1,8 @@
 @typeparam TEnum where TEnum : struct, Enum
+@using System.ComponentModel.DataAnnotations
+@using System.Reflection
 
-<div class="kit-field">
+<div class="kit-field" style="@(Width is not null ? $"min-width:{Width}" : null)">
     @if (!string.IsNullOrEmpty(Label))
     {
         <span class="kit-field-label">@((MarkupString)Label)</span>
@@ -12,7 +14,7 @@
                 disabled="@Disabled">
             @foreach (var opt in _options)
             {
-                <option value="@opt.Value">@opt.Text</option>
+                <option value="@opt.Value" title="@opt.Tooltip">@opt.Primary</option>
             }
         </select>
     </div>
@@ -23,21 +25,38 @@
     [Parameter] public EventCallback<TEnum?> ValueChanged { get; set; }
     [Parameter] public string? Label { get; set; }
     [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Width { get; set; }
+    /// <summary>true (standaard): toont ShortName, tooltip = Name. false: toont Name, tooltip = ShortName.</summary>
+    [Parameter] public bool UseShortName { get; set; } = true;
 
-    private record EnumOption(string Value, string Text);
+    private record EnumOption(string Value, string Primary, string Tooltip);
     private List<EnumOption> _options = [];
     private string? _selectedValue;
 
-    protected override void OnInitialized()
-    {
-        _options = Enum.GetValues<TEnum>()
-            .Select(e => new EnumOption(((int)(object)e).ToString(), e.ToString()))
-            .ToList();
-    }
+    protected override void OnInitialized() => RebuildOptions();
 
     protected override void OnParametersSet()
     {
+        RebuildOptions();
         _selectedValue = Value.HasValue ? ((int)(object)Value.Value).ToString() : null;
+    }
+
+    private void RebuildOptions()
+    {
+        _options = Enum.GetValues<TEnum>()
+            .Select(e =>
+            {
+                var field   = typeof(TEnum).GetField(e.ToString());
+                var display = field?.GetCustomAttribute<DisplayAttribute>();
+                string name      = display?.Name      ?? e.ToString();
+                string shortName = display?.ShortName ?? name;
+
+                string primary = UseShortName ? shortName : name;
+                string tooltip = UseShortName ? name : shortName;
+
+                return new EnumOption(((int)(object)e).ToString(), primary, tooltip);
+            })
+            .ToList();
     }
 
     private async Task OnChanged(ChangeEventArgs e)

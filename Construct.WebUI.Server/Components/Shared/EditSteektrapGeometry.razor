@@ -3,127 +3,60 @@
 
 @if(SteekTrap != null)
 {
-    <KaskonInputContainer Label="type">
-        <FluentSelectEnum TEnum="SteekTrapTypeEnum"
-                          ExcludeEnumItems="@excludedSteekTrapTypen.ToArray()"
-                          @bind-EnumSelectedValue="SteekTrap.SteekTrapType"></FluentSelectEnum>
-    </KaskonInputContainer>
     
 
-    <KaskonInputContainer Label="bepaal lengte">
-        <FluentSwitch Value="SteekTrap.GebruikEigenLengte" ValueChanged="OnGebruikEigenLengteChanged" 
-        CheckedMessage="opgave gebruiker" UncheckedMessage="auto"></FluentSwitch>
-    </KaskonInputContainer>
+       
+    <KitInputNumberWithUnit Label="lengte <i>L<sub>t,proj.Z</sub></i>" 
+                            Disabled="@(!SteekTrap.GebruikEigenLengte)"
+                            T="double" Min="800" Max="8000" Step="50" @bind-Value="SteekTrap.LtProjZ" 
+                            Units="UnitSets.LengteMM" OnValueChanged="OnModelChanged" />
+    <FluentSwitch Value="SteekTrap.GebruikEigenLengte" ValueChanged="OnGebruikEigenLengteChanged"
+                  CheckedMessage="lengte opgave gebruiker" UncheckedMessage="lengte automatisch"></FluentSwitch>
+   
+                  <br />
 
-    @if (SteekTrap.GebruikEigenLengte)
-    {
-        @* <KaskonInputContainer>Eigen opgave van de theoretische lengte (horizontaal) van het element</KaskonInputContainer> *@
-        <KaskonInputContainer Label="L<sub>t,proj.Z</sub>">
-            <KitInputNumber T="double" Min="800" Max="8000" Step="50" @bind-Value="SteekTrap.LtProjZ" Unit="mm" OnValueChanged="OnModelChanged" />
-        </KaskonInputContainer>
+                  @if(!SteekTrap.GebruikEigenLengte)
+                  {
+        <KitInputNumberWithUnit Label="aantal treden"
+                                Disabled="@(SteekTrap.GebruikEigenLengte)"
+                                T="int" Min="3" Max="23"
+                                Units="UnitSets.Geen" @bind-Value="SteekTrap.OptredeAantal1" OnValueChanged="OnModelChanged" />
 
-        <KaskonInputContainer Label="aantal optreden">
-            <FluentTextField Disabled="true" Value="n.v.t."></FluentTextField>
-        </KaskonInputContainer>
-    }
-    else
-    {
-        // Opgave aantal optreden, Lt is automatisch  
-        <KaskonInputContainer Label="L<sub>t,proj.Z</sub>">
-           <div class="form-control">@SteekTrap.LtProjZ</div>
-        </KaskonInputContainer>
-
-
-        @* <KaskonInputContainer Label="L<sub>t</sub>">
-            <KitInputNumber T="double" Value="SteekTrap.LengteTotaal" Disabled="!true" Unit="mm" />
-        </KaskonInputContainer> *@
-
-        <KaskonInputContainer Label="aantal optreden">
-            <KitInputNumber T="int" Min="3" Max="23" Unit="st" @bind-Value="SteekTrap.OptredeAantal1" OnValueChanged="OnModelChanged" />
-        </KaskonInputContainer>
-
-                
+        <br />
     }
 
+             
 
 
-    <KaskonInputContainer Label="bepaal hoogte">
-        <FluentSwitch Value="SteekTrap.GebruikEigenHoogte" ValueChanged="OnGebruikEigenHoogteChanged"
-        CheckedMessage="opgave gebruiker" UncheckedMessage="auto" 
-        Disabled="@(!SteekTrap.GebruikEigenLengte)"></FluentSwitch>
-    </KaskonInputContainer>
+   
 
-    @if (SteekTrap.GebruikEigenHoogte)
-    {
-        <KaskonInputContainer Label="H<sub>t</sub>">
-            <KitInputNumber T="double" Min="0" Max="5000" Step="50" @bind-Value="SteekTrap.HoogteTotaal" Unit="mm" OnValueChanged="OnModelChanged" />
-        </KaskonInputContainer>
-    }
-    else
-    {
-        <KaskonInputContainer Label="H<sub>t</sub>">
-            <KitInputNumber T="double" Min="0" Max="5000" Step="50" Value="SteekTrap.HoogteTotaal" Unit="mm" OnValueChanged="OnModelChanged" Disabled="true" />
-        </KaskonInputContainer>
-    }
+
+
+        
+
+    <KitInputNumberWithUnit Label="hoogte <i>H<sub>t</sub></i>"
+                            Disabled="@(!SteekTrap.GebruikEigenLengte)"
+                            T="double" Min="0" Max="5000" Step="50" @bind-Value="SteekTrap.HoogteTotaal"
+                            Units="UnitSets.LengteMM" OnValueChanged="OnModelChanged" />
+
+    <FluentSwitch Value="SteekTrap.GebruikEigenHoogte" ValueChanged="OnGebruikEigenHoogteChanged"
+                  CheckedMessage="hoogte opgave gebruiker" UncheckedMessage="hoogte automatisch"
+                  Disabled="@(!SteekTrap.GebruikEigenLengte)"></FluentSwitch>
+                  <br />
+
+
+
 
     <KaskonTraptredeDetail SteekTrap="SteekTrap" OnChanged="OnModelChanged" />
 
-    <KaskonInputContainer Label="op">
-        <KitInputNumber T="double" Min="60" Max="400" Step="1" @bind-Value="SteekTrap.OptredeMaat" Unit="mm" OnValueChanged="OnModelChanged" />
-    </KaskonInputContainer>
 
-        <KaskonInputContainer Label="aan">
-        <KitInputNumber T="double" Min="60" Max="800" Step="10" @bind-Value="SteekTrap.AantredeMaat" Unit="mm" OnValueChanged="OnModelChanged" />
-    </KaskonInputContainer>
+    <KitInputNumberWithUnit Label="optrede" Units="UnitSets.LengteMM" T="double" @bind-Value="SteekTrap.OptredeMaat" /> 
+    <KitInputNumberWithUnit Label="aantrede" Units="UnitSets.LengteMM" T="double" @bind-Value="SteekTrap.AantredeMaat" />
+    <KitInputNumberWithUnit Label="schildikte" Units="UnitSets.LengteMM" T="double" @bind-Value="SteekTrap.SchilDikte" />
+    <KitInputNumberWithUnit Label="adviesdikte" T="double" Value="SteekTrap.AdviesSchildikteMin" Units="UnitSets.LengteMM" Disabled=true />
+    <KitInputNumberWithUnit Label="trapbreedte" T="double" Min="600" Max="4000" Step="100" @bind-Value="SteekTrap.Breedte" Units="UnitSets.LengteMM" />
+    <KitInputNumberWithUnit Label="afwerking" T="double" Min="0" Max="50" Step="0.5" @bind-Value="SteekTrap.AfwerkingVlaklast" Units="UnitSets.KrachtPerOppervlak" />
 
-
-   @*  <KaskonInputContainer Label="schuine/hoek">
-        <input type="text"
-               class="form-control"
-               value="@(SteekTrap.SchuineMaat.ToString("0.# mm") + $" / {SteekTrap.Hellingshoek:0.#} graden")"
- 
-               disabled />
-    </KaskonInputContainer> *@
-
-
-   @*  <KaskonInputContainer Label="schildikte">
-        <KitInputNumber T="double" Min="60" Max="400" Step="10" @bind-Value="SteekTrap.ProfielSchil.Hoogte" Unit="mm" OnValueChanged="OnModelChanged"/>
-
-      
-    </KaskonInputContainer> *@
-
-    @if(SteekTrap.MainSlab != null)
-    {
-        <KaskonInputContainer Label="schildikte">
-            <KitInputNumber T="double" Min="60" Max="400" Step="10" @bind-Value="SteekTrap.SchilDikte" Unit="mm" OnValueChanged="OnModelChanged" />
-        </KaskonInputContainer>
-
-
-        <KaskonInputContainer Label="adviesdikte">
-           
-           <KitInputNumber T="double" Value="SteekTrap.AdviesSchildikteMin" Unit="mm" Disabled=true />
-
-        </KaskonInputContainer>
-    }
-   
-   
-    
-
-
-    <KaskonInputContainer Label="breedte [mm]">
-        <KitInputNumber T="double" Min="600" Max="4000" Step="100" @bind-Value="SteekTrap.Breedte" Unit="mm" />
-    </KaskonInputContainer>
-
-    <KaskonInputContainer Label="afwerking [kN/m²]">
-        <KitInputNumber T="double" Min="0" Max="50" Step="0.5" @bind-Value="SteekTrap.AfwerkingVlaklast" Unit="kN/m²" />
-    </KaskonInputContainer>
-
-    <KaskonMilieuklasseDekking Boven="@SteekTrap.PlaatDekking.Boven"
-                               Onder="@SteekTrap.PlaatDekking.Onder"
-                               Merk="@SteekTrap.Merk"
-                               OnChanged="OnModelChanged" />
-
-   <br/>
 
 
     @*   <KaskonInputContainer Label="dragende bomen?">
@@ -133,42 +66,36 @@
      </KaskonInputContainer> *@
 
      @if (SteekTrap.DragendeTrapBomen){
-         <p>Dragende bomen niet toegestaan.</p>
-
-        <KaskonInputContainer Label="boomhoogte">
-            <KitInputNumber T="double" Min="200" Max="500" Step="10" @bind-Value="SteekTrap.TrapBomenHoogte" Unit="kN/m²" />
-        </KaskonInputContainer>
+         <p>Dragende bomen UNDER CONSTRUCTION.</p>
 
 
-        <KaskonInputContainer Label="boombreedte">
-            <KitInputNumber T="double" Min="20" Max="400" Step="10" @bind-Value="SteekTrap.TrapBoomBreedte" Unit="kN/m²" />
-        </KaskonInputContainer>
+        
+            <KitInputNumberWithUnit Label="boomhoogte" Min="200" Max="500" Step="10" T="double" @bind-Value="SteekTrap.TrapBomenHoogte" Units="UnitSets.LengteMM" />
+            <KitInputNumberWithUnit Label="boombreedte" T="double" Min="60" Max="400" Step="10" @bind-Value="SteekTrap.TrapBoomBreedte" Units="UnitSets.LengteMM" />
 
 
      }
     
+    <br />
+    <br />
+    <FluentCheckbox Value="SteekTrap.HeeftBoventand" Label="boventand" ValueChanged="@OnHeeftBoventandChanged" />
+    <br />
+    <FluentCheckbox Value="SteekTrap.HeeftOndertand" Label="ondertand" ValueChanged="@OnHeeftOndertandChanged" />
+    <br />
 
-
-
-    <KaskonInputContainer Label="boventand">
-        <FluentSwitch Value="@(SteekTrap.HeeftBoventand)" ValueChanged="@OnHeeftBoventandChanged" CheckedMessage="aanwezig" UncheckedMessage="niet aanwezig" />
-    </KaskonInputContainer>
+    
+   
 
     @if(SteekTrap.TandOpleggingBovenzijde != null)
     {
-
-
-
-        <KaskonInputContainer Label="haarspelden">
-            <FluentTextField @bind-Value="SteekTrap.TandOpleggingBovenzijde!.WapeningAlgemeen.Tekst" />
-        </KaskonInputContainer>
-
-
-
-
-
+        <KitTextBox Label="wapening boven" @bind-Value="SteekTrap.TandOpleggingBovenzijde!.WapeningAlgemeen.Tekst"></KitTextBox>
     }
-    
+
+    @if (SteekTrap.TandOpleggingOnderzijde != null)
+    {
+        <KitTextBox Label="wapening onder" @bind-Value="SteekTrap.TandOpleggingOnderzijde!.WapeningAlgemeen.Tekst"></KitTextBox>
+    }
+
 
 
 
@@ -251,6 +178,32 @@
         SteekTrap.IsAkkoord();
         OnModelChanged();
     }
+
+    private void OnHeeftOndertandChanged(bool value)
+    {
+        if (SteekTrap == null) return;
+        SteekTrap.HeeftOndertand = value;
+        if (value && SteekTrap.TandOpleggingOnderzijde == null)
+        {
+            SteekTrap.TandOpleggingOnderzijde = new(SteekTrap, new())
+            {
+                TandLengte = 100,
+                TandHoogte = 100,
+                WapeningAlgemeen = new WapeningContext() { Tekst = "6-75" },
+                VoegBreedte = 10,
+            };
+            SteekTrap.TandOpleggingOnderzijde.HalsDikte = SteekTrap.TandOpleggingOnderzijde.BerekenHalsDikte(SteekTrap.LengteBovenNetto);
+            _bovensteAantredeMode = "standaard";
+        }
+        else if (!value)
+        {
+            SteekTrap.TandOpleggingOnderzijde = null;
+        }
+        SteekTrap.IsAkkoord();
+        OnModelChanged();
+    }
+
+
 
     private void OnBovensteAantredeModeChanged(string mode)
     {

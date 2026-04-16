@@ -15,6 +15,9 @@ publish.zip
 node_modules/
 
 
+# Lokale debug overrides (nooit committen)
+Directory.Build.props.user
+
 # User-specific files
 *.rsuser
 *.suo

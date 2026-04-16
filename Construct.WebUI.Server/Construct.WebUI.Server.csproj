@@ -68,8 +68,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\EurocodeRazorClassLibrary\EurocodeRazorClassLibrary.csproj" />
-    <ProjectReference Include="..\Construct.Infrastructure\Construct.Infrastructure.csproj" />
+	<PackageReference Include="Kaskon.EurocodeComponenten" Version="5.0.0" />
+	<ProjectReference Include="..\Construct.Infrastructure\Construct.Infrastructure.csproj" />
   </ItemGroup>
 
 	<ItemGroup>

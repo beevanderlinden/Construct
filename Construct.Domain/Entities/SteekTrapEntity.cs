@@ -1820,6 +1820,7 @@ namespace Construct.Domain.Entities
 
 
         public bool HeeftBoventand { get; set; } = true;
+        public bool HeeftOndertand { get; set; } = false;
         public TandOplegging? TandOpleggingBovenzijde { get; set; } = null;
         public TandOplegging? TandOpleggingOnderzijde { get; set; } = null;
 

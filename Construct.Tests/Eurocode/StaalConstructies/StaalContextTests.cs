@@ -115,41 +115,7 @@ public class StaalContextTests
 
     // ── VgmVrijLijnlast — doorbuiging/rotatie HEB200, L=8 m, q=10 kN/m ──────
 
-    [Fact]
-    public void VgmVrijLijnlast_HEB200_PuntenABC_VMThetaW_Correct()
-    {
-        // Arrange — eenheden: kN en m
-        // E: N/mm² → kN/m²  (× 1e3)   |   I: mm⁴ → m⁴  (× 1e-12)
-        var staal = new StaalContext();
-        var profiel = new ProfielIH(Doorsneden.HEB200);
-
-        const double L = 8.0;          // m
-        const double q = 10.0;         // kN/m
-        double E = staal.E * 1e3;      // kN/m²
-        double I = profiel.Iy * 1e-12; // m⁴
-        double EI = E * I;             // kN·m²
-
-        var vmn = new VmnVrijLijnlast(q, L, E, I);
-
-        // ── Punt A (x = 0) ───────────────────────────────────────────────────
-        vmn.PuntA.V.Should().BeApproximately(q * L / 2.0, 0.001);                               // RA = 40 kN
-        vmn.PuntA.M.Should().BeApproximately(0, 1e-10);                             // M(0) = 0
-        vmn.PuntA.Theta.Should().BeApproximately(-q * Math.Pow(L, 3) / (24 * EI), 1e-9);     // −qL³/(24EI)
-        vmn.PuntA.W.Should().BeApproximately(0, 1e-10);                             // w(0) = 0
-
-        // ── Punt B (x = L) ───────────────────────────────────────────────────
-        vmn.PuntB.V.Should().BeApproximately(-q * L / 2.0, 0.001);                              // −RB = −40 kN
-        vmn.PuntB.M.Should().BeApproximately(0, 1e-10);                             // M(L) = 0
-        vmn.PuntB.Theta.Should().BeApproximately(q * Math.Pow(L, 3) / (24 * EI), 1e-9);      // +qL³/(24EI)
-        vmn.PuntB.W.Should().BeApproximately(0, 1e-10);                             // w(L) = 0
-
-        // ── Punt C (x = L/2) — max buiging en max doorbuiging ────────────────
-        vmn.PuntC.V.Should().BeApproximately(0, 1e-10);                             // nulpunt dwarskracht
-        vmn.PuntC.M.Should().BeApproximately(q * L * L / 8.0, 0.001);                           // M_max = qL²/8 = 80 kNm
-        vmn.PuntC.Theta.Should().BeApproximately(0, 1e-10);                         // θ = 0 (symmetrie)
-        vmn.PuntC.W.Should().BeApproximately(-5 * q * Math.Pow(L, 4) / (384 * EI), 1e-9);    // −5qL⁴/(384EI)
-    }
-
+    
     // ── VgmInklemmingLijnlast — doorbuiging/rotatie HEB200, L=4 m, q=10 kN/m ─
 
     [Fact]

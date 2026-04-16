@@ -30,8 +30,7 @@
     border: 1px solid var(--kit-border);
     border-radius: 0.375rem;
     padding: 0.5rem 0.625rem 0.375rem;
-    margin-top: 0.7em;
-    margin-right: 0.5rem;
+    margin-top: 1.2em;
     background: var(--kit-bg);
     min-width: 18em;
     box-shadow: 0 0 0 0 transparent;
@@ -43,12 +42,16 @@
     box-shadow: 0 0 0 0.25rem var(--kit-shadow-focus);
 }
 
+.kit-field:has(:disabled) {
+    background: transparent;
+}
+
 .kit-field-label {
     position: absolute;
-    top: 0;
+    top: -0.7em;
     left: 0.5rem;
     transform: translateY(-50%);
-    background: var(--kit-bg);
+    background: transparent;
     padding: 0 0.25em;
     font-size: 0.75em;
     color: var(--kit-text-muted);
@@ -81,6 +84,32 @@
     }
 
     .kit-field input[type="text"]:disabled {
+        color: var(--kit-text-disabled);
+        cursor: default;
+    }
+
+/* === Textarea (NumberOfLines > 1) === */
+.kit-field textarea {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    background: transparent;
+    color: var(--kit-text);
+    font-size: 1em;
+    outline: none;
+    resize: vertical;
+    field-sizing: content;
+    font-family: inherit;
+}
+
+    .kit-field textarea:focus {
+        outline: none;
+        box-shadow: none;
+    }
+
+    .kit-field textarea:disabled {
         color: var(--kit-text-disabled);
         cursor: default;
     }

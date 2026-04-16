@@ -16,15 +16,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\CommonLibrary\CommonLibrary.csproj" />
-    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\Eurocode0.Grondslagen\Eurocode0.Grondslagen.csproj" />
-    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\Eurocode1.Belastingen\Eurocode1.Belastingen.csproj" />
-    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\Eurocode2.BetonConstructies\Eurocode2.BetonConstructies.csproj" />
-    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\Eurocode3.StaalConstructies\Eurocode3.StaalConstructies.csproj" />
-    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\Eurocode5.HoutConstructies\Eurocode5.HoutConstructies.csproj" />
-    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\ExportFactory\ExportFactory.csproj" />
-    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Profielen\ParametrischeProfielen\ParametrischeProfielen.csproj" />
-    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Profielen\StaalProfielen\StaalProfielen.csproj" />
+    <PackageReference Include="Kaskon.CommonLibrary" Version="5.0.0" />
+    <PackageReference Include="Kaskon.Eurocode0.Grondslagen" Version="5.0.0" />
+    <PackageReference Include="Kaskon.Eurocode1.Belastingen" Version="5.0.0" />
+    <PackageReference Include="Kaskon.Eurocode2.BetonConstructies" Version="5.0.0" />
+    <PackageReference Include="Kaskon.Eurocode3.StaalConstructies" Version="5.0.0" />
+    <PackageReference Include="Kaskon.Eurocode5.HoutConstructies" Version="5.0.0" />
+    <PackageReference Include="Kaskon.ExportFactory" Version="5.0.0" />
+    <PackageReference Include="Kaskon.ParametrischeProfielen" Version="5.0.0" />
+    <PackageReference Include="Kaskon.Profielen.Staal" Version="5.0.0" />
     <ProjectReference Include="..\Mechanica.LiggerSB\Mechanica.LiggerSB.csproj" />
   </ItemGroup>
 

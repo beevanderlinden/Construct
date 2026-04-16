@@ -15,28 +15,11 @@ else
 
     @if (Model is SteekTrapEntity _trap)
     {
-        <FluentSwitch @bind-Value="_trap.GebruikEigenGewicht" CheckedMessage="opgave gebruiker" UncheckedMessage="auto"></FluentSwitch><br />
+        <FluentSwitch @bind-Value="_trap.GebruikEigenGewicht" CheckedMessage="e.g. opgave gebruiker" UncheckedMessage="e.g. automatisch"></FluentSwitch><br />
         <KitInputNumberWithUnit Label="eigen gewicht" @bind-Value="_trap.EigenGewichtPerM2" Units="UnitSets.KrachtPerOppervlak" Disabled="@(!_trap.GebruikEigenGewicht)"></KitInputNumberWithUnit>
         <KitInputNumberWithUnit Label="afwerking" @bind-Value="_trap.AfwerkingVlaklast" Units="UnitSets.KrachtPerOppervlak"></KitInputNumberWithUnit>
         <KitInputNumberWithUnit Label="permanent totaal" Value="_trap.PermanenteBelastingPerM2" Units="UnitSets.KrachtPerOppervlak" Disabled=true></KitInputNumberWithUnit>
-
-
-        <KaskonInputContainer Label="bepaal e.g.">
-            <FluentSwitch @bind-Value="_trap.GebruikEigenGewicht" CheckedMessage="opgave gebruiker" UncheckedMessage="auto"></FluentSwitch>
-        </KaskonInputContainer>
-        @if (_trap.GebruikEigenGewicht)
-        {
-            <KaskonInputContainer Label="eigen gewicht">
-                <KitInputNumber T="double" @bind-Value="_trap.EigenGewichtPerM2" Min="0" Max="20" Step="0.1" Unit="kN/m²" />
-            </KaskonInputContainer>
-        }
-        else
-        {
-            <KaskonInputContainer Label="eigen gewicht">
-                <KitInputNumber T="double" Value="_trap.EigenGewichtPerM2" Unit="kN/m²" Step="0.1" Disabled=true />
-
-            </KaskonInputContainer>
-        }
+        
     }
     else
     {
@@ -47,67 +30,57 @@ else
 
 
 
-      <KaskonInputContainer Label="afwerking">
-        <KitInputNumber T="double" @bind-Value="Model.AfwerkingVlaklast" Min="0" Max="5" Step="0.1" Unit="kN/m²" />
-    </KaskonInputContainer>
-
-    <KaskonInputContainer Label="perm. totaal">
-        <KitInputNumber T="double" Value="Model.PermanenteBelastingPerM2" Unit="kN/m²" Step="0.1" Disabled=true />
-
-    </KaskonInputContainer>
+      
 
     <br />
-
-     <KaskonInputContainer Label="<b>veranderlijk</b>"/>
+    <span></span>
+    <br />
+     <FluentDivider />
+     <h2>veranderlijk</h2>
 
          
-
+       
 
 
     <KitInputEnum TEnum="Eurocode.Belastingen.GebruiksklasseEnum"
                   Label="gebruiksklasse"
+                  UseShortName="false"
                   @bind-Value="Model.Gebruiksklasse" />
 
+    <div style="margin-left:10px;">momentaan factoren</div>
 
-    <KitInputNumberWithUnit Label="<i>ψ<sub>0</sub></i>" 
+
+    <KitInputNumberWithUnit 
+        Label="<i>ψ<sub>0</sub></i>" 
         Value="Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom0" 
+        Width="3em"
         Disabled=true></KitInputNumberWithUnit>
-    <KitInputNumberWithUnit Label="<i>ψ<sub>1</sub></i>" Value="Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom1" Disabled=true></KitInputNumberWithUnit>
-    <KitInputNumberWithUnit Label="<i>ψ<sub>2</sub></i>" Value="Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom2" Disabled=true></KitInputNumberWithUnit>
+    <KitInputNumberWithUnit 
+        Label="<i>ψ<sub>1</sub></i>" 
+        Value="Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom1" 
+        Width="3em"
+        Disabled=true></KitInputNumberWithUnit>
+    <KitInputNumberWithUnit 
+        Label="<i>ψ<sub>2</sub></i>"
+        Value="Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom2"
+        Width="3em"
+        Disabled=true></KitInputNumberWithUnit>
 
     <br/>
+    <KaskonInputContainer Label="opgelegde belastingen" />
     <KitInputNumberWithUnit Label="vlaklast <i>q<sub>k</sub></i>" Value="@Model.Belastingen.BelastingGevallen.LastOrDefault()?.OpgelegdeBelastingen.Vlaklast" Units="UnitSets.KrachtPerOppervlak" Disabled=true></KitInputNumberWithUnit>
-    
     <KitInputNumberWithUnit Label="puntlast <i>Q<sub>k</sub></i>" Value="@Model.Belastingen.BelastingGevallen.LastOrDefault()?.OpgelegdeBelastingen.Puntlast" Units="UnitSets.Kracht" DefaultUnit="kN" Disabled=true></KitInputNumberWithUnit>
 
 
 
-    <KaskonInputContainer Label="momentaan factoren">
-        <div class="form-control-text">
-            <i>ψ<sub>0</sub></i> = @Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom0.ToString("0.0#") | 
-            <i>ψ<sub>1</sub></i> = @Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom1.ToString("0.0#") | 
-            <i>ψ<sub>2</sub></i> = @Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom2.ToString("0.0#")
-        </div>
-    </KaskonInputContainer>
-
-    <KaskonInputContainer Label="vlaklast">
-        <div class="form-control-text">
-            <i>q<sub>k</sub></i> = @Model.Belastingen.BelastingGevallen.LastOrDefault()?.OpgelegdeBelastingen.Vlaklast kN/m²
-        </div>
-    </KaskonInputContainer>
-
-    <KaskonInputContainer Label="puntlast">
-        <div class="form-control-text">
-            <i>Q<sub>k</sub></i> = @Model.Belastingen.BelastingGevallen.LastOrDefault()?.OpgelegdeBelastingen.Puntlast kN
-        </div>
-    </KaskonInputContainer>
+    
 
 
 
    
     <br />
 
-    @if (Model is SteekTrapEntity _trap2)
+    @if (Model is SteekTrapEntity _trap2 && 1+1==3)
     {
         var krachten = _trap2.Krachten;
 

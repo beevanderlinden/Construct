@@ -68,11 +68,19 @@ public static class UnitSets
         new("m",  1.0,    "0.001"),
     ];
 
-    /// <summary>Lengte — model opgeslagen in m</summary>
-    public static readonly IReadOnlyList<UnitOption> VerhoudingLengte =
+    /// <summary>Lengte — model opgeslagen in mm</summary>
+    public static readonly IReadOnlyList<UnitOption> LengteMM =
     [
-        new("L/x", 1, "50"),
-        new("xL", 1, "50"),
+        new("mm", 1, "1"),
+        new("cm", 0.1,  "0.1"),
+        new("m",  0.001,    "0.001"),
+    ];
 
+
+
+    /// <summary>Geen eenheid — verbergt de unit-selector; model- en displaywaarde zijn gelijk.</summary>
+    public static readonly IReadOnlyList<UnitOption> Geen =
+    [
+        new("", 1.0),
     ];
 }

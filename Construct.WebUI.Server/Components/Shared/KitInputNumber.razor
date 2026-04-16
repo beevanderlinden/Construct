@@ -2,12 +2,12 @@
 
 <div class="kit-input-group">
     <input type="number"
+           id="@_inputId"
            class="@InputClass"
            @bind="ValueString"
            step="@StepString"
            min="@MinString"
            max="@MaxString"
-           
            disabled="@Disabled" />
     @if (!string.IsNullOrEmpty(Unit))
     {
@@ -31,6 +31,7 @@
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public bool HideSpinButtons { get; set; }
 
+    private readonly string _inputId = $"kit-{Guid.NewGuid():N}"[..16];
     private string InputClass => HideSpinButtons ? $"{Class} no-spin" : Class;
 
     private string? ValidationMessage;

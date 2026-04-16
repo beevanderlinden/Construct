@@ -102,13 +102,30 @@
                                             <KaskonInputContainer Label="wapening">
 
                                             </KaskonInputContainer>
-                                            <PlaatProfielVisualisatie Wapening="@slab.PlaatWapening"
-                                                                      Breedte="1000"
-                                                                      Hoogte="@slab.Dikte"
-                                                                      MaxDisplayHeight="300" />
+
+                                            @if(betonAssemblage is SteekTrapEntity steekTrapEntity)
+                                            {
+                                                <PlaatProfielVisualisatie Wapening="@slab.PlaatWapening"
+                                                                          Breedte="steekTrapEntity.Breedte"
+                                                                          Hoogte="@slab.Dikte"
+                                                                          ToonRibben="steekTrapEntity.DragendeTrapBomen"
+                                                                          RibHoogte="steekTrapEntity.TrapBomenHoogte"
+                                                                          RibBreedte="steekTrapEntity.TrapBoomBreedte"
+                                                                          MaxDisplayHeight="300" />
+                                            }
+                                            else
+                                            {
+                                                <PlaatProfielVisualisatie Wapening="@slab.PlaatWapening"
+                                                                          Breedte="1000"
+                                                                          Hoogte="@slab.Dikte"
+                                                                          MaxDisplayHeight="300" />
+                                            }
 
                                             <WapeningContextTabel PlaatWapening="@slab.PlaatWapening"
                                                                   OnChanged="@(() => StateHasChanged())" />
+
+
+
                                         }
                                         else
                                         {

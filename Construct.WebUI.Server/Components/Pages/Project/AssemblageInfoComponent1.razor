@@ -13,10 +13,6 @@
 else
 {
     <div>
-        <KaskonInputContainer Label="merk" Required="true">
-            <FluentTextField @bind-Value="@Model.Merk" style="width: 100%" /> 
-        </KaskonInputContainer>
-
 
         @if (PS.CurrentProject != null && PS.CurrentProject.Assemblages.FirstOrDefault(asbly =>
             asbly.Id != Model.Id &&
@@ -25,14 +21,11 @@ else
             <p class="warning">Merknaam bestaat al, gebruik een andere naam.</p>
         }
 
+        <KitTextBox Label="merk" @bind-Value="@Model.Merk" />
+        <KitTextBox Label="naam" @bind-Value="@Model.Naam" />
+        <KitTextBox Label="omschrijving" @bind-Value="@Model.Omschrijving" NumberOfLines="3" />
 
-        <KaskonInputContainer Label="naam">
-            <FluentTextField @bind-Value="@Model.Naam" style="width: 100%" />
-        </KaskonInputContainer>
-
-        <KaskonInputContainer Label="omschrijving">
-            <FluentTextArea @bind-Value="@Model.Omschrijving" style="width: 100%" />
-        </KaskonInputContainer>
+       
 
 
 
@@ -49,6 +42,13 @@ else
 
         @if(Model.Materiaal is BetonContext beton)
         {
+          @*   <KitInputEnum TEnum="BetonsterkteklasseEnum"
+                          Label="betonkwaliteit"
+                          @bind-EnumSelectedValue="beton.Betonsterkteklasse"
+                          @bind-EnumSelectedValue:after="OnBetonChanged" /> *@
+
+            
+
             <KaskonInputContainer Label="betonkwaliteit">
                 <FluentSelect TOption="BetonContext"
                               Items="@GetBeschikbareBeton()"

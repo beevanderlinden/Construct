@@ -1,6 +1,14 @@
 @using System.Collections.Generic
 @using Microsoft.AspNetCore.Components
 
+<KitTextField Label="milieuklasse" Value="@Boven?.MilieuklassenUserFriendlyName"/>
+
+<KitTextField Label="dekking nominaal" Value="@Boven?.DekkingNom.ToString("0 mm")" />
+<KitTextField Label="dekking" Value="@Boven?.DekkingToe.ToString("0 mm")" />
+
+
+
+
 @* Herbruikbaar component voor milieuklasse/dekking en meldingen *@
 <KaskonInputContainer Label="milieuklasse | dekking">
     @if (

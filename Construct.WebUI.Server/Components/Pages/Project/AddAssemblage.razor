@@ -28,8 +28,8 @@
     <FluentMenu
         @key="ProjectEntity.Id" 
         @bind-Open="@open" @onmenuchange=OnMenuChange Width="400px" >
-        <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Steektrap (half)</FluentMenuItem>
-        <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Steektrap (heel)</FluentMenuItem>
+        <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Steektrap (plaat)</FluentMenuItem>
+        <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Steektrap (boom)</FluentMenuItem>
         <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Hoektrap</FluentMenuItem>
 
 
@@ -356,13 +356,22 @@
 
 
 
-                case "steektrap (half)":
+                case "steektrap (plaat)":
                     var steektrap = GetSteekTrap(1900, 188, 220, 100.0);
                     CreateAssemblage(steektrap);
                     break;
-                case "steektrap (heel)":
-                    var steektrapVerdieping = GetSteekTrap(16, 150.0);
-                    CreateAssemblage(steektrapVerdieping);
+                case "steektrap (boom)":
+                    var steektrapMetBomen = GetSteekTrap(1900, 188, 220, 80.0);
+                    steektrapMetBomen.DragendeTrapBomen = true;
+                    if (steektrapMetBomen.PlaatWapening != null)
+                    {
+                        steektrapMetBomen.PlaatWapening!.Boven = null;
+                        steektrapMetBomen.PlaatWapening!.Onder!.LaagHoofdwapening = 2;
+
+                    }
+                    
+
+                    CreateAssemblage(steektrapMetBomen);
                     break;
                     
                     

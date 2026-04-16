@@ -1,23 +1,29 @@
 @typeparam T
 @using System.Globalization
 
-<div class="kit-field">
+<div class="kit-field" style="@(Width is not null ? $"min-width:{Width}" : null)">
     @if (!string.IsNullOrEmpty(Label))
     {
-        <span class="kit-field-label">@((MarkupString)Label)</span>
+        <label for="@_inputId" class="kit-field-label">@((MarkupString)Label)</label>
     }
     <div class="kit-input-group">
         <input type="number"
+               id="@_inputId"
                class="@Class"
                @bind="DisplayValueString"
-               step="@SelectedUnit.Step"
+               min="@(Min.HasValue  ? (Min.Value  * SelectedUnit.Factor).ToString(CultureInfo.InvariantCulture) : null)"
+               max="@(Max.HasValue  ? (Max.Value  * SelectedUnit.Factor).ToString(CultureInfo.InvariantCulture) : null)"
+               step="@(Step.HasValue ? (Step.Value * SelectedUnit.Factor).ToString(CultureInfo.InvariantCulture) : SelectedUnit.Step)"
                disabled="@(Disabled || DisabledInput)" />
-        <select class="kit-unit-select" value="@_selectedLabel" @onchange="OnUnitSelectChanged" disabled="@Disabled">
-            @foreach (var u in Units)
-            {
-                <option value="@u.Label">@u.Label</option>
-            }
-        </select>
+        @if (Units.Any(u => !string.IsNullOrEmpty(u.Label)))
+        {
+            <select class="kit-unit-select" value="@_selectedLabel" @onchange="OnUnitSelectChanged" disabled="@Disabled">
+                @foreach (var u in Units)
+                {
+                    <option value="@u.Label">@u.Label</option>
+                }
+            </select>
+        }
     </div>
     @if (!string.IsNullOrEmpty(_validationMessage))
     {
@@ -30,12 +36,18 @@
     [Parameter] public EventCallback<T> ValueChanged { get; set; }
     [Parameter] public EventCallback OnValueChanged { get; set; }
     [Parameter] public IReadOnlyList<UnitOption> Units { get; set; } = [];
+    [Parameter] public string? Width { get; set; }
     [Parameter] public string? DefaultUnit { get; set; }
     [Parameter] public string? Label { get; set; }
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public bool DisabledInput { get; set; }
     [Parameter] public string? Format { get; set; }
     [Parameter] public string Class { get; set; } = "form-control";
+    [Parameter] public double? Min { get; set; }
+    [Parameter] public double? Max { get; set; }
+    [Parameter] public double? Step { get; set; }
+
+    private readonly string _inputId = $"kit-{Guid.NewGuid():N}"[..16];
 
     private string _selectedLabel = string.Empty;
     private string? _validationMessage;
