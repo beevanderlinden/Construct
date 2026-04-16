@@ -1,9 +1,39 @@
 ﻿@using System.Globalization
 @inject IProjectStateService ProjectState
 
+
+@if(SteekTrap is HoekTrapEntity hoektrap)
+{
+    <KitInputNumberWithUnit Label="L1" 
+                            Min="hoektrap.B2"
+                            Step="100"
+                            T="double" @bind-Value="hoektrap.L1" Units="UnitSets.LengteMM" OnValueChanged="OnModelChanged" />
+    <KitInputNumberWithUnit Label="L2"
+                            Step="100"
+                            Min="hoektrap.B1"           
+                            T="double" @bind-Value="hoektrap.L2" Units="UnitSets.LengteMM" OnValueChanged="OnModelChanged" />
+    <KitInputNumberWithUnit Label="B1" 
+                            Min="600"
+                            Max="hoektrap.L2"
+                            Step="100"
+                            T="double" @bind-Value="hoektrap.B1" Units="UnitSets.LengteMM" OnValueChanged="OnModelChanged" />
+    <KitInputNumberWithUnit Label="B2" 
+                            Min="600"       
+                            Max="hoektrap.L1"
+                            Step="100"  
+                            T="double" @bind-Value="hoektrap.B2" Units="UnitSets.LengteMM" OnValueChanged="OnModelChanged" />
+
+
+}
+
+
+
 @if(SteekTrap != null)
 {
     
+
+
+
 
        
     <KitInputNumberWithUnit Label="lengte <i>L<sub>t,proj.Z</sub></i>" 

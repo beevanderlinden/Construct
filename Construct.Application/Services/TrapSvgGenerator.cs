@@ -77,7 +77,7 @@
 
             // Ankerpunten als cirkels (diameter = 100, radius = 50)
             double r = 50;
-            double offset = 100;
+            double offset = 50;
 
             List<(double cx, double cy)> centers =
             [

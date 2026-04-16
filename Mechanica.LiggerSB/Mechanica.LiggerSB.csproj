@@ -7,9 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\Eurocode1.Belastingen\Eurocode1.Belastingen.csproj" />
-    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Eurocode\Eurocode2.BetonConstructies\Eurocode2.BetonConstructies.csproj" />
-    <ProjectReference Include="..\..\..\Users\bvanderlinden\source\repos\Profielen\StaalProfielen\StaalProfielen.csproj" />
+    <PackageReference Include="Kaskon.Eurocode1.Belastingen" Version="5.0.0" />
+    <PackageReference Include="Kaskon.Eurocode2.BetonConstructies" Version="5.0.0" />
+    <PackageReference Include="Kaskon.Profielen.Staal" Version="5.0.0" />
   </ItemGroup>
 
 </Project>
