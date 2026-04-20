@@ -207,6 +207,13 @@ namespace Construct.Domain.Entities
 
             var beton = Materiaal as BetonContext;
 
+            // ✅ Sync beton naar PlaatDekking (wordt aangemaakt in constructor vóór Materiaal beschikbaar is)
+            if (beton != null)
+            {
+                PlaatDekking.Onder.Beton = beton;
+                PlaatDekking.Boven.Beton = beton;
+            }
+
             //DemoUitkraging = new() { Beton = beton ?? new() };
 
             ProfielSchil = new()
@@ -878,7 +885,7 @@ namespace Construct.Domain.Entities
 
             // Altijd dekking bijwerken
             tand.DekkingAlgemeen = Math.Max(PlaatDekking.Boven.DekkingToe, PlaatDekking.Onder.DekkingToe);
-            tand.WapeningAlgemeen.DekkingToegepast = tand.DekkingAlgemeen;
+            tand.WapeningAlgemeen!.DekkingToegepast = tand.DekkingAlgemeen;
             if (tand.BuigingTand != null)
                 tand.BuigingTand.Wapening = tand.WapeningAlgemeen;
 
@@ -925,7 +932,7 @@ namespace Construct.Domain.Entities
                     tand.WapeningAlgemeen.Tekst = $"Ø{currentDiameter:0.#}-{currentHoh:0}";
                     tand.Bijwerken();
 
-                    if (tand.TotaleWapeningBenodigd <= tand.BuigingTand.AsApplied * targetUtilization)
+                    if (tand.TotaleWapeningBenodigd <= tand.BuigingTand!.AsApplied * targetUtilization)
                     {
                         Console.WriteLine($"✅ [SteekTrapEntity] Tandwapening: hoh aangepast naar {currentHoh}mm (Ø{currentDiameter})");
                         tand.BerekenEnValideer();
@@ -945,7 +952,7 @@ namespace Construct.Domain.Entities
                     tand.WapeningAlgemeen.Tekst = $"Ø{d:0.#}-{minHoh:0}";
                     tand.Bijwerken();
 
-                    if (tand.BuigingTand.AsRequired <= tand.BuigingTand.AsApplied)
+                    if (tand.BuigingTand!.AsRequired <= tand.BuigingTand.AsApplied)
                     {
                         Console.WriteLine($"✅ [SteekTrapEntity] Tandwapening aangepast: Ø{d}-{minHoh}");
                         tand.BerekenEnValideer();
@@ -1149,7 +1156,9 @@ namespace Construct.Domain.Entities
             this.ProjectInfo.Grondslagen = grondslagen;
             this.PlaatDekking.Boven.Grondslagen = grondslagen;
             this.PlaatDekking.Onder.Grondslagen = grondslagen;
-            this.DekkingBoven.Grondslagen = grondslagen;
+            #pragma warning disable CS0618
+                        this.DekkingBoven.Grondslagen = grondslagen;
+            #pragma warning restore CS0618
 
         }
 
@@ -1166,7 +1175,7 @@ namespace Construct.Domain.Entities
         public List<BaseEurocodeContext> GetToetsen()
         {
 
-            return [MomentSchil, PlaatDekking.Boven, Dwarskracht, Scheurwijdte, Slankheid, DoorbuigingValidatie, TandOpleggingBovenzijde];
+            return [MomentSchil, PlaatDekking.Boven, Dwarskracht, Scheurwijdte, Slankheid, DoorbuigingValidatie, TandOpleggingBovenzijde!];
         }
         
 
@@ -1519,9 +1528,9 @@ namespace Construct.Domain.Entities
         //public DoorbuigingStudie DoorbuigingOLD { get; set; } = new();
 
         //public DoorbuigingTrap
-        public BetonDoorbuigingContext DoorbuigingContext { get; set; }
+        public BetonDoorbuigingContext DoorbuigingContext { get; set; } = default!;
 
-        public DoorbuigingValidatieContext DoorbuigingValidatie { get; set; }
+        public DoorbuigingValidatieContext DoorbuigingValidatie { get; set; } = default!;
         public List<DoorbuigingCombinatieContext> DoorbuigingCombinatieContexts { get; set; } = [];
 
 
@@ -1714,8 +1723,8 @@ namespace Construct.Domain.Entities
             this.DoorbuigingValidatie.FactorBijkomend = 0.002;
             this.DoorbuigingValidatie.FactorEind = 0.004;
             this.DoorbuigingValidatie.FactorZeeg = 0.0;
-            this.DoorbuigingValidatie.Wapening = this.PlaatWapening.Onder.BasisWapening;
-            this.DoorbuigingValidatie.Profiel = this.MainSlab.Profiel ?? this.ProfielSchil;
+            this.DoorbuigingValidatie.Wapening = this.PlaatWapening?.Onder?.BasisWapening ?? new();
+            this.DoorbuigingValidatie.Profiel = this.MainSlab?.Profiel ?? this.ProfielSchil;
 
             // Sync ProfielSchil.Hoogte met MainSlab.Dikte zodat MomentSchil.Profiel correct blijft
             if (MainSlab != null && _profielSchil.Hoogte != MainSlab.Dikte)
@@ -1858,7 +1867,7 @@ namespace Construct.Domain.Entities
         
         public List<BendingResults> MomentCollectie { get; set; } = [];
 
-        private KrachtenDemo _krachten;
+        private KrachtenDemo _krachten = default!;
         [JsonIgnore]
         public KrachtenDemo Krachten
         {
@@ -1867,7 +1876,7 @@ namespace Construct.Domain.Entities
         }
 
 
-        private KrachtenDemo _spiegelKrachten;
+        private KrachtenDemo _spiegelKrachten = default!;
         [JsonIgnore]
         public KrachtenDemo SpiegelKrachten
         {
@@ -1875,7 +1884,7 @@ namespace Construct.Domain.Entities
             set => SetProperty(ref _spiegelKrachten, value);
         }
 
-        private KrachtenDemo _boomKrachten;
+        private KrachtenDemo _boomKrachten = default!;
         [JsonIgnore]
         public KrachtenDemo BoomKrachten
         {
@@ -1942,7 +1951,7 @@ namespace Construct.Domain.Entities
         /// Toets voor de slankheid van het element
         /// </summary>
         [JsonIgnore]
-        public GrenswaardeSlankheidContext Slankheid { get; set; }
+        public GrenswaardeSlankheidContext Slankheid { get; set; } = default!;
 
         /// <summary>
         /// Toets voor de buiging momentwapening van de schil
@@ -2192,10 +2201,10 @@ namespace Construct.Domain.Entities
 
         //public double FactorG { get; set; }
         //public double FactorQ { get; set; }
-        public BelastingCombinatie MaatgevendeCombinatieFundamenteel { get; set; }
+        public BelastingCombinatie MaatgevendeCombinatieFundamenteel { get; set; } = default!;
 
-        public BelastingCombinatie MaatgevendeCombinatieFrequent;
-        public BelastingCombinatie MaatgevendeCombinatieKarakteristiek { get; set; }
+        public BelastingCombinatie MaatgevendeCombinatieFrequent = default!;
+        public BelastingCombinatie MaatgevendeCombinatieKarakteristiek { get; set; } = default!;
 
 
         // dit is straks niet meer nodig, bij toepassing ligger/raamwerk
@@ -2390,7 +2399,7 @@ namespace Construct.Domain.Entities
             var vergeetMijNietje2 = SteekTrapExtensions.GetVergeetMeNietje(SteekTrapExtensions.VergeetMeNietje.VrijVrijLijnlast, opgelegdeBelastingen.Value.Vlaklast, l, a);
             var vergeetMijNietje3 = SteekTrapExtensions.GetVergeetMeNietje(SteekTrapExtensions.VergeetMeNietje.VrijVrijPuntlast, opgelegdeBelastingen.Value.Puntlast, l, a);
 
-            var momentaanFactoren = steekTrap.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk).MomentaanFactoren;
+            var momentaanFactoren = steekTrap.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren;
 
 
 
@@ -2565,8 +2574,8 @@ namespace Construct.Domain.Entities
 
 
             returnItem.qG = qG;
-            returnItem.qEfr = qG + opgelegdeBelastingen.Value.Vlaklast * momentaanFactoren.Mom1;
-            returnItem.qEqp = qG + opgelegdeBelastingen.Value.Vlaklast * momentaanFactoren.Mom2;
+            returnItem.qEfr = qG + opgelegdeBelastingen.Value.Vlaklast * (momentaanFactoren?.Mom1 ?? 0);
+            returnItem.qEqp = qG + opgelegdeBelastingen.Value.Vlaklast * (momentaanFactoren?.Mom2 ?? 0);
 
             steekTrap.UpdateSnedekrachten(returnItem.MEd, returnItem.Mfreq, returnItem.VEd);
             steekTrap.Krachten = returnItem;
@@ -2618,8 +2627,8 @@ namespace Construct.Domain.Entities
 
             var md = 0.0;
             var vd = 0.0;
-            var bcOrdered = belastingenContext.BelastingCombinaties.OrderBy(c => c.Type).ToList();
-            var lastType = bcOrdered[0].Type;
+            var bcOrdered = (belastingenContext?.BelastingCombinaties ?? []).OrderBy(c => c?.Type).ToList();
+            var lastType = bcOrdered.FirstOrDefault()?.Type ?? default;
             foreach (var bc in bcOrdered)
             {
                 if (bc.Type != lastType)

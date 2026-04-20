@@ -4,8 +4,8 @@ namespace Construct.Domain.Entities
 
     public class ProjectFileInfo
     {
-        public string FilePath { get; set; }
-        public ProjectInfoEntity Info { get; set; }
+        public string FilePath { get; set; } = string.Empty;
+        public ProjectInfoEntity Info { get; set; } = default!;
 
         public string DriveId { get; set; } = string.Empty;
         public string ItemId { get; set; } = string.Empty;
@@ -41,7 +41,7 @@ namespace Construct.Domain.Entities
     /// </summary>
     public class ProjectFileRoot
     {
-        public ProjectInfoEntity ProjectInfo { get; set; }
+        public ProjectInfoEntity ProjectInfo { get; set; } = default!;
     }
 
 }

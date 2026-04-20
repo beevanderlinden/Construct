@@ -22,6 +22,18 @@ namespace Construct.Domain.Entities
         public string Id { get; set; } = Guid.NewGuid().ToString("N");
         public BEAM.SBLigger Beam { get; set; } = new();
         public string Naam { get; set; } = "strook 1";
+
+        /// <summary>
+        /// Factor voor toevallige inklemming aan het begin (oplegging A).
+        /// Standaard 0.15 (= 15% van het veldmoment).
+        /// </summary>
+        public double ToevalligeInklemmingBegin { get; set; } = 0.15;
+
+        /// <summary>
+        /// Factor voor toevallige inklemming aan het einde (oplegging B).
+        /// Standaard 0.15 (= 15% van het veldmoment).
+        /// </summary>
+        public double ToevalligeInklemmingEind { get; set; } = 0.15;
         
         // een strook heeft een profiel
         public Profielen.Beton.BetonProfiel Profiel { get; set; } = new(1000, 200);
@@ -60,7 +72,7 @@ namespace Construct.Domain.Entities
                    
                     if (br.Moment < 0)
                     {
-                        pw.Onder.BasisWapening.Tekst = pw.Onder.BasisWapening.Tekst + $"+{bijleg}";
+                        if (pw.Onder?.BasisWapening != null) pw.Onder.BasisWapening.Tekst = pw.Onder.BasisWapening.Tekst + $"+{bijleg}";
                         // is nu akkoord?
                         if (br.AsApplied >= br.AsRequired)
                         {
@@ -74,7 +86,7 @@ namespace Construct.Domain.Entities
                     }
                         else if (br.Moment > 0)
                     {
-                        pw.Boven.BasisWapening.Tekst = pw.Boven.BasisWapening.Tekst + $"+{bijleg}";
+                        if (pw.Boven?.BasisWapening != null) pw.Boven.BasisWapening.Tekst = pw.Boven.BasisWapening.Tekst + $"+{bijleg}";
                     }
                     
                        
@@ -89,7 +101,7 @@ namespace Construct.Domain.Entities
             // beam bijwerken
             Beam.LoadContext = Father?.Belastingen;
             Beam.Materiaal = Father?.Materiaal;
-            
+            Beam.AccidentalFixityFactor = Math.Max(ToevalligeInklemmingBegin, ToevalligeInklemmingEind);
 
             Beam.ComputeReactions();
             Beam.Compute();
@@ -210,8 +222,8 @@ namespace Construct.Domain.Entities
             ForceCollection.Clear();
             ForceCollectionFrequent.Clear();
 
-            
 
+#pragma warning disable CS0618
             // Check if beam has computed results
             if (beam.ResultCollectionLegacy == null || beam.ResultCollectionLegacy.Values.Count == 0)
                 return;
@@ -235,18 +247,19 @@ namespace Construct.Domain.Entities
 
             // Punt A (0)
             var mA = beam.ResultCollectionLegacy.Values.Select(r => r.MomentDiagram.First().M).Max();
-            var mToev = Math.Abs(.15 * -minMomentEntry.M);
+            var mToevBegin = Math.Abs(ToevalligeInklemmingBegin * -minMomentEntry.M);
             if (beam.StartSupport == SupportType.Pin)
-                mA = Math.Max(mA, mToev);
-            
-           
+                mA = Math.Max(mA, mToevBegin);
+
+
             SectionForces fA = new(my: mA, vz: vA.Max());
             ForceCollection.Add(new(fA, 0));
 
             // Punt B (lengte)
             var mB = beam.ResultCollectionLegacy.Values.Select(r => r.MomentDiagram.Last().M).Max();
+            var mToevEind = Math.Abs(ToevalligeInklemmingEind * -minMomentEntry.M);
             if (beam.EndSupport == SupportType.Pin)
-                mB = Math.Max(mB, mToev);
+                mB = Math.Max(mB, mToevEind);
 
             
             SectionForces fB = new(my: mB, vz: vB.Max());
@@ -255,7 +268,7 @@ namespace Construct.Domain.Entities
 
             // GROOTSTE FREQUENTE MOMENT
             var frequentMoments = beam.ResultCollectionLegacy.Values
-                .Where(x => x.Combination.Type == BelastingCombinatieTypeEnum.Frequent)
+                .Where(x => x.Combination?.Type == BelastingCombinatieTypeEnum.Frequent)
                 .SelectMany(r => r.MomentDiagram)
                 .ToList();
 
@@ -265,6 +278,7 @@ namespace Construct.Domain.Entities
                 SectionForces fMFr = new(my: mFreqEdEntry.M);
                 ForceCollectionFrequent.Add(new(fMFr, mFreqEdEntry.x));
             }
+#pragma warning restore CS0618
         }
         
 
@@ -285,7 +299,7 @@ namespace Construct.Domain.Entities
                     Profiel = this.Profiel,
                     PosLabel = fx.Pos.ToString("0.000", CultureInfo.InvariantCulture),
                     //br.PosLabelVisible = true;
-                    Wapening = fx.Forces.My < 0 ? PlaatWapening.Onder.BasisWapening : PlaatWapening.Boven.BasisWapening,
+                    Wapening = fx.Forces.My < 0 ? PlaatWapening?.Onder?.BasisWapening ?? new() : PlaatWapening?.Boven?.BasisWapening ?? new(),
                     Snedekrachten = fx.Forces
                 };
                 BendingResults.Add(br);
@@ -304,8 +318,10 @@ namespace Construct.Domain.Entities
                     Snedekrachten = fx.Forces,
                     PosLabel = fx.Pos.ToString("0.000", CultureInfo.InvariantCulture),
                     Profiel = this.Profiel,
+#pragma warning disable CS0618
                     AsLangs = this.WapOnder.As,
                     NutHoogte = this.Profiel.Hoogte - this.WapOnder.ReferentieAfstand,
+#pragma warning restore CS0618
                     //PosLabel = fx.Pos.ToString("0.000", CultureInfo.InvariantCulture),
 
                 };
@@ -331,10 +347,12 @@ namespace Construct.Domain.Entities
                 ScheurwijdteContext sw = new()
                 {
                     Beton = beton ?? new(),
-                    Wapening = WapOnder,
+                    #pragma warning disable CS0618
+                                        Wapening = WapOnder,
+                    #pragma warning restore CS0618
                     Snedekrachten = fx.Forces,
                     Profiel = this.Profiel,
-                    Dekking = betonFather?.PlaatDekking.Onder, // ✅ Null-safe access
+                    Dekking = betonFather?.PlaatDekking.Onder ?? new(),
                     PosLabel = fx.Pos.ToString("0.000", CultureInfo.InvariantCulture),
                     
                 };
@@ -380,19 +398,21 @@ namespace Construct.Domain.Entities
     public class DekkingContext : BaseEurocodeContext
     {
         public override string Heading { get; set; } = "Dekking/Duurzaamheid";
-        public event Action? OnChanged;
+        #pragma warning disable CS0067
+                public event Action? OnChanged;
+        #pragma warning restore CS0067
 
-        private BetonDekkingContext _onder = new();
+        private BetonDekkingContext? _onder = new();
         public BetonDekkingContext Onder
         {
-            get => _onder;
+            get => _onder ?? new();
             set => SetNestedProperty(ref _onder, value);
         }
 
-        private BetonDekkingContext _boven = new();
+        private BetonDekkingContext? _boven = new();
         public BetonDekkingContext Boven
         {
-            get => _boven;
+            get => _boven ?? new();
             set => SetNestedProperty(ref _boven, value);
         }
 

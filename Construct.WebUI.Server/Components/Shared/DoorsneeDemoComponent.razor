@@ -867,9 +867,9 @@
         if (MateriaalType != DoorsneeDemoMateriaalType.Beton) return;
         try
         {
-            bendingResults = new() { Beton = betonContext, Wapening = wapeningBoven,
+            bendingResults = new() { Beton = betonContext, Wapening = wapeningBoven ?? new(),
                 Profiel = new Profielen.Beton.BetonProfiel { Breedte = breedte, Hoogte = hoogte } };
-            bendingResultsOnder = new() { Beton = betonContext, Wapening = wapeningOnder,
+            bendingResultsOnder = new() { Beton = betonContext, Wapening = wapeningOnder ?? new(),
                 Profiel = new Profielen.Beton.BetonProfiel(breedte, hoogte) };
             StateHasChanged();
         }
@@ -899,12 +899,12 @@
     {
         if (MateriaalType != DoorsneeDemoMateriaalType.Beton) return; // EC3/EC5: TODO
 
-        bendingResults = new() { PosLabel = positie, Beton = betonContext, Wapening = wapeningBoven,
+        bendingResults = new() { PosLabel = positie, Beton = betonContext, Wapening = wapeningBoven ?? new(),
             Profiel = new Profielen.Beton.BetonProfiel { Breedte = breedte, Hoogte = hoogte },
             Snedekrachten = new SectionForces { My = krachten.My } };
         bendingResults.BerekenEnValideer();
 
-        bendingResultsOnder = new() { PosLabel = positie, Beton = betonContext, Wapening = wapeningOnder,
+        bendingResultsOnder = new() { PosLabel = positie, Beton = betonContext, Wapening = wapeningOnder ?? new(),
             Profiel = new Profielen.Beton.BetonProfiel(breedte, hoogte),
             Snedekrachten = new SectionForces { My = krachten.My } };
         bendingResultsOnder.BerekenEnValideer();

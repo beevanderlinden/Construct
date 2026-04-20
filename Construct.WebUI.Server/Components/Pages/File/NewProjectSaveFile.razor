@@ -43,7 +43,6 @@
 
 
 @code {
-    private string urlGrondslagen = "/Project/grondslagen";
     private string urlAssemblages = "/Project/assemblages";
 
     public string FileName { get; set; } = "project.cprj";
@@ -125,7 +124,8 @@
             }
 
             
-            ProjectStateService.SetProjectFileInfo(ProjectStateService.ProjectFileInfo); 
+            if (ProjectStateService.ProjectFileInfo != null)
+                ProjectStateService.SetProjectFileInfo(ProjectStateService.ProjectFileInfo);
 
 
             // nu mag je opslaan

@@ -6,7 +6,6 @@ namespace Construct.Domain.Entities
     {
         protected override string TagName => "pattern";
 
-        public string? Id { get; set; }
         public double Width { get; set; }
         public double Height { get; set; }
         public string PatternUnits { get; set; } = "userSpaceOnUse";

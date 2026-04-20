@@ -1,0 +1,13 @@
+{
+  "version": "0.2.1",
+  "defaults": {},
+  "configurations": [
+    {
+      "type": "default",
+      "project": "Construct.WebUI.Server\\Construct.WebUI.Server.csproj",
+      "name": "Construct.WebUI.Server (https)",
+      "launchBrowser": true,
+      "launchUrl": "https://localhost:7233"
+    }
+  ]
+}

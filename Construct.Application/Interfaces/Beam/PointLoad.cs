@@ -53,27 +53,6 @@ namespace Construct.Application.Interfaces.Beam
             double total = 0.5 * (q1 + q2) * L;
             double centroid = L * (2 * q2 + q1) / (3 * (q1 + q2));
             return total * (x - StartPosition - centroid);
-
-
-
-            if (x >= EndPosition)
-            {
-                // Area of the trapezoid
-                double area = 0.5 * (StartMagnitude + EndMagnitude) * (EndPosition - StartPosition);
-                // Distance from the start position to the centroid
-                double centroidDistance = StartMagnitude +  (EndPosition - StartPosition) * (2 * StartMagnitude + EndMagnitude) / (3 * (StartMagnitude + EndMagnitude));
-                return area * (x - centroidDistance);
-            }
-
-            // For positions between StartPosition and EndPosition, we need to calculate the moment due to the triangular load up to position x
-            double dx = x - StartPosition;
-            double m = (EndMagnitude - StartMagnitude) / (EndPosition - StartPosition);
-            
-            // integraal van q(s)*(x - s) ds 
-            double term1 = StartMagnitude * Math.Pow(dx,2) / 2.0;
-            double term2 = m * Math.Pow(dx,3) / 6.0;
-
-            return term1 + term2;
         }
         public double TotalForce
         {

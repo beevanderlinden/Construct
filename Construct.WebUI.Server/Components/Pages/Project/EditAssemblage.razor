@@ -296,7 +296,11 @@
                                     
                                     @if (Model is SteekTrapEntity tr)
                                     {
-                                        <SteekTrapResultaten SteekTrap=@tr />
+
+                                        <SteekTrapResultaten Krachten="@tr.Krachten" Title="SCHIL" />
+                                        <SteekTrapResultaten Krachten="@tr.SpiegelKrachten" Title="SPIEGEL" />
+                                        <SteekTrapResultaten Krachten="@tr.BoomKrachten" Title="BOOM" />
+
 
 
                                     }
@@ -573,7 +577,7 @@
             // Toon warnings
             if (validation.HasWarnings)
             {
-                var warningSummary = $"[{Model.Merk}] :";
+                var warningSummary = $"[{Model?.Merk}] :";
                 warningSummary += $" {validation.Warnings.Count} waarschuwing(en) gevonden.";
                 // foreach (var warning in validation.Warnings)
                 // {

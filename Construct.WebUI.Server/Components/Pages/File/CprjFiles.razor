@@ -30,8 +30,7 @@ else if (!string.IsNullOrEmpty(geselecteerdeMapNaam))
 @code {
     private List<ProjectFileInfo> projectFileInfos = [];
     private ProjectFileInfo? selectedProjectFileInfo;
-
-    string? geselecteerdeMapNaam;
+    private string? geselecteerdeMapNaam = null;
 
     //private async Task ToonGeselecteerdeMap()
     //{

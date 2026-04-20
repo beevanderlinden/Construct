@@ -1,44 +1,31 @@
-@if (SteekTrap != null)
+@if (Krachten is KrachtenDemo kd)
 {
-    var r = SteekTrap.Krachten;
 
 
-    <h3>Momenten schil</h3>
+    <h3>@Title</h3>
+    <KitInputNumberWithUnit Label="L" Value="kd.L" Disabled="true" Units="UnitSets.Lengte" Format="0.0" />
+    <KitInputNumberWithUnit Label="1/8×L²" Value="@(Math.Pow(kd.L,2)/8.0)" Disabled="true" Units="UnitSets.Geen" Format="0.0" />
 
-     <KaskonInputContainer Label="permanent">
-        @r.Mk1.ToString("0.0 kNm")
-    </KaskonInputContainer>
+    <KitInputNumberWithUnit Label="veranderlijk" Value="kd.Lijnlast_qk" Disabled="true" Units="UnitSets.KrachtPerLengte" Format="0.0" />
+    <KitInputNumberWithUnit Label="permanent" Value="kd.Gk" Disabled="true" Units="UnitSets.KrachtPerLengte" Format="0.0" />
+    <KitInputNumberWithUnit Label="permanent" Value="kd.Gk" Disabled="true" Units="UnitSets.KrachtPerLengte" Format="0.0" />
 
-     <KaskonInputContainer Label="veranderlijk">
-        @if (Math.Abs(r.Mk2) > Math.Abs(r.Mk3))
-        {
-            @r.Mk2.ToString("0.0 kNm")
-        }
-        else
-        {
-            @r.Mk3.ToString("0.0 kNm")
-        }
-    </KaskonInputContainer>
 
-   
-    <KaskonInputContainer Label="fundamenteel">
-        @r.MEd.ToString("0.0 kNm")
-    </KaskonInputContainer>
 
-    <KaskonInputContainer Label="frequent">
-        @r.Mfreq.ToString("0.0 kNm")
-    </KaskonInputContainer>
 
-    <KaskonInputContainer Label="quasi-blijvend">
-        @r.Mqp.ToString("0.0 kNm")
-    </KaskonInputContainer>
+    <KitInputNumberWithUnit Label="M<sub>Ed</sub>" Value="kd.MEd" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
+    <KitInputNumberWithUnit Label="M<sub>Ed,fr</sub>" Value="kd.Mfreq" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
+    <KitInputNumberWithUnit Label="M<sub>Ed,qp</sub>" Value="kd.Mqp" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
+    <KitInputNumberWithUnit Label="moment permanent" Value="kd.Mk1" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
+    <KitInputNumberWithUnit Label="moment q<sub>k</sub>" Value="kd.Mk2" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
+    <KitInputNumberWithUnit Label="moment Q<sub>k</sub>" Value="kd.Mk3" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
 
-    <KaskonInputContainer Label="karakteristiek">
-        @r.Mk.ToString("0.0 kNm")
-    </KaskonInputContainer>
+
+    
 
 }
 
 @code {
-    [Parameter, EditorRequired] public SteekTrapEntity? SteekTrap { get; set; }
+    [Parameter, EditorRequired] public KrachtenDemo? Krachten { get; set; }
+    [Parameter] public string? Title { get; set; }
 }

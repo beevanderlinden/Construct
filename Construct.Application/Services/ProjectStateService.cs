@@ -92,7 +92,7 @@ namespace Construct.Application.Services
                 Console.WriteLine($"[RestoreNav] {assemblage.GetType().Name} '{assemblage.Merk}'");
                 Console.WriteLine($"   - MateriaalId: {assemblage.MateriaalId}");
                 Console.WriteLine($"   - Materiaal: {assemblage.Materiaal?.Naam ?? "NULL"}");
-                Console.WriteLine($"   - In dictionary? {(assemblage.MateriaalId.HasValue && project.Materialen.ContainsKey(assemblage.MateriaalId.Value))}");
+                Console.WriteLine($"   - In dictionary? {(assemblage.MateriaalId.HasValue && (project.Materialen?.ContainsKey(assemblage.MateriaalId.Value) ?? false))}");
             }
 
             // ✅ Itereer door alle assemblages
@@ -116,7 +116,7 @@ namespace Construct.Application.Services
                 if (assemblage.Materiaal == null && assemblage.MateriaalId.HasValue)
                 {
                     Console.Error.WriteLine($"  ❌ CRITICAL: MateriaalId is set ({assemblage.MateriaalId}) but Materiaal is NULL!");
-                    if (project.Materialen.ContainsKey(assemblage.MateriaalId.Value))
+                    if (project.Materialen?.ContainsKey(assemblage.MateriaalId.Value) == true)
                     {
                         Console.Error.WriteLine($"     BUT IT EXISTS IN DICTIONARY: {project.Materialen[assemblage.MateriaalId.Value]?.Naam}");
                         Console.Error.WriteLine($"     RESTORE FAILED!");
@@ -323,7 +323,6 @@ namespace Construct.Application.Services
 
     public class ProjectStateServiceBAK
     {
-        private readonly IUndoRedoService<ProjectEntity> _undoRedoService;
         public ProjectEntity? CurrentProject { get; private set; }
         public ProjectFileInfo? ProjectFileInfo { get; private set; }
 

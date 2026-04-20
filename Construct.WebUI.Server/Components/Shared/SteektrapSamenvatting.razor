@@ -75,17 +75,13 @@ else
     
     @code 
     {
-        private bool showContent;
-
         protected override async Task OnInitializedAsync()
         {
             // kleine delay zodat layout eerst kan stabiliseren
             await Task.Delay(20);
-            
+
             // data ophalen / initialiseren hier
             // Model = await LoadModelAsync();
-
-            showContent = true;
         }
     }
 

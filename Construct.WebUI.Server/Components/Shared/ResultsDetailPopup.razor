@@ -70,7 +70,6 @@
     private string _popupId = Guid.NewGuid().ToString("N");
     private string _searchFilter = string.Empty;
     private T? _previousModel;
-    private bool _modelChanged;
     private bool _katexRendering = true; // Start met loading state
     
     private enum SortOrder
@@ -87,7 +86,6 @@ protected override void OnParametersSet()
     // Detecteer model wijziging
     if (!EqualityComparer<T>.Default.Equals(_previousModel, Model))
     {
-        _modelChanged = true;
         _previousModel = Model;
         _katexRendering = true; // Reset loading state voor nieuwe data
     }

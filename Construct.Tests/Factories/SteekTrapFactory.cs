@@ -293,4 +293,156 @@ public static class SteekTrapFactory
 
         return (trap, project);
     }
+
+    /// <summary>
+    /// Maakt project RD-506383 "De Bloemenkamer aan Raadhuisstraat 73" SPRANG-CAPELLE aan
+    /// met trappen TR01 en TR02 en bordes BD01.
+    /// BD01 wordt aan beide zijden aangesloten op TR01 respectievelijk TR02.
+    /// </summary>
+    public static (SteekTrapEntity tr01, SteekTrapEntity tr02, BordesEntity bd01, ProjectEntity project) CreateProject_RD506383()
+    {
+        var project = new ProjectEntity
+        {
+            ProjectInfo =
+            {
+                Nummer = "RD-506383",
+                Naam = "De Bloemenkamer aan Raadhuisstraat 73",
+                Plaatsnaam = "SPRANG-CAPELLE",
+                Grondslagen =
+                {
+                    NationaleBijlage = NationaleBijlageEnum.NL,
+                    Gevolgklasse = GevolgklasseEnum.CC2b,
+                    OntwerpLevensduur = OntwerpLevensduurEnum.Vijftig,
+                },
+            },
+            DefaultGebruiksklasse = GebruiksklasseEnum.A_gemeenschappelijke_trappen,
+        };
+
+        var beton = project.VoegMateriaalToe(new BetonContext("C45/55"));
+
+        // TR01: lengte=3500, op=184, aan=220, schil=150
+        var tr01 = new SteekTrapEntity(project.ProjectInfo)
+        {
+            Id = Guid.NewGuid(),
+            Merk = "TR01",
+            Materiaal = beton,
+            MateriaalId = beton.Id,
+            Gebruiksklasse = project.DefaultGebruiksklasse,
+            OptredeMaat = 184,
+            AantredeMaat = 220,
+            HeeftBoventand = true,
+            Breedte = 1100,
+        };
+        tr01.SchilDikte = 150;
+        tr01.GebruikEigenLengte = true;
+        tr01.LengteTotaalEigenOpgave = 3500;
+        tr01.Init(project.ProjectInfo);
+        tr01.Belastingen.GenereerBelastingCombinaties(
+            tr01.Belastingen,
+            tr01.Belastingen.BelastingGevallen,
+            tr01.Belastingen.CombinatiesTypes);
+        
+        // stel in minimaal #8-150 in voor dit project
+        if (tr01.PlaatWapening is PlaatWapening pw)
+        {
+            if (pw.Onder?.BasisWapening is WapeningContext basis)
+            {
+                basis.TekstOndergrens = "r8-150";
+            }
+            if (pw.Onder?.VerdeelWapening is WapeningContext verdeel)
+            {
+                verdeel.TekstOndergrens = "r8-150";
+            }
+        }
+        tr01.LengteBoven = tr01.AantredeMaat + tr01.WelMaat;
+
+
+
+        project.Assemblages.Add(tr01);
+
+        // TR02: lengte=1900, op=184, aan=220, schil=150
+        var tr02 = new SteekTrapEntity(project.ProjectInfo)
+        {
+            Id = Guid.NewGuid(),
+            Merk = "TR02",
+            Materiaal = beton,
+            MateriaalId = beton.Id,
+            Gebruiksklasse = project.DefaultGebruiksklasse,
+            OptredeMaat = 184,
+            AantredeMaat = 220,
+            HeeftBoventand = true,
+            Breedte = 1100,
+        };
+        tr02.SchilDikte = 150;
+        tr02.GebruikEigenLengte = true;
+        tr02.LengteTotaalEigenOpgave = 1900;
+        tr02.Init(project.ProjectInfo);
+        tr02.Belastingen.GenereerBelastingCombinaties(
+            tr02.Belastingen,
+            tr02.Belastingen.BelastingGevallen,
+            tr02.Belastingen.CombinatiesTypes);
+
+
+        if (tr02.PlaatWapening is PlaatWapening tr02pw)
+        {
+            if (tr02pw.Onder?.BasisWapening is WapeningContext basis)
+            {
+                basis.TekstOndergrens = "r8-150";
+            }
+            if (tr02pw.Onder?.VerdeelWapening is WapeningContext verdeel)
+            {
+                verdeel.TekstOndergrens = "r8-150";
+            }
+        }
+
+
+        project.Assemblages.Add(tr02);
+
+        // BD01: lengte=2550, breedte=1280
+        var bd01 = new BordesEntity
+        {
+            ProjectInfo = project.ProjectInfo,
+            Id = Guid.NewGuid(),
+            Merk = "BD01",
+            Breedte = 1280,
+            Lengte = 2550,
+            Materiaal = beton,
+            MateriaalId = beton.Id,
+            Gebruiksklasse = project.DefaultGebruiksklasse,
+            
+        };
+
+       
+
+        bd01.Init(project.ProjectInfo);
+
+        if (bd01.PlaatWapening?.Onder is PlaatWapeningGroep pwOnder)
+        {
+            pwOnder.BasisWapening.TekstOndergrens = "8-150";
+            if (pwOnder.VerdeelWapening is not null)
+            {
+                pwOnder.VerdeelWapening.TekstOndergrens = "8-150";
+            }
+        }
+        if (bd01.PlaatWapening?.Boven is PlaatWapeningGroep pwBoven)
+        {
+            pwBoven.BasisWapening.TekstOndergrens = "8-150";
+            if (pwBoven.VerdeelWapening is not null)
+            {
+                pwBoven.VerdeelWapening.TekstOndergrens = "8-150";
+            }
+        }
+
+        bd01.Trap1.AansluitendElement = tr02;
+        bd01.Trap1.AansluitendElementId = tr02.Id;
+        bd01.Trap1.Randafstand = 150;
+
+        bd01.Trap2.AansluitendElement = tr02;
+        bd01.Trap2.AansluitendElementId = tr02.Id;
+        bd01.Trap2.Randafstand = 150;
+
+        project.Assemblages.Add(bd01);
+
+        return (tr01, tr02, bd01, project);
+    }
 }

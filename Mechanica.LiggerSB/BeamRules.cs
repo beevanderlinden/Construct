@@ -306,8 +306,8 @@ namespace Mechanica.SimpleBeam
 
 
 
-        public string Name { get; set; }
-        public string Description { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
         public double OffsetY { get; set; }
         public double StartMagnitude { get; set; }
         public double EndMagnitude { get; set; }
@@ -371,11 +371,11 @@ namespace Mechanica.SimpleBeam
         
         
         
-        public string Name { get; set; }
-        public string Description { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
 
 
-        // is UI offset, kijken of we dit buiten deze class kunnen houden, voor nu werkt het prima
+        // is UI offset
         public double OffsetY { get; set; }
         
         
@@ -592,6 +592,7 @@ namespace Mechanica.SimpleBeam
             EndPosition = end;
             StartMagnitude = magnitude;
             EndMagnitude = magnitude;
+            
         }
 
         public DistributedLoad(double start, double end, double magnitude)
@@ -1000,6 +1001,7 @@ namespace Mechanica.SimpleBeam
             _beamClone = beam.CloneForResult();
             ShearDiagram = SampleShear(beam);
             (MomentDiagram, MomentDiagramAccidentalFixity) = SampleMoment(beam, AccidentalFixityFactor);
+            DeflectionDiagram = SampleDeflection(beam);
         }
 
         public BeamResult(BelastingCombinatie combination, SBLigger beam, double accidentalFixityFactor = 0.15)
@@ -1053,7 +1055,6 @@ namespace Mechanica.SimpleBeam
 
             foreach (var pos in positions.OrderBy(p=>p))
             {
-                double? recalculatedVertReaction = null;
                 // als er een kraanlast zit dan eerste de correcte reactie uitrekenen.
                 if (beam.Loads.OfType<MovingPointLoad>().Any())
                 {
@@ -1315,6 +1316,12 @@ namespace Mechanica.SimpleBeam
         public double StartFixMoment { get; internal set; } = 0;  // Steunpuntsmoment aan de linkerzijde (positief = steunpunt)
         public double EndFixMoment { get; internal set; } = 0;    // Steunpuntsmoment aan de rechterzijde (positief = steunpunt)
 
+        /// <summary>
+        /// Factor voor toevallige inklemming die wordt doorgegeven aan BeamResult.
+        /// Standaard 0.15 (15%). Gebruik Math.Max(begin, eind) als begin ≠ eind.
+        /// </summary>
+        public double AccidentalFixityFactor { get; set; } = 0.15;
+
         private BaseProfiel? _profiel;
 
         [JsonIgnore] // TODO introduceer ProfielState voor persistence
@@ -1426,7 +1433,9 @@ namespace Mechanica.SimpleBeam
             }
            
 
+            #pragma warning disable CS0618
             this.ResultCollectionLegacy = results; // Opslaan in beam
+#pragma warning restore CS0618
             this.ResultCollection = resultCollection;
             IsDirty = false;
         }
@@ -1455,7 +1464,7 @@ namespace Mechanica.SimpleBeam
             beamClone.ComputeReactions();
 
             // 4. Teruggeven
-            return new BeamResult(loadCase, beamClone);
+            return new BeamResult(loadCase, beamClone) { AccidentalFixityFactor = AccidentalFixityFactor };
         }
 
         public BeamResult ComputeForCombination(BelastingCombinatie comb)
@@ -1488,7 +1497,7 @@ namespace Mechanica.SimpleBeam
             beamClone.ComputeReactions();
 
             // 4. Teruggeven
-            return new BeamResult(comb, beamClone);
+            return new BeamResult(comb, beamClone, AccidentalFixityFactor);
         }
 
 

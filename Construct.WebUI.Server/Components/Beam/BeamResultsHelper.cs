@@ -303,13 +303,13 @@ public static class BeamResultsHelper
             var wapening = My < 0 ? beam.PlaatWapening?.Onder?.BasisWapening : beam.PlaatWapening?.Boven?.BasisWapening;
 
 
-            var bending = new BendingResults((BetonContext)materiaal, betonProfiel, wapening, new() { My = My });
+            var bending = new BendingResults((BetonContext)materiaal, betonProfiel!, wapening!, new() { My = My });
 
 
 
             double asReq = bending.AsRequired;
-            double asProv = wapening.As;
-            string asProvTekst = wapening.GetUserFriendlyText("");
+            double asProv = wapening?.As ?? 0;
+            string asProvTekst = wapening?.GetUserFriendlyText("") ?? "";
             string vlak = My > 0 ? "boven" : "onder";
             double uc = asReq / asProv;
 

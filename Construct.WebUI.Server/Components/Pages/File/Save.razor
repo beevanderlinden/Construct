@@ -80,6 +80,7 @@ else
         // Save the project to a file
         _filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), _fileName);
 
+        if (ProjectEntity == null) return;
         MaakJsonSystemText(ProjectEntity, _filePath);
     }
 

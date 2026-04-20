@@ -248,7 +248,8 @@ DeleteItemClicked="DeleteItem" />
             // sla op in de lokale folder
             if (_saveToLocalFolder)
             {
-                await ProjectFileService.AutoSave(JS, ProjectState.ProjectFileInfo);
+                if (ProjectState.ProjectFileInfo != null)
+                        await ProjectFileService.AutoSave(JS, ProjectState.ProjectFileInfo);
                 ToastService.ShowToast(ToastIntent.Success, $"Project opgeslagen in lokale folder");
             }
 

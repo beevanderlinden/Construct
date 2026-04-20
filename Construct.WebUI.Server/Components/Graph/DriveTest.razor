@@ -92,8 +92,7 @@
                     { "baseurl", "https://graph.microsoft.com/v1.0" }
                 }
             };
-            bestandRequest.SetStreamContent(stream);
-            bestandRequest.Headers.Add("Content-Type", "text/plain");
+            bestandRequest.SetStreamContent(stream, "text/plain");
 
             var uploadResult = await adapter.SendAsync<DriveItem>(
                 bestandRequest,

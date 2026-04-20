@@ -110,9 +110,6 @@ else
 [Parameter, EditorRequired] public AssemblageEntity Model{ get; set; }
 [Parameter] public EventCallback<AssemblageEntity> ModelChanged { get; set; }
 
-// Dialog state
-private bool _belastingenDialogHidden = true;
-
 // Geselecteerde materialen
 private BetonContext? SelectedBeton { get; set; }
 private StaalContext? SelectedStaal { get; set; }

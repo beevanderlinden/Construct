@@ -219,8 +219,10 @@
         public string GetSvgContentXml(IEnumerable<BaseSvg> svgObjects)
         {
             var sb = new StringBuilder();
+            #pragma warning disable CS0618
             sb.AppendLine(AddDefs());
-            
+#pragma warning restore CS0618
+
             foreach (var tag in svgObjects)
             {
                 // Als het een SvgDimLineGroup is, vouw deze uit naar individuele DimLines
@@ -248,7 +250,9 @@
 
 
 
+            #pragma warning disable CS0618
             sb.AppendLine(AddDefs());
+#pragma warning restore CS0618
 
             //var inspecteer = "";
             foreach (SvgPath path in pathCollection)
@@ -378,48 +382,6 @@
                 sb.AppendLine(dimLine.Render(scale));
             }
 
-            // DimLines + tekst
-            foreach (var d in dimLines)
-            {
-                continue; // bewaar code totdat Render() en Render(scale) werkt!
-                var (x1o, y1o, x2o, y2o, angle) = d.GetOffsetPoints(12, 1.5, scale);
-
-                sb.AppendLine($@"<line 
-                x1=""{x1o.ToSvg()}"" y1=""{y1o.ToSvg()}"" 
-                x2=""{x2o.ToSvg()}"" y2=""{y2o.ToSvg()}""
-                stroke=""{d.StrokeColor}""
-                stroke-width=""{d.StrokeWidth}""
-                marker-start=""url(#circle-cross)""
-                marker-end=""url(#circle-cross)""
-                vector-effect=""non-scaling-stroke""
-                />");
-
-
-                // text boven de maatlijn
-                var (midX, midY) = d.GetMidPoint(12, 1.5, scale);
-
-                sb.AppendLine(
-                    $@"<text x=""{midX.ToSvg()}"" y=""{(midY - 2 / scale).ToSvg()}"" 
-                    text-anchor=""middle"" 
-                    font-size=""{textSize.ToSvg()}"" 
-                    font-family=""Arial"" 
-                    transform=""rotate({d.Angle.ToSvg()},{midX.ToSvg()},{midY.ToSvg()})"">
-                    {d.DisplayValue}
-                    </text>");
-
-                // hulplijnen
-                if (d.ShowExtensionLines)
-                {
-                    sb.AppendLine($@"<line 
-                    x1=""{d.X1.ToSvg()}"" y1=""{d.Y1.ToSvg()}"" 
-                    x2=""{x1o.ToSvg()}"" y2=""{y1o.ToSvg()}"" 
-                    stroke=""{d.StrokeColor}"" stroke-width=""0.5"" stroke-dasharray=""2,2"" vector-effect=""non-scaling-stroke""/>");
-                    sb.AppendLine($@"<line 
-                    x1=""{d.X2.ToSvg()}"" y1=""{d.Y2.ToSvg()}""
-                    x2=""{x2o.ToSvg()}"" y2=""{y2o.ToSvg()}"" 
-                    stroke=""{d.StrokeColor}"" stroke-width=""0.5"" stroke-dasharray=""2,2"" vector-effect=""non-scaling-stroke""/>");
-                }
-            }
 
             foreach (var t in texts)
             {

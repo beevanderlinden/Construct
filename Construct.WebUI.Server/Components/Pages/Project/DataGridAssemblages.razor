@@ -67,8 +67,6 @@
     [Parameter]
     public EventCallback<AssemblageViewModel> DeleteItemClicked { get; set; }
 
-    private bool debugMode = false;
-
     protected override async Task OnInitializedAsync()
     {
         await Task.Delay(200);

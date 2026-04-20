@@ -86,13 +86,13 @@ namespace Construct.Application.Services
         public async Task<ProjectFileInfo> GetProjectFileInfoByDriveItem(GraphServiceClient graphClient, DriveItem driveItem)
         {
             using var stream = await graphClient
-            .Drives[driveItem.ParentReference.DriveId]
+            .Drives[driveItem.ParentReference!.DriveId]
             .Items[driveItem.Id]
             .Content
             .GetAsync();
 
             using var memoryStream = new MemoryStream();
-            await stream.CopyToAsync(memoryStream);
+            await (stream ?? throw new InvalidOperationException("Stream kon niet worden geopend.")).CopyToAsync(memoryStream);
             var bytes = memoryStream.ToArray();
 
             // 👇 Probeer de inhoud te lezen als ProjectEntity
@@ -102,7 +102,7 @@ namespace Construct.Application.Services
                 ? throw new InvalidOperationException("Bestand kon niet worden gelezen als geldig project")
                 : new ProjectFileInfo
                 {
-                    FilePath = driveItem.WebUrl,
+                    FilePath = driveItem.WebUrl ?? string.Empty,
                     Info = info,
                     Base64 = Convert.ToBase64String(bytes),
                     LastModified = DateTime.UtcNow, // Als je geen exacte hebt
@@ -125,7 +125,7 @@ namespace Construct.Application.Services
                 ? throw new InvalidOperationException("Bestand kon niet worden gelezen als geldig project")
                 : new ProjectFileInfo
                 {
-                    FilePath = fileWebUrl,
+                    FilePath = fileWebUrl ?? string.Empty,
                     Info = info,
                     Base64 = Convert.ToBase64String(bytes),
                     LastModified = DateTime.UtcNow, // Als je geen exacte hebt

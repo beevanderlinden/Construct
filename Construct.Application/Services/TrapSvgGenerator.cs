@@ -75,7 +75,32 @@
             path.Fill = "lightgray";
             elements.Add(path);
 
-            // Ankerpunten als cirkels (diameter = 100, radius = 50)
+            // Zwaartepunt van het L-polygon (shoelace formule)
+            double area = 0, cogx = 0, cogy = 0;
+            for (int i = 0; i < polygon.Count; i++)
+            {
+                var p0 = polygon[i];
+                var p1 = polygon[(i + 1) % polygon.Count];
+                double cross = p0.X * p1.Y - p1.X * p0.Y;
+                area += cross;
+                cogx += (p0.X + p1.X) * cross;
+                cogy += (p0.Y + p1.Y) * cross;
+            }
+            area /= 2.0;
+            cogx /= 6.0 * area;
+            cogy /= 6.0 * area;
+            elements.Add(new SvgCircle { Cx = cogx, Cy = cogy, R = 20, Fill = "red", Stroke = "none" });
+            elements.Add(new SvgText(
+                $"A={area / 1e6:0.00} m²  cog=({cogx:0},{cogy:0})",
+                x: cogx, y: cogy)
+            {
+                Anchor = "start",
+                DominantBaseLine = "hanging",
+                Fill = "red",
+                DX = 25
+            });
+
+            // Ankerpunten als cirkels
             double r = 50;
             double offset = 50;
 
@@ -98,9 +123,15 @@
                     Cy = cy,
                     R = r,
                     Fill = "none",
-                    Stroke = "var(--neutral-foreground-rest, black)"
+                    Stroke = "red"
                 });
+
+                // kruis in de cirkel
+                elements.Add(new SvgLine { X1 = cx - r, Y1 = cy,     X2 = cx + r, Y2 = cy,     Stroke = "red", StrokeWidth = 1 });
+                elements.Add(new SvgLine { X1 = cx,     Y1 = cy - r, X2 = cx,     Y2 = cy + r, Stroke = "red", StrokeWidth = 1 });
             }
+
+
 
             return elements;
         }
@@ -1611,8 +1642,8 @@
                 // is dit al gedaan?
                 var results = strook.Beam.ResultCollectionLegacy
                     .Where(r => 
-                    r.Value.Combination.Type == Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B |
-                    r.Value.Combination.Type == Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A
+                    r.Value.Combination?.Type == Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B ||
+                    r.Value.Combination?.Type == Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A
                     ).ToList();
                 var result = results.FirstOrDefault();
 
@@ -1714,8 +1745,8 @@
 
                 var results = strook.Beam.ResultCollectionLegacy
                   .Where(r =>
-                  r.Value.Combination.Type == Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B |
-                  r.Value.Combination.Type == Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A
+                  r.Value.Combination?.Type == Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B ||
+                  r.Value.Combination?.Type == Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A
                   ).ToList();
 
                 if (results.Count == 0) return "";
@@ -3620,7 +3651,7 @@
                         // Verschillende wapening → twee lijnen
                         tweeVerschillendeBijlegLijnen = true;
                         wapeningTekstBoven = wapeningBoven.ToString();
-                        wapeningTekstOnder = wapeningOnder?.ToString();
+                        wapeningTekstOnder = wapeningOnder?.ToString() ?? string.Empty;
                     }
                     else
                     {
@@ -3736,7 +3767,7 @@
 
                     // Tekst
                     var wapTekst = new SvgText(
-                        wapeningTekstOnder,
+                        wapeningTekstOnder ?? string.Empty,
                         x: bordes.Lengte / 2,
                         y: yVS,
                         scale: scale

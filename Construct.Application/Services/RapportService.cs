@@ -9,7 +9,7 @@ namespace Construct.Application.Services
         public required DocumentContent Content { get; set; }
         public required MigraDoc.DocumentObjectModel.Document Document { get; set; }
 
-        ProjectEntity Project { get; set; }
+        public required ProjectEntity Project { get; set; }
 
     }
 }

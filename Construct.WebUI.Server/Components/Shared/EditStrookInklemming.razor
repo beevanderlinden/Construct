@@ -1,0 +1,23 @@
+@using Construct.Domain.Entities
+
+@if (Model != null)
+{
+    <KaskonInputContainer Label="inklemming begin">
+        <KitInputNumber T="double"
+                        @bind-Value="Model.ToevalligeInklemmingBegin"
+                        Unit="-" Step="0.05" Min="0" Max="2.00"
+                        OnValueChanged="OnChanged" />
+    </KaskonInputContainer>
+
+    <KaskonInputContainer Label="inklemming eind">
+        <KitInputNumber T="double"
+                        @bind-Value="Model.ToevalligeInklemmingEind"
+                        Unit="-" Step="0.05" Min="0" Max="2.00"
+                        OnValueChanged="OnChanged" />
+    </KaskonInputContainer>
+}
+
+@code {
+    [Parameter] public StrookEntity? Model { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+}

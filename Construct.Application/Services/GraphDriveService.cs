@@ -98,7 +98,7 @@ namespace Construct.Application.Services
             {
                 if (item.File != null)
                 {
-                    if (string.IsNullOrEmpty(extensionFilter) || item.Name.EndsWith(extensionFilter, StringComparison.OrdinalIgnoreCase))
+                    if (string.IsNullOrEmpty(extensionFilter) || item.Name!.EndsWith(extensionFilter, StringComparison.OrdinalIgnoreCase))
                     {
                         items.Add(item);
                     }
@@ -116,10 +116,10 @@ namespace Construct.Application.Services
         private static IEnumerable<DriveItem> FilterByExtension(IEnumerable<DriveItem> items, string? extension)
         {
             if (string.IsNullOrWhiteSpace(extension)) return items;
-            return items.Where(i => i.File != null && i.Name.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
+            return items.Where(i => i.File != null && i.Name!.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
         }
 
-        private async Task TraverseFolderAsync(string folderPath, List<DriveItem> collected, string extensionFilter, int maxDepth, int currentDepth)
+        private async Task TraverseFolderAsync(string folderPath, List<DriveItem> collected, string? extensionFilter, int maxDepth, int currentDepth)
         {
             if (currentDepth > maxDepth)
                 return;
@@ -148,7 +148,7 @@ namespace Construct.Application.Services
                 // Bestand met juiste extensie toevoegen
                 if (item.File != null)
                 {
-                    if (extensionFilter == null || item.Name.EndsWith(extensionFilter, StringComparison.OrdinalIgnoreCase))
+                    if (extensionFilter == null || item.Name!.EndsWith(extensionFilter, StringComparison.OrdinalIgnoreCase))
                     {
                         collected.Add(item);
                     }
@@ -162,7 +162,7 @@ namespace Construct.Application.Services
             }
         }
 
-        private async Task LoadRecursiveTreeAsync(string path, List<DriveItemNode> parentList, string? extensionFilter, int maxDepth, int currentDepth, string currentFolderPath)
+        private async Task LoadRecursiveTreeAsync(string path, List<DriveItemNode> parentList, string? extensionFilter, int maxDepth, int currentDepth, string? currentFolderPath)
         {
             if (currentDepth > maxDepth) return;
 
@@ -193,7 +193,7 @@ namespace Construct.Application.Services
 
                 if (item.File != null)
                 {
-                    if (string.IsNullOrEmpty(extensionFilter) || item.Name.EndsWith(extensionFilter, StringComparison.OrdinalIgnoreCase))
+                    if (string.IsNullOrEmpty(extensionFilter) || item.Name!.EndsWith(extensionFilter, StringComparison.OrdinalIgnoreCase))
                     {
                         parentList.Add(new DriveItemNode
                         {
@@ -260,7 +260,7 @@ namespace Construct.Application.Services
                     foreach (var item in response.Value)
                     {
                         if (item.File != null &&
-                            (string.IsNullOrEmpty(extensionFilter) || item.Name.EndsWith(extensionFilter, StringComparison.OrdinalIgnoreCase)))
+                            (string.IsNullOrEmpty(extensionFilter) || item.Name!.EndsWith(extensionFilter, StringComparison.OrdinalIgnoreCase)))
                         {
                             result.Add(new DriveItemNode
                             {
@@ -296,13 +296,13 @@ namespace Construct.Application.Services
         public async Task<ProjectFileInfo> GetProjectFileInfoByDriveItem(DriveItem driveItem)
         {
             using var stream = await _graphClient
-            .Drives[driveItem.ParentReference.DriveId]
+            .Drives[driveItem.ParentReference!.DriveId]
             .Items[driveItem.Id]
             .Content
             .GetAsync();
 
             using var memoryStream = new MemoryStream();
-            await stream.CopyToAsync(memoryStream);
+            await (stream ?? throw new InvalidOperationException("Stream kon niet worden geopend.")).CopyToAsync(memoryStream);
             var bytes = memoryStream.ToArray();
 
             // 👇 Probeer de inhoud te lezen als ProjectEntity
@@ -328,7 +328,7 @@ namespace Construct.Application.Services
         {
             var result = new List<ProjectFileInfo>();
             var children = await _graphClient
-                .Drives[folder.ParentReference.DriveId]
+                .Drives[folder.ParentReference!.DriveId]
                 .Items[folder.Id]
                 .Children.GetAsync();
 

@@ -45,7 +45,7 @@
 
             if (ProjectState.CurrentProject != null)
             {
-                base64 = FileService.GetBase64<ProjectEntity>(ProjectState.CurrentProject);
+                base64 = FileService.GetBase64<ProjectEntity>(ProjectState.CurrentProject) ?? string.Empty;
 
 
             }

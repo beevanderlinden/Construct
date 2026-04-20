@@ -26,7 +26,7 @@ namespace Construct.Domain.Common
             return source.GetType().GetProperties(bindingAttr).ToDictionary
             (
                 propInfo => propInfo.Name,
-                propInfo => propInfo.GetValue(source, null)
+                propInfo => propInfo.GetValue(source, null)!
             );
 
 

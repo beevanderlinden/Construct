@@ -6,7 +6,7 @@ namespace Construct.Domain.Entities
     {
         protected override string TagName => "symbol";
 
-        public string? Id { get; set; }
+        public new string? Id { get; set; }
         public double? ViewBoxX { get; set; }
         public double? ViewBoxY { get; set; }
         public double? ViewBoxWidth { get; set; }

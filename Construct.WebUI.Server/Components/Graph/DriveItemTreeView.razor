@@ -217,7 +217,8 @@
             // open de link
             try
             {
-                await OpenInNewTab(node.WebUrl);
+                if (node.WebUrl != null)
+                    await OpenInNewTab(node.WebUrl);
                 //Navigation.NavigateTo(node.WebUrl);
             }
             catch

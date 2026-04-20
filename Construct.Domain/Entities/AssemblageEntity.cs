@@ -277,10 +277,16 @@ namespace Construct.Domain.Entities
             Console.WriteLine($"  Materiaal BEFORE: {Materiaal?.Naam ?? "NULL"}");
             Console.WriteLine($"  project.Materialen.Count: {project.Materialen?.Count ?? 0}");
             
+            // check null
+            if (project.Materialen == null)
+            {
+                project.Materialen = new Dictionary<Guid, BaseMateriaal>();
+            }
+
             // ✅ NIEUW: Bewaar het oude materiaal als hint voor fallback
             var oudMateriaal = Materiaal;
             
-            if (MateriaalId.HasValue)
+            if (MateriaalId.HasValue && project.Materialen != null)
             {
                 bool exists = project.Materialen.ContainsKey(MateriaalId.Value);
                 Console.WriteLine($"  MateriaalId exists in dictionary? {exists}");
@@ -291,7 +297,7 @@ namespace Construct.Domain.Entities
             }
             
             _materiaalRef.Restore(
-                guid => project.Materialen.TryGetValue(guid, out var mat) ? mat : null
+                guid => project.Materialen!.TryGetValue(guid, out var mat) ? mat : null
             );
             
             Console.WriteLine($"  Materiaal AFTER: {Materiaal?.Naam ?? "NULL"}");
@@ -306,7 +312,7 @@ namespace Construct.Domain.Entities
                 if (oudMateriaal is BetonContext oudBeton)
                 {
                     // Zoek eerst naar exact dezelfde betonsterkteklasse
-                    var vergelijkbaar = project.Materialen.Values
+                    var vergelijkbaar = project.Materialen!.Values
                         .OfType<BetonContext>()
                         .FirstOrDefault(b => b.Betonsterkteklasse == oudBeton.Betonsterkteklasse);
                     
@@ -335,7 +341,7 @@ namespace Construct.Domain.Entities
                     Console.WriteLine($"  ⚠️ Geen vergelijkbaar materiaal gevonden. Voeg oud materiaal ({oudMateriaal.Naam}) toe aan project.");
                     Materiaal = oudMateriaal;
                     MateriaalId = oudMateriaal.Id;
-                    project.Materialen[oudMateriaal.Id] = oudMateriaal;
+                    project.Materialen![oudMateriaal.Id] = oudMateriaal;
                 }
             }
         }

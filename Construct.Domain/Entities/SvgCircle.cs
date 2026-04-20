@@ -78,7 +78,7 @@
 
 
         /// <summary>id attribuut</summary>
-        public string? Id { get; set; }
+        public new string? Id { get; set; }
 
 
         /// <summary>transform attribuut (bv. "translate(10,20) rotate(30)")</summary>

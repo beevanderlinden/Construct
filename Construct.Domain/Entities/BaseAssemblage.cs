@@ -69,7 +69,7 @@ namespace Construct.Domain.Entities
             if (field != null)
                 field.PropertyChanged += NestedPropertyChanged;
 
-            OnPropertyChanged(propertyName);
+            OnPropertyChanged(propertyName ?? string.Empty);
             return true;
         }
 

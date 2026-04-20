@@ -213,11 +213,11 @@
                                             OnValueChanged="OnChanged" />
                         </KaskonInputContainer>
                         <KaskonInputContainer Label="tand">
-                            <FluentSwitch @bind-Value="SteekTrap.HeeftBoventand"
+                            <FluentSwitch @bind-Value="SteekTrap!.HeeftBoventand"
                                           CheckedMessage="ja" UncheckedMessage="nee"
                                           @bind-Value:after="OnHeeftBoventandChanged" />
                         </KaskonInputContainer>
-                        @if (SteekTrap.TandOpleggingBovenzijde != null)
+                        @if (SteekTrap!.TandOpleggingBovenzijde != null)
                         {
                             <KaskonInputContainer Label="tandhoogte ↕">
                                 <KitInputNumber T="double" Min="50" Max="400" Unit="mm"
@@ -239,7 +239,7 @@
                         {
                             var krachten = SteekTrap!.GetKrachten();
 
-                            <SteekTrapResultaten SteekTrap="SteekTrap" />
+                            <SteekTrapResultaten Krachten="krachten as KrachtenDemo" />
 
 
                             <KaskonInputContainer Label="systeemlengte">
@@ -1059,8 +1059,6 @@
         {
             double welVert = SteekTrap.WelMaatVertikaal;
             const double r = 20.0;
-            double d = r * 2;
-            double L = Math.Sqrt((op - welVert) * (op - welVert) + wel * wel);
             double cy = m + 2 * op - r;
             double cx = m + aan;
             neusCircle = $"<circle cx=\"{cx:F1}\" cy=\"{cy:F1}\" r=\"{r:F1}\" fill=\"none\" stroke=\"#888\" stroke-width=\"{1.0 / sc:F1}\" />";

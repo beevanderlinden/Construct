@@ -13,10 +13,10 @@ namespace Construct.Domain.Entities
     {
         public override string Heading { get; set; } = "Tand";
 
-        public event PropertyChangedEventHandler? PropertyChanged;
+        public new event PropertyChangedEventHandler? PropertyChanged;
 
 
-        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        protected new void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
@@ -124,7 +124,7 @@ namespace Construct.Domain.Entities
 
         }
 
-        private DwarskrachtWapContext _dwarskrachtTand;
+        private DwarskrachtWapContext _dwarskrachtTand = default!;
 
         public DwarskrachtWapContext DwarskrachtTand
         {
@@ -347,7 +347,7 @@ namespace Construct.Domain.Entities
 
 
 
-        public WapeningContext WapeningAlgemeen { get; set; } = new WapeningContext() { Tekst = "6-75"};
+        public WapeningContext WapeningAlgemeen { get; set; } = new WapeningContext() { Tekst = "6-150"};
         public SectionForces SnedekrachtenHals
         {
             get
@@ -357,7 +357,7 @@ namespace Construct.Domain.Entities
         }
 
 
-        private SectionForces _snedekrachtenTand;
+        private SectionForces _snedekrachtenTand = default!;
 
         public SectionForces SnedekrachtenTand
         {
@@ -449,7 +449,7 @@ namespace Construct.Domain.Entities
         }
 
 
-        private BendingResults _buigingTand;
+        private BendingResults _buigingTand = default!;
         public BendingResults BuigingTand
         {
             get => _buigingTand;

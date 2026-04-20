@@ -6,7 +6,7 @@ namespace Construct.Domain.Entities
     {
         protected override string TagName => "clipPath";
 
-        public string? Id { get; set; }
+        public new string? Id { get; set; }
 
         public List<BaseSvg> Children { get; } = [];
 

@@ -1,7 +1,7 @@
 @typeparam T
 @using System.Globalization
 
-<div class="kit-field" style="@(Width is not null ? $"min-width:{Width}" : null)">
+<div class="kit-field" style="@($"min-width:{MinWidth}{(Width is not null ? $";width:{Width}" : null)}")">
     @if (!string.IsNullOrEmpty(Label))
     {
         <label for="@_inputId" class="kit-field-label">@((MarkupString)Label)</label>
@@ -36,7 +36,8 @@
     [Parameter] public EventCallback<T> ValueChanged { get; set; }
     [Parameter] public EventCallback OnValueChanged { get; set; }
     [Parameter] public IReadOnlyList<UnitOption> Units { get; set; } = [];
-    [Parameter] public string? Width { get; set; }
+    [Parameter] public string? Width { get; set; } = "9em";
+    [Parameter] public string MinWidth { get; set; } = "9em";
     [Parameter] public string? DefaultUnit { get; set; }
     [Parameter] public string? Label { get; set; }
     [Parameter] public bool Disabled { get; set; }

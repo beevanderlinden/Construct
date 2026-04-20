@@ -41,6 +41,14 @@
                         OnValueChanged="OnModelChanged" />
     </KaskonInputContainer>
 
+    @foreach (var strook in Model.Stroken)
+    {
+        <details>
+            <summary>inklemming – @strook.Naam</summary>
+            <EditStrookInklemming Model="@strook" OnChanged="OnModelChanged" />
+        </details>
+    }
+
     <KaskonMilieuklasseDekking 
         Boven="@Model.PlaatDekking.Boven" 
         Onder="@Model.PlaatDekking.Onder" 
@@ -106,9 +114,6 @@
     [Parameter] public BordesEntity? Model{ get; set; }
     [Parameter] public EventCallback<BordesEntity> ModelChanged{ get; set; }
     [CascadingParameter] public Action? RequestParentRefresh { get; set; }
-
-    // Dialog state
-    private bool _dekkingDialogHidden = true;
 
     void OnModelChanged() => RequestParentRefresh?.Invoke();
 
@@ -226,7 +231,7 @@
                 }
             }
             // Sla GUID op indien van toepassing
-            Model.Trap1AansluitendElementGuid = keuze?.Value?.Id;
+            Model!.Trap1AansluitendElementGuid = keuze?.Value?.Id;
             OnModelChanged();
         }
         await Task.CompletedTask;
@@ -262,7 +267,7 @@
                 }
             }
             // Sla GUID op indien van toepassing
-            Model.Trap2AansluitendElementGuid = keuze?.Value?.Id;
+            Model!.Trap2AansluitendElementGuid = keuze?.Value?.Id;
             OnModelChanged();
         }
         await Task.CompletedTask;

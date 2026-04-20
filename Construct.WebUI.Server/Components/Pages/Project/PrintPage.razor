@@ -98,8 +98,6 @@ else
     string contentType = "application/rtf";
     private string documentNummer = "ber-01";
 
-    private bool toonDocInfo = !false;
-
     private MigraDoc.DocumentObjectModel.Document? document { get; set; } = null;
     private ExportFactory.MigraDocContentModels.DocumentContent content = new(); // gebruik MigraDocContentModels.DocumentContent voor de MigraDoc export
     private ExportFactory.MigraDocContentModels.CoverPageContent cover = new();
@@ -678,8 +676,6 @@ else
 
     public TableContent GetTableContentDekkingOpt(DekkingContext dekkingContext)
     {
-        string w = "3cm";
-
         TableContent table = new();
         dekkingContext.BerekenEnValideer();
         table.Headers.Add(new() { CellContent = new("dekking", "3cm") });
@@ -1374,7 +1370,6 @@ else
                 return content;
 
 
-            string toastMessage = "Document genereren...";
             Stopwatch stopWatch = new();
             stopWatch.Start();
 
@@ -1492,7 +1487,7 @@ else
 
 
                     //section.AddParagraph("Materialen", "Kop 3");
-                    var materialen = new List<BaseMateriaal>() { a.Materiaal };
+                    var materialen = new List<BaseMateriaal>() { a.Materiaal! };
                     section.Elements.Add(GetTableContentMaterialen(materialen));
 
 
@@ -1542,7 +1537,7 @@ else
 
                         svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; width: {svgWidthPixels:0}; height: 30mm;";
 
-                        var svgDocs = ligger.Beam.ToSvgDocumentsOpt((int)svgWidthPixels, 9999, svgStyle, ligger.Beam.LoadContext?.BelastingGevallen, [(Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A | Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B)]);
+                        var svgDocs = ligger.Beam.ToSvgDocumentsOpt((int)svgWidthPixels, 9999, svgStyle, ligger.Beam.LoadContext?.BelastingGevallen ?? [], [(Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A | Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B)]);
 
                         foreach (var svgDoc in svgDocs)
                         {
@@ -1693,7 +1688,7 @@ else
                         var tand = bordes.Tand;
 
                         // de diameter is gelijk aan de verdeelwapening, we berekenen de hohmaat (maximaal 150mm)
-                        bordes.Tand.WapeningAlgemeen.Tekst = $"Ø{bordes.DetailWapeningDiameter:0.#}-{bordes.DetailWapeningHohMax}";
+                        //bordes.Tand.WapeningAlgemeen.Tekst = $"Ø{bordes.DetailWapeningDiameter:0.#}-{150}";
 
 
                         tand.Bijwerken();

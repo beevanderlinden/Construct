@@ -169,6 +169,7 @@
         }
 
         boundingBox.Reset();
+#pragma warning disable CS0618
         SvgXml = SvgGenerator.GenerateStrookSvgXml(
             Strook, boundingBox, width ?? 500.0, height?? 300, Style, 
             toonDwarskrachtenlijn: !true, toonMomentenlijn:!true, toonFiguren: true, loadCase: Strook?.Beam?.LoadContext?.BelastingGevallen?.FirstOrDefault());
@@ -176,20 +177,21 @@
 
 
         boundingBox.Reset();
-        SvgXml1 = SvgGenerator.GenerateStrookSvgXml(Strook, boundingBox, width ?? 500.0, height ?? 300, Style,
+        SvgXml1 = SvgGenerator.GenerateStrookSvgXml(Strook!, boundingBox, width ?? 500.0, height ?? 300, Style,
             toonDwarskrachtenlijn: !true, toonMomentenlijn: !true, toonFiguren: true, loadCase: Strook?.Beam?.LoadContext?.BelastingGevallen?.LastOrDefault());
         CurrentViewBox1 = SetViewBoxOpt(boundingBox.MinX, boundingBox.MinY, boundingBox.Width, boundingBox.Height);
 
 
         boundingBox.Reset();
-        SvgXml2 = SvgGenerator.GenerateStrookSvgXml(Strook, boundingBox, width ?? 500.0, height ?? 300, Style, toonDwarskrachtenlijn: true, toonMomentenlijn: !true, toonFiguren: false);
+        SvgXml2 = SvgGenerator.GenerateStrookSvgXml(Strook!, boundingBox, width ?? 500.0, height ?? 300, Style, toonDwarskrachtenlijn: true, toonMomentenlijn: !true, toonFiguren: false);
         CurrentViewBox2 = SetViewBoxOpt(boundingBox.MinX, boundingBox.MinY, boundingBox.Width, boundingBox.Height);
 
 
 
         boundingBox.Reset();
-        SvgXml3 = SvgGenerator.GenerateStrookSvgXml(Strook, boundingBox, width ?? 500.0, height ?? 300, Style, toonDwarskrachtenlijn: !true, toonMomentenlijn: true, toonFiguren: false);
+        SvgXml3 = SvgGenerator.GenerateStrookSvgXml(Strook!, boundingBox, width ?? 500.0, height ?? 300, Style, toonDwarskrachtenlijn: !true, toonMomentenlijn: true, toonFiguren: false);
         CurrentViewBox3 = SetViewBoxOpt(boundingBox.MinX, boundingBox.MinY, boundingBox.Width, boundingBox.Height);
+#pragma warning restore CS0618
 
 
 

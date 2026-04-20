@@ -6,7 +6,6 @@ namespace Construct.Domain.Entities
     {
         protected override string TagName => "marker";
 
-        public string? Id { get; set; }
         public double MarkerWidth { get; set; } = 10;
         public double MarkerHeight { get; set; } = 10;
         public double RefX { get; set; } = 0;

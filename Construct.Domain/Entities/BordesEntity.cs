@@ -591,8 +591,8 @@ namespace Construct.Domain.Entities
             this.Tand.Initialize(this.TandOplegging);
             
             // ✅ LEES constraints (maar wijzig ze NOOIT!)
-            double constraintDiameter = DetailWapeningDiameterMin ?? 8.0;
-            double constraintMaxHoh = DetailWapeningHohMax ?? 150;
+            double constraintDiameter = DetailWapeningDiameterMin ?? 6.0;
+            double constraintMaxHoh = 150;
             
             // Bereken met constraint waarden
             double currentDiameter = constraintDiameter;
@@ -1406,7 +1406,7 @@ namespace Construct.Domain.Entities
             set => _detailWapeningDiameterMin = value;
         }
 
-        public double? _detailWapeningHohMax = 100;
+        public double? _detailWapeningHohMax = 150;
         public double? DetailWapeningHohMax
         {
             get => _detailWapeningHohMax;

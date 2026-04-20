@@ -56,8 +56,8 @@ public static class UnitSets
     /// <summary>Moment — model opgeslagen in kNm</summary>
     public static readonly IReadOnlyList<UnitOption> Moment =
     [
-        new("Nm",  1000.0, "100"),
-        new("kNm", 1.0,    "0.01"),
+        new("kNm", 1.0,    "1"),
+        new("Nm",  1000.0, "1000"),
     ];
 
     /// <summary>Lengte — model opgeslagen in m</summary>
