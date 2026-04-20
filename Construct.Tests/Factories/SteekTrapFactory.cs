@@ -445,4 +445,59 @@ public static class SteekTrapFactory
 
         return (tr01, tr02, bd01, project);
     }
+
+    /// <summary>
+    /// Maakt project RD-506807 "9 app. Rijsweg 60" MALDEN aan met trap TR01+02.
+    /// Lengte=1375, Op=185, Aan=220, Schil=100, DragendeBomen=true, Breedte=900, BomenHoogte=300.
+    /// </summary>
+    public static (SteekTrapEntity trap, ProjectEntity project) CreateProject_RD506807()
+    {
+        var project = new ProjectEntity
+        {
+            ProjectInfo =
+            {
+                Nummer = "RD-506807",
+                Naam = "9 app. Rijsweg 60",
+                Plaatsnaam = "MALDEN",
+                Grondslagen =
+                {
+                    NationaleBijlage = NationaleBijlageEnum.NL,
+                    Gevolgklasse = GevolgklasseEnum.CC2b,
+                    OntwerpLevensduur = OntwerpLevensduurEnum.Vijftig,
+                },
+            },
+            DefaultGebruiksklasse = GebruiksklasseEnum.A_gemeenschappelijke_trappen,
+        };
+
+        var beton = project.VoegMateriaalToe(new BetonContext("C45/55"));
+
+        var trap = new SteekTrapEntity(project.ProjectInfo)
+        {
+            Id = Guid.NewGuid(),
+            Merk = "TR01+02",
+            Materiaal = beton,
+            MateriaalId = beton.Id,
+            Gebruiksklasse = project.DefaultGebruiksklasse,
+            OptredeMaat = 185,
+            AantredeMaat = 220,
+            Breedte = 900,
+            HeeftBoventand = true,
+        };
+
+        trap.SchilDikte = 100;
+        trap.GebruikEigenLengte = true;
+        trap.LengteTotaalEigenOpgave = 1375;
+        trap.DragendeTrapBomen = true;
+        trap.TrapBomenHoogte = 300;
+        trap.Init(project.ProjectInfo);
+
+        trap.Belastingen.GenereerBelastingCombinaties(
+            trap.Belastingen,
+            trap.Belastingen.BelastingGevallen,
+            trap.Belastingen.CombinatiesTypes);
+
+        project.Assemblages.Add(trap);
+
+        return (trap, project);
+    }
 }
