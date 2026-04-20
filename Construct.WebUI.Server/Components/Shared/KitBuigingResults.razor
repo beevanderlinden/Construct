@@ -1,0 +1,28 @@
+@using Eurocode.BetonConstructies
+
+<h3>@Context?.Heading
+    @if (Context?.IsValidated ?? false)
+    {
+        <span> ✅</span>
+    }
+    else
+    {
+        <span> ❌</span>
+
+    }
+</h3>
+
+
+
+<EurocodeMeldingenComponent Meldingen="@Context?.Meldingen" />
+<KitInputNumberWithUnit Label="<i>M<sub>Ed</sub></i>" Value="@Context?.Moment" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
+<KitInputNumberWithUnit Label="<i>d</i>" Value="@Context?.D" Disabled="true" Units="UnitSets.LengteMM" Format="0.0" />
+<KitInputNumberWithUnit Label="<i>x/d</i>" Value="@Context?.XuD" Disabled="true" Units="UnitSets.Geen" Format="0.0000" />
+<KitInputNumberWithUnit Label="<i>A<sub>s,req</sub></i>" Value="@Context?.AsRequired" Disabled="true" Units="UnitSets.OppervlakMM" Format="0" />
+<KitInputNumberWithUnit Label="<i>A<sub>s,prov</sub></i>" Value="@Context?.Wapening?.As" Disabled="true" Units="UnitSets.OppervlakMM" Format="0" />
+<KitTextBox Label="Wapening" Value="@Context?.Wapening?.SanitizedTekst()" Disabled="true" />
+
+
+@code {
+    [Parameter, EditorRequired] public BendingResults? Context { get; set; }
+}

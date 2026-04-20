@@ -93,7 +93,10 @@ public class ProjectRD505007Tests
         br.AsApplied.Should().BeGreaterThanOrEqualTo(br.AsRequired);
 
         // doorbuiging
+        
+
         var db = trap12.DoorbuigingValidatie;
+        db.Beton.GetHashCode().Should().Be(trap12.Beton?.GetHashCode());
         db.Wc.Should().Be(0);
         db.Kruipkrimp.TheoretischeKruipCoefficient.Should().BeApproximately(1.80, 0.3);
         db.Wbijk.Should().BeApproximately(-3.6, 1); 

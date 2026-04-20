@@ -165,12 +165,14 @@ namespace Construct.Domain.Entities
                             BasisWapening = new WapeningContext()
                             {
                                 Tekst = this.WapeningSchil?.Tekst ?? "r8-150",
+                                TekstOndergrens = "r8-150",
                                 ReferentieVlak = ReferentieVlakEnum.Onder,
                                 ReferentieLengte = 1000,
                             },
                             VerdeelWapening = new WapeningContext()
                             {
-                                Tekst = "r6-250",
+                                Tekst = "r8-150",
+                                TekstOndergrens = "r8-150",
                                 ReferentieVlak = ReferentieVlakEnum.Onder,
                                 ReferentieLengte = 1000,
                             },
@@ -183,13 +185,15 @@ namespace Construct.Domain.Entities
                             DekkingBuitensteLaag = this.PlaatDekking.Boven,
                             BasisWapening = new WapeningContext()
                             {
-                                Tekst = "r6-150",
+                                Tekst = "r8-150",
+                                TekstOndergrens = "r8-150",
                                 ReferentieVlak = ReferentieVlakEnum.Boven,
                                 ReferentieLengte = 1000,
                             },
                             VerdeelWapening = new WapeningContext()
                             {
-                                Tekst = "r6-250",
+                                Tekst = "r8-150",
+                                TekstOndergrens = "r8-150",
                                 ReferentieVlak = ReferentieVlakEnum.Boven,
                                 ReferentieLengte = 1000,
                             },
@@ -197,12 +201,7 @@ namespace Construct.Domain.Entities
                             DiameterVerdeel = 8,
                         },
                     };
-                    
-                    Console.WriteLine($"   Onder.BasisWapening HashCode: {MainSlab.PlaatWapening.Onder.BasisWapening.GetHashCode()}");
-                    Console.WriteLine($"   Boven.BasisWapening HashCode: {MainSlab.PlaatWapening.Boven.BasisWapening.GetHashCode()}");
-                    Console.WriteLine($"   Zijn ze hetzelfde? {ReferenceEquals(MainSlab.PlaatWapening.Boven.BasisWapening, MainSlab.PlaatWapening.Onder.BasisWapening)}");
                 }
-                
             }
 
             var beton = Materiaal as BetonContext;
@@ -285,9 +284,9 @@ namespace Construct.Domain.Entities
 
 
             DoorbuigingCombinatieContexts = [
-                new DoorbuigingCombinatieContext(){CombinatieType = BelastingCombinatieTypeEnum.Blijvend, Lijnlast = -Krachten?.qG ?? 0},
-                new DoorbuigingCombinatieContext(){CombinatieType = BelastingCombinatieTypeEnum.QuasiBlijvend, Lijnlast = -Krachten?.qEqp ?? 0},
-                new DoorbuigingCombinatieContext(){CombinatieType = BelastingCombinatieTypeEnum.Frequent, Lijnlast = -Krachten?.qEfr ?? 0},
+                new DoorbuigingCombinatieContext(){CombinatieType = BelastingCombinatieTypeEnum.Blijvend, Lijnlast = Krachten?.LijnlastG ?? 0},
+                new DoorbuigingCombinatieContext(){CombinatieType = BelastingCombinatieTypeEnum.QuasiBlijvend, Lijnlast = Krachten?.LijnlastQuasiPermanent ?? 0},
+                new DoorbuigingCombinatieContext(){CombinatieType = BelastingCombinatieTypeEnum.Frequent, Lijnlast = Krachten?.LijnlastFrequent ?? 0},
             ];
             DoorbuigingValidatie = new(beton ?? new(), MainSlab?.Profiel ?? ProfielSchil, WapeningSchil!, LengteSchuin, DoorbuigingCombinatieContexts);
             DoorbuigingValidatie.Init();
@@ -347,25 +346,6 @@ namespace Construct.Domain.Entities
 
 
 
-        public MarkupString ToMomentMarkupString()
-        {
-            return Krachten.GetMomentMarkupString();
-        }
-        public MarkupString ToGeometrieEnBelastingMarkupString()
-        {
-            return Krachten.GetGeometrieEnBelastingMarkupString();
-        }
-
-        public MarkupString ToGeometrieMarkupString()
-        {
-            return Krachten.GetGeometrieMarkupString();
-        }
-
-        public MarkupString ToBelastingMarkupString()
-        {
-            return Krachten.GetBelastingMarkupString();
-        }
-
         public List<(string naam, MarkupString markup)> ToBelastingMarkupStrings()
         {
             return Krachten.GetBelastingMarkupStrings();
@@ -401,7 +381,10 @@ namespace Construct.Domain.Entities
                 Meldingen.Add(new(MeldingType.Opmerking, "optrede te groot voor bouwbesluit"));
             }
 
-            this.GetKrachten(); // altijd bijwerken, mogelijk veranderd
+            //this.GetKrachten(); // altijd bijwerken, mogelijk veranderd
+            this.SetKrachten(); // update krachten in context zodat deze worden meegenomen in de berekeningen
+
+
             this.Dwarskracht.NutHoogte = this.MomentSchil.D; // geen ref op NutHoogte -> bijwerken
             this.Dwarskracht.AsLangs = this.MomentSchil.AsApplied; // geen ref op AsLangs -> bijwerken
 
@@ -488,8 +471,6 @@ namespace Construct.Domain.Entities
         //[JsonConstructor]
         public SteekTrapEntity(ProjectInfoEntity projectInfo)
         {
-            Stopwatch sw = new();
-            sw.Start();
             ProjectInfo = projectInfo;
             Belastingen = new(grondslagen: ProjectInfo.Grondslagen);
             
@@ -506,7 +487,7 @@ namespace Construct.Domain.Entities
             {
                 IsPlaatGeometrie = true,
                 IsKwaliteitsBeheersing = true,
-                SelectedMilieuklassen = [MilieuklasseEnum.XC1]
+                SelectedMilieuklassen = [MilieuklasseEnum.XC1],
             };
             PlaatDekking.Boven = new(grondslagen: ProjectInfo.Grondslagen, beton: beton ?? new())
             {
@@ -520,7 +501,7 @@ namespace Construct.Domain.Entities
 
             // Profiel voor de schil, bepaalt de schildikte
             ProfielSchil = new() { Breedte = 1000, Hoogte = 120 };
-            WapeningSchil = new("8-150", PlaatDekking.Onder.DekkingToe);
+            WapeningSchil = new("r8-150", PlaatDekking.Onder.DekkingToe);
 
 
             
@@ -545,7 +526,6 @@ namespace Construct.Domain.Entities
             // Voor GELADEN steektrappen (uit JSON): Init() wordt aangeroepen in RestoreReferencesAfterDeserialization()
             Init(projectInfo);
             
-            Console.WriteLine($"[SteekTrapEntity] aangemaakt ({sw.ElapsedMilliseconds} ms)");
         }
 
         /// <summary>
@@ -1736,13 +1716,13 @@ namespace Construct.Domain.Entities
             var frequent = this.DoorbuigingValidatie.CombinatieContexts.FirstOrDefault(c => c.CombinatieType == BelastingCombinatieTypeEnum.Frequent);
 
             if (blijvend != null) 
-                blijvend.Lijnlast = -this.Krachten.qG * FactorProjectieZToLocalZ;
+                blijvend.Lijnlast = -this.Krachten.LijnlastG * FactorProjectieZToLocalZ; // negatief = neerwaarts
 
             if (quasiBlijvend != null)
-                quasiBlijvend.Lijnlast = -this.Krachten.qEqp * FactorProjectieZToLocalZ;
+                quasiBlijvend.Lijnlast = -this.Krachten.LijnlastQuasiPermanent * FactorProjectieZToLocalZ;
 
             if (frequent != null)
-                frequent.Lijnlast = -this.Krachten.qEfr * FactorProjectieZToLocalZ;
+                frequent.Lijnlast = -this.Krachten.LijnlastFrequent * FactorProjectieZToLocalZ;
 
             if (!this.DoorbuigingValidatie.BerekenEnValideer())
             {
@@ -1765,8 +1745,8 @@ namespace Construct.Domain.Entities
 
 
             this.DoorbuigingContext.LengteMM = this.LengteSchuin;
-            this.DoorbuigingContext.Lijnlast = this.Krachten.qEqp * this.FactorProjectieZToLocalZ;
-            this.DoorbuigingContext.LijnlastG = this.Krachten.qG * this.FactorProjectieZToLocalZ;
+            this.DoorbuigingContext.Lijnlast = this.Krachten.LijnlastQuasiPermanent * this.FactorProjectieZToLocalZ;
+            this.DoorbuigingContext.LijnlastG = this.Krachten.LijnlastG * this.FactorProjectieZToLocalZ;
             this.DoorbuigingContext.D = this.SchilDikte - this.WapeningSchil.ReferentieAfstand;
             Debug.WriteLine("doorbuiging context bijgewerkt");
 
@@ -2208,37 +2188,19 @@ namespace Construct.Domain.Entities
 
 
         // dit is straks niet meer nodig, bij toepassing ligger/raamwerk
-        public double Gk { get; set; }
+        public double Gk => EigenGewicht + Afwerking;
         public double EigenGewicht { get; set; }
         public double Afwerking { get; set; }
         public double Lijnlast_qk { get; set; }
         public double Puntlast_Qk { get; set; }
         public double L { get; set; }
 
+        public double H { get; set; } = 0;
 
-        public double qG { get; set; }
+        public double LijnlastG { get; set; }
+        public double LijnlastFrequent { get; set; }
+        public double LijnlastQuasiPermanent { get; set; }
 
-        public double qEfr { get; set; }
-        public double qEqp { get; set; }
-
-
-
-        private string GetMomentTekst()
-        {
-            string result = "";
-            result += $"M~BG1~ = 0,125 × {Gk:0.0} × {L:0.###}² = {Mk1:0.0} kNm, ";
-            result += $"M~BG2~ = 0,125 × {Lijnlast_qk:0.0}×{L:0.###}² = {Mk2:0.0} kNm, ";
-            result += $"M~BG3~ = 0,25 × {Puntlast_Qk:0.0}×{L:0.###} = {Mk3:0.0} kNm <br />";
-            result += $"M~Ed~ = {MEd:0.0} kNm <br />";
-            result += $"M~Ed,freq~ = {Mfreq:0.0} kNm";
-            return result;
-
-        }
-
-        public MarkupString GetMomentMarkupString()
-        {
-            return MarkupHelper.ToMarkupString(GetMomentTekst());
-        }
 
 
         public string GetGeometrieTekst()
@@ -2327,6 +2289,7 @@ namespace Construct.Domain.Entities
             double lijnlast_qk = 1;
             double puntlast_Qk = 1;
             double L = 1;
+            double H = 1;
             double qAfw = 0;
 
             switch (onderdeel)
@@ -2337,6 +2300,7 @@ namespace Construct.Domain.Entities
                     lijnlast_qk = steekTrap.GetOpgelegdeBelasting()?.Vlaklast ?? 10;
                     puntlast_Qk = steekTrap.GetOpgelegdeBelasting()?.Puntlast ?? 10;
                     L = steekTrap.LtProjZ / 1000.0;
+                    H = steekTrap.HoogteTotaal / 1000.0;
                     break;
                     case "boom":
                     // hier de boombelasting berekenen
@@ -2344,6 +2308,7 @@ namespace Construct.Domain.Entities
                     lijnlast_qk = steekTrap.GetOpgelegdeBelasting()?.Vlaklast ?? 10;
                     puntlast_Qk = steekTrap.GetOpgelegdeBelasting()?.Puntlast ?? 10;
                     L = steekTrap.LtProjZ / 1000.0;
+                    H = steekTrap.HoogteTotaal / 1000.0;
                     // pas de belastingen 
                     double belastingBreedteMeter = steekTrap.Breedte / 2.0 / 1000.0;
                     qG *= belastingBreedteMeter;
@@ -2355,14 +2320,15 @@ namespace Construct.Domain.Entities
                     lijnlast_qk = steekTrap.GetOpgelegdeBelasting()?.Vlaklast ?? 10;
                     puntlast_Qk = steekTrap.GetOpgelegdeBelasting()?.Puntlast ?? 10;
                     L = (steekTrap.Breedte - steekTrap.TrapBoomBreedte) / 1000.0;
+                    H = 0;
                     break;
-
             }
 
-            var krachten = GetKrachtenDemo(qG, lijnlast_qk, puntlast_Qk, L, qAfw, steekTrap.Belastingen);
+            var krachten = GetKrachtenDemo(-qG, -lijnlast_qk, -puntlast_Qk, L, -qAfw, steekTrap.Belastingen, H);
 
             // bijwerken
             steekTrap.UpdateSnedekrachten(krachten.MEd, krachten.Mfreq, krachten.VEd);
+
 
            
             
@@ -2372,221 +2338,10 @@ namespace Construct.Domain.Entities
             return krachten;
 
         }
-        
-
-        
-
-        public KrachtenDemo BerekenSteektrap(SteekTrapEntity steekTrap)
-        {
-            Console.WriteLine($"[BerekenSteektrap] {steekTrap.Merk}");
-            KrachtenDemo returnItem = new();
-            // belastingen
-            double qG = steekTrap.GetPermanenteBelasting();
-            steekTrap.EigenGewichtPerM2 = qG;
-            var opgelegdeBelastingen = steekTrap.GetOpgelegdeBelasting();
-
-            if (opgelegdeBelastingen == null)
-                opgelegdeBelastingen = new() { Puntlast = 10, LijnlastRand = 10, Vlaklast = 10 };
-
-            // momenten (kar)
-            double l = steekTrap.GetLengteTotaal() / 1000;
-            double a = 0.5 * l;
-
-            //double m1 = steekTrap.GetMomentVgmn1(qG);
-
-            // in het midden 
-            var vergeetMijNietje1 = SteekTrapExtensions.GetVergeetMeNietje(SteekTrapExtensions.VergeetMeNietje.VrijVrijLijnlast, qG, l, a);
-            var vergeetMijNietje2 = SteekTrapExtensions.GetVergeetMeNietje(SteekTrapExtensions.VergeetMeNietje.VrijVrijLijnlast, opgelegdeBelastingen.Value.Vlaklast, l, a);
-            var vergeetMijNietje3 = SteekTrapExtensions.GetVergeetMeNietje(SteekTrapExtensions.VergeetMeNietje.VrijVrijPuntlast, opgelegdeBelastingen.Value.Puntlast, l, a);
-
-            var momentaanFactoren = steekTrap.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren;
 
 
 
-            var mk1 = vergeetMijNietje1.m;
-            var mk2 = vergeetMijNietje2.m;
-            var mk3 = vergeetMijNietje3.m;
-
-            var mk = vergeetMijNietje1.m + Math.Max(vergeetMijNietje2.m, vergeetMijNietje3.m);
-            mk = 0.0;
-
-            var mfreq = 0.0;
-            var mQp = 0.0;
-            var vfreq = 0.0;
-            var vQp = 0.0;
-
-            var momA = 0.0;
-            var momB = 0.0;
-            var momC = 0.0;
-            var dwaA = 0.0;
-            var dwaB = 0.0;
-            var dwaC = 0.0;
-
-            var vk1 = qG * l / 2;
-            var vk2 = opgelegdeBelastingen.Value.Vlaklast * l / 2;
-            var vk3 = opgelegdeBelastingen.Value.Puntlast;
-            var vk = vk1 + Math.Max(vk2, vk3);
-            vk = 0.0;
-
-            var md = 0.0;
-            var vd = 0.0;
-            var bcOrdered = steekTrap.Belastingen.BelastingCombinaties.OrderBy(c => c.Type).ToList();
-            var lastType = bcOrdered[0].Type;
-            foreach (var bc in bcOrdered)
-            {
-                if (bc.Type != lastType)
-                {
-
-                    momA = 0.0;
-                    momB = 0.0;
-                    momC = 0.0;
-                    dwaA = 0.0;
-                    dwaB = 0.0;
-                    dwaC = 0.0;
-
-
-                }
-                var mom = 0.0;
-                var dwa = 0.0;
-                foreach (var item in bc.Items)
-                {
-                    if (item.Geval.Nr == 1)
-                    {
-                        mom += vergeetMijNietje1.m * item.FactorNetto;
-                        dwa += vk1 * item.FactorNetto;
-
-                    }
-                    else if (item.Geval.Nr == 2)
-                    {
-                        mom += vergeetMijNietje2.m * item.FactorNetto;
-                        dwa += vk2 * item.FactorNetto;
-                    }
-                    else if (item.Geval.Nr == 3)
-                    {
-                        mom += vergeetMijNietje3.m * item.FactorNetto;
-                        dwa += vk3 * item.FactorNetto;
-                    }
-                }
-
-                switch (bc.Type)
-                {
-                    case BelastingCombinatieTypeEnum.Fundamenteel_A:
-                        if (mom > momA) momA = mom;
-                        if (dwa > dwaA) dwaA = dwa;
-                        if (mom >= md)
-                        {
-                            md = mom;
-                            returnItem.MaatgevendeCombinatieFundamenteel = bc;
-                        }
-                        break;
-                    case BelastingCombinatieTypeEnum.Fundamenteel_B:
-                        if (mom > momB) momB = mom;
-                        if (dwa > dwaB) dwaB = dwa;
-                        if (mom >= md)
-                        {
-                            md = mom;
-                            returnItem.MaatgevendeCombinatieFundamenteel = bc;
-                        }
-                        break;
-                    case BelastingCombinatieTypeEnum.Karakteristiek:
-
-                        if (mom >= mk)
-                        {
-                            mk = mom;
-                            returnItem.MaatgevendeCombinatieKarakteristiek = bc;
-                        }
-                        break;
-                    case BelastingCombinatieTypeEnum.Frequent:
-                        if (mom > momC) momC = mom;
-                        if (dwa > dwaC) dwaC = dwa;
-                        if (mom >= mfreq)
-                        {
-                            mfreq = mom;
-
-                            returnItem.MaatgevendeCombinatieFrequent = bc;
-                        }
-                        if (dwa >= vfreq)
-                        {
-                            vfreq = dwa;
-                        }
-                        break;
-                    case BelastingCombinatieTypeEnum.QuasiBlijvend:
-                        if (mom > momC) momC = mom;
-                        if (dwa > dwaC) dwaC = dwa;
-                        if (mom >= mQp)
-                        {
-                            mQp = mom;
-
-                            returnItem.MaatgevendeCombinatieFrequent = bc;
-                        }
-                        if (dwa >= vQp)
-                        {
-                            vQp = dwa;
-                        }
-                        break;
-                }
-
-
-
-                if (dwa > vd)
-                    vd = dwa;
-
-                lastType = bc.Type;
-            }
-
-
-
-            returnItem.Mk = -mk;
-            returnItem.MEd = -md;
-            returnItem.Mfreq = -mfreq;
-            returnItem.Mqp = -mQp;
-
-            returnItem.Vk = vk;
-            returnItem.VEd = vd;
-            returnItem.Vfreq = vfreq;
-            returnItem.Vqp = vQp;
-
-
-            returnItem.Mk1 = -mk1;
-            returnItem.Mk2 = -mk2;
-            returnItem.Mk3 = -mk3;
-
-            returnItem.Vk1 = vk1;
-            returnItem.Vk2 = vk2;
-            returnItem.Vk3 = vk3;
-
-            returnItem.MomA = -momA;
-            returnItem.MomB = -momB;
-            returnItem.MomC = -momC;
-
-            returnItem.DwarskrachtA = dwaA;
-            returnItem.DwarskrachtB = dwaB;
-            returnItem.DwarskrachtC = dwaC;
-
-
-            returnItem.Gk = qG;
-            returnItem.EigenGewicht = qG - steekTrap.AfwerkingVlaklast;
-            returnItem.Afwerking = steekTrap.AfwerkingVlaklast;
-
-            returnItem.Lijnlast_qk = opgelegdeBelastingen.Value.Vlaklast;
-            returnItem.Puntlast_Qk = opgelegdeBelastingen.Value.Puntlast;
-            returnItem.L = l;
-
-
-            returnItem.qG = qG;
-            returnItem.qEfr = qG + opgelegdeBelastingen.Value.Vlaklast * (momentaanFactoren?.Mom1 ?? 0);
-            returnItem.qEqp = qG + opgelegdeBelastingen.Value.Vlaklast * (momentaanFactoren?.Mom2 ?? 0);
-
-            steekTrap.UpdateSnedekrachten(returnItem.MEd, returnItem.Mfreq, returnItem.VEd);
-            steekTrap.Krachten = returnItem;
-
-            return returnItem;
-
-        }
-
-        
-
-        public KrachtenDemo GetKrachtenDemo(double qG, double lijnlast_qk, double puntlast_Qk, double L, double qAfw, BelastingenContext belastingenContext)
+        public KrachtenDemo GetKrachtenDemo(double qG, double lijnlast_qk, double puntlast_Qk, double L, double qAfw, BelastingenContext belastingenContext, double H = 0)
         {
             KrachtenDemo returnItem = new();
             double a = 0.5 * L;
@@ -2602,10 +2357,10 @@ namespace Construct.Domain.Entities
             var mk3 = vergeetMijNietje3.m;
 
             var momBg1 = mk1;
-            var momBg2 = Math.Max(mk2, mk3);
+            var momBg2 = Math.Min(mk2, mk3); // meest negatief (sagging) is maatgevend
 
-            var mk = vergeetMijNietje1.m + Math.Max(vergeetMijNietje2.m, vergeetMijNietje3.m);
-            mk = 0.0;
+            var mk = vergeetMijNietje1.m + Math.Min(vergeetMijNietje2.m, vergeetMijNietje3.m); // meest negatief
+            //mk = 0.0;
 
             var mfreq = 0.0;
             var mQp = 0.0;
@@ -2619,9 +2374,9 @@ namespace Construct.Domain.Entities
             var dwaB = 0.0;
             var dwaC = 0.0;
 
-            var vk1 = qG * L / 2;
-            var vk2 = lijnlast_qk * L / 2;
-            var vk3 = puntlast_Qk;
+            var vk1 = -qG * L / 2;           // positief bij neerwaartse (negatieve) belasting
+            var vk2 = -lijnlast_qk * L / 2;  // positief bij neerwaartse (negatieve) belasting
+            var vk3 = -puntlast_Qk;           // positief bij neerwaartse (negatieve) belasting
             var vk = vk1 + Math.Max(vk2, vk3);
             vk = 0.0;
 
@@ -2651,55 +2406,47 @@ namespace Construct.Domain.Entities
                     {
                         mom += vergeetMijNietje1.m * item.FactorNetto;
                         dwa += vk1 * item.FactorNetto;
-
                     }
                     else if (item.Geval.Nr == 2)
                     {
-                        mom += vergeetMijNietje2.m * item.FactorNetto;
-                        dwa += vk2 * item.FactorNetto;
-                    }
-                    else if (item.Geval.Nr == 3)
-                    {
-                        mom += vergeetMijNietje3.m * item.FactorNetto;
-                        dwa += vk3 * item.FactorNetto;
+                        mom += Math.Min(vergeetMijNietje2.m, vergeetMijNietje3.m) * item.FactorNetto; // meest negatief
+                        dwa += Math.Max(vk2, vk3) * item.FactorNetto; // grootste reactie
                     }
                 }
 
                 switch (bc.Type)
                 {
                     case BelastingCombinatieTypeEnum.Fundamenteel_A:
-                        if (mom > momA) momA = mom;
+                        if (mom < momA) momA = mom; // meest negatief
                         if (dwa > dwaA) dwaA = dwa;
-                        if (mom >= md)
+                        if (mom <= md)
                         {
                             md = mom;
                             returnItem.MaatgevendeCombinatieFundamenteel = bc;
                         }
                         break;
                     case BelastingCombinatieTypeEnum.Fundamenteel_B:
-                        if (mom > momB) momB = mom;
+                        if (mom < momB) momB = mom; // meest negatief
                         if (dwa > dwaB) dwaB = dwa;
-                        if (mom >= md)
+                        if (mom <= md)
                         {
                             md = mom;
                             returnItem.MaatgevendeCombinatieFundamenteel = bc;
                         }
                         break;
                     case BelastingCombinatieTypeEnum.Karakteristiek:
-
-                        if (mom >= mk)
+                        if (mom <= mk)
                         {
                             mk = mom;
                             returnItem.MaatgevendeCombinatieKarakteristiek = bc;
                         }
                         break;
                     case BelastingCombinatieTypeEnum.Frequent:
-                        if (mom > momC) momC = mom;
+                        if (mom < momC) momC = mom; // meest negatief
                         if (dwa > dwaC) dwaC = dwa;
-                        if (mom >= mfreq)
+                        if (mom <= mfreq)
                         {
                             mfreq = mom;
-
                             returnItem.MaatgevendeCombinatieFrequent = bc;
                         }
                         if (dwa >= vfreq)
@@ -2708,12 +2455,11 @@ namespace Construct.Domain.Entities
                         }
                         break;
                     case BelastingCombinatieTypeEnum.QuasiBlijvend:
-                        if (mom > momC) momC = mom;
+                        if (mom < momC) momC = mom; // meest negatief
                         if (dwa > dwaC) dwaC = dwa;
-                        if (mom >= mQp)
+                        if (mom <= mQp)
                         {
                             mQp = mom;
-
                             returnItem.MaatgevendeCombinatieFrequent = bc;
                         }
                         if (dwa >= vQp)
@@ -2733,46 +2479,45 @@ namespace Construct.Domain.Entities
 
 
 
-            returnItem.Mk = -mk;
-            returnItem.MEd = -md;
-            returnItem.Mfreq = -mfreq;
-            returnItem.Mqp = -mQp;
+            returnItem.Mk = mk;       // negatief = sagging
+            returnItem.MEd = md;      // negatief = sagging
+            returnItem.Mfreq = mfreq; // negatief = sagging
+            returnItem.Mqp = mQp;     // negatief = sagging
 
             returnItem.Vk = vk;
-            returnItem.VEd = vd;
+            returnItem.VEd = vd;      // positief (reactie omhoog)
             returnItem.Vfreq = vfreq;
             returnItem.Vqp = vQp;
 
 
-            returnItem.Mk1 = -mk1;
-            returnItem.Mk2 = -mk2;
-            returnItem.Mk3 = -mk3;
+            returnItem.Mk1 = mk1; // negatief = sagging
+            returnItem.Mk2 = mk2;
+            returnItem.Mk3 = mk3;
 
-            returnItem.Vk1 = vk1;
+            returnItem.Vk1 = vk1; // positief bij neerwaartse belasting
             returnItem.Vk2 = vk2;
             returnItem.Vk3 = vk3;
 
-            returnItem.MomA = -momA;
-            returnItem.MomB = -momB;
-            returnItem.MomC = -momC;
+            returnItem.MomA = momA; // negatief = sagging
+            returnItem.MomB = momB;
+            returnItem.MomC = momC;
 
             returnItem.DwarskrachtA = dwaA;
             returnItem.DwarskrachtB = dwaB;
             returnItem.DwarskrachtC = dwaC;
 
 
-            returnItem.Gk = qG;
-            returnItem.EigenGewicht = qG - qAfw;
-            returnItem.Afwerking = qAfw;
+            returnItem.EigenGewicht = -(qG - qAfw);  // positief voor leesbaarheid.
+            returnItem.Afwerking = -qAfw;            // positief voor leesbaarheid.       
 
-            returnItem.Lijnlast_qk = lijnlast_qk;
-            returnItem.Puntlast_Qk = puntlast_Qk;
+            returnItem.Lijnlast_qk = -lijnlast_qk;   // positief voor leesbaarheid.
+            returnItem.Puntlast_Qk = -puntlast_Qk;   // positief voor leesbaarheid.
             returnItem.L = L;
+            returnItem.H = H;
 
-
-            returnItem.qG = qG;
-            returnItem.qEfr = qG + lijnlast_qk * momentaanFactoren?.Mom1 ?? 1;
-            returnItem.qEqp = qG + lijnlast_qk * momentaanFactoren?.Mom2 ?? 1;
+            returnItem.LijnlastG = -qG;                // negatief = neerwaarts
+            returnItem.LijnlastFrequent = -(qG + lijnlast_qk * momentaanFactoren?.Mom1 ?? 1);
+            returnItem.LijnlastQuasiPermanent = -(qG + lijnlast_qk * momentaanFactoren?.Mom2 ?? 1);
             
             returnItem.Mbg1 = momBg1;
             returnItem.Mbg2 = momBg2;

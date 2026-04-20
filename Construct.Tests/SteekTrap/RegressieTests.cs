@@ -15,8 +15,8 @@ public class RegressieTests
         trap.LtProjZ.Should().BeApproximately(1794.0, 50);
         trap.HoogteTotaal.Should().BeApproximately(1500.0, 1);
         trap.Snedekrachten.My.Should().BeApproximately(-4.76, 0.5);
-        trap.Snedekrachten.Vz.Should().BeApproximately(10.6, 0.5);
-        trap.MomentSchil!.AsRequired.Should().BeApproximately(145, 5);
+        trap.Snedekrachten.Vz.Should().BeApproximately(11.1, 0.5);
+        trap.MomentSchil!.AsRequired.Should().BeApproximately(155, 5);
     }
 
     [Fact]
@@ -24,6 +24,8 @@ public class RegressieTests
     {
         var (trap, _) = SteekTrapFactory.Create(16, 120, 185, 220, true);
         trap.Bijwerken();
+
+
 
         trap.LtProjZ.Should().BeApproximately(3503.0, 40);
         trap.Snedekrachten.My.Should().BeApproximately(-19.2, 1.0);

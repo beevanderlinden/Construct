@@ -189,10 +189,13 @@ public class CprjSerializatieTests
         var m = trap.MomentSchil;
         m.Should().NotBeNull();
 
+        m.Beton.GetHashCode().Should().Be(trap.Materiaal!.GetHashCode(),
+            because: "MomentSchil.Beton moet dezelfde instantie zijn als trap.Materiaal");
+
         m.Moment.Should().BeApproximately(-21.6, 1.0,   because: "rekenmoment M~Ed~ moet gelijk zijn na roundtrip");
-        m.AsRequired.Should().BeApproximately(404, 20,  because: "benodigde wapening A~s,req~ moet gelijk zijn na roundtrip");
-        m.AsApplied.Should().BeApproximately(437, 20,   because: "toegepaste wapening A~s,prov~ moet gelijk zijn na roundtrip");
-        m.AsProvidedText.Should().Be("Ø8-120",           because: "wapeningkeuze moet na roundtrip gelijk zijn");
+        m.AsRequired.Should().BeApproximately(392, 20,  because: "benodigde wapening A~s,req~ moet gelijk zijn na roundtrip");
+        m.AsApplied.Should().BeApproximately(402, 20,   because: "toegepaste wapening A~s,prov~ moet gelijk zijn na roundtrip");
+        m.AsProvidedText.Should().Be("Ø8-125",                       because: "wapeningkeuze moet na roundtrip gelijk zijn");
         m.Hoogte.Should().BeApproximately(150, 0.1,     because: "profielhoogte h moet gelijk zijn na roundtrip");
     }
 

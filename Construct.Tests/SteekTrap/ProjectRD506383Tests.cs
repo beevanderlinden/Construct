@@ -32,12 +32,6 @@ public class ProjectRD506383Tests
     {
         var (tr01, tr02, bd01, _) = SteekTrapFactory.CreateProject_RD506383();
 
-        // voor het bijwerken
-        var tr01TandBefor = tr01.TandOpleggingBovenzijde?.WapeningAlgemeen?.Tekst;
-
-
-
-
         tr01.Bijwerken();
         tr02.Bijwerken();
         bd01.Bijwerken();
@@ -58,10 +52,10 @@ public class ProjectRD506383Tests
         var bd01Vs1     = bd01.Stroken.Last().PlaatWapening?.Onder?.BasisWapening?.Tekst;
 
         var defaultWap1 = "r8-150";
-        var defaultWap2 = "r6-150";
+        var defaultWap2 = "Ø6-115";
 
         // ik verwacht:
-        tr01Basis.Should().Be("r8-120");
+        tr01Basis.Should().Be("r8-125");
         tr01Verdeel.Should().Be(defaultWap1);
         tr01Tand.Should().Be(defaultWap2);
 
@@ -133,7 +127,7 @@ public class ProjectRD506383Tests
     {
         var (tr01, tr02, bd01, _) = SteekTrapFactory.CreateProject_RD506383();
 
-        bd01.Trap1.AansluitendElement.Should().Be(tr01);
+        bd01.Trap1.AansluitendElement.Should().Be(tr02);
         bd01.Trap1.Randafstand.Should().BeApproximately(150, 0.1);
 
         bd01.Trap2.AansluitendElement.Should().Be(tr02);

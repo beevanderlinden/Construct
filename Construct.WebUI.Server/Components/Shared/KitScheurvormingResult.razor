@@ -1,0 +1,29 @@
+@using Eurocode.BetonConstructies
+
+<h3>@Context?.Heading
+    @if (Context?.IsValidated ?? false)
+    {
+        <span> ✅</span>
+    }
+    else
+    {
+        <span> ❌</span>
+    }
+</h3>
+
+<KitInputNumberWithUnit Label="<i>M<sub>E,freq</sub></i>" Value="@Context?.MomentFrequent" Disabled="true" Units="UnitSets.Moment" Format="0.0" DefaultUnit="kNm"/>
+<KitInputNumberWithUnit Label="<i>M<sub>cr</sub></i>" Value="@Context?.Mcr" Disabled="true" Units="UnitSets.Moment" Format="0.0" DefaultUnit="kNm" />
+<KitInputNumberWithUnit Label="<i>s<sub>r,max</sub></i>" Value="@Context?.SrMax" Disabled="true" Units="UnitSets.Geen" Format="0.0" />
+<KitInputNumberWithUnit Label="<i>&epsilon;<sub>sm</sub>-&epsilon;<sub>cm</sub></i>" Value="@Context?.VerhoudingWapeningBetonEffectief" Disabled="true" Units="UnitSets.Geen" Format="0.0000" />
+
+  
+    
+
+<KitInputNumberWithUnit Label="<i>w<sub>k</sub></i>" Value="@Context?.Wk" Disabled="true" Units="UnitSets.LengteMM" Format="0.00" />
+<KitInputNumberWithUnit Label="<i>w<sub>max</sub></i>" Value="@Context?.ScheurwijdteMax" Disabled="true" Units="UnitSets.LengteMM" Format="0.00" />
+
+
+
+@code {
+    [Parameter, EditorRequired] public ScheurwijdteContext? Context { get; set; }
+}

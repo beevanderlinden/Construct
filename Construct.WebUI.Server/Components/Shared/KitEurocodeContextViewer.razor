@@ -1,0 +1,23 @@
+@using CommonLibrary
+@using Eurocode.BetonConstructies
+
+@if (Context is BendingResults buiging)
+{
+    <KitBuigingResults Context="buiging" />
+}
+else if (Context is DwarskrachtWapContext dwarskracht)
+{
+    <KitDwarskrachtResultZonderWapening Context="dwarskracht" />
+}
+else if (Context is ScheurwijdteContext scheurwijdte)
+{
+    <KitScheurvormingResult Context="scheurwijdte" />
+}
+else if (Context != null)
+{
+    <h3>@Context.Heading</h3>
+}
+
+@code {
+    [Parameter, EditorRequired] public BaseEurocodeContext? Context { get; set; }
+}

@@ -1,24 +1,32 @@
+@using Construct.Application.Services
+@using Construct.Domain.Entities
+@using Microsoft.AspNetCore.Components
+
 @if (Krachten is KrachtenDemo kd)
 {
 
 
     <h3>@Title</h3>
-    <KitInputNumberWithUnit Label="L" Value="kd.L" Disabled="true" Units="UnitSets.Lengte" Format="0.0" />
-    <KitInputNumberWithUnit Label="1/8×L²" Value="@(Math.Pow(kd.L,2)/8.0)" Disabled="true" Units="UnitSets.Geen" Format="0.0" />
+    <h3>geometrie</h3>
 
-    <KitInputNumberWithUnit Label="veranderlijk" Value="kd.Lijnlast_qk" Disabled="true" Units="UnitSets.KrachtPerLengte" Format="0.0" />
-    <KitInputNumberWithUnit Label="permanent" Value="kd.Gk" Disabled="true" Units="UnitSets.KrachtPerLengte" Format="0.0" />
-    <KitInputNumberWithUnit Label="permanent" Value="kd.Gk" Disabled="true" Units="UnitSets.KrachtPerLengte" Format="0.0" />
+    @((MarkupString)RenderLoadScheme(kd))
+
+    <h3>belasting</h3>
+    <KitInputNumberWithUnit Label="permanent" Value="kd.Gk" Disabled="true" Units="UnitSets.KrachtPerLengte" Format="0.0" DefaultUnit="kN/m" />
+    <KitInputNumberWithUnit Label="veranderlijk <i>q<sub>k</sub></i>" Value="kd.Lijnlast_qk" Disabled="true" Units="UnitSets.KrachtPerLengte" Format="0.0" DefaultUnit="kN/m" />
+    <KitInputNumberWithUnit Label="veranderlijk <i>Q<sub>k</sub></i>" Value="kd.Puntlast_Qk" Disabled="true" Units="UnitSets.Kracht" Format="0.0" DefaultUnit="kN"/>
+    <h3>momenten</h3>
+    <KitInputNumberWithUnit Label="<i>M<sub>Ed</sub></i>" Value="kd.MEd" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
+    <KitInputNumberWithUnit Label="<i>M<sub>kar</sub></i>" Value="kd.Mk" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
+    <KitInputNumberWithUnit Label="<i>M<sub>freq</sub></i>" Value="kd.Mfreq" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
+    <KitInputNumberWithUnit Label="<i>M<sub>qp</sub><i>" Value="kd.Mqp" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
+    <KitInputNumberWithUnit Label="<i>M<sub>G,k</sub></i>" Value="kd.Mk1" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
+    <KitInputNumberWithUnit Label="<i>M<sub>Q,k</sub></i>" Value="kd.Mbg2" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
+
+   
 
 
 
-
-    <KitInputNumberWithUnit Label="M<sub>Ed</sub>" Value="kd.MEd" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
-    <KitInputNumberWithUnit Label="M<sub>Ed,fr</sub>" Value="kd.Mfreq" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
-    <KitInputNumberWithUnit Label="M<sub>Ed,qp</sub>" Value="kd.Mqp" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
-    <KitInputNumberWithUnit Label="moment permanent" Value="kd.Mk1" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
-    <KitInputNumberWithUnit Label="moment q<sub>k</sub>" Value="kd.Mk2" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
-    <KitInputNumberWithUnit Label="moment Q<sub>k</sub>" Value="kd.Mk3" Disabled="true" Units="UnitSets.Moment" Format="0.0" />
 
 
     
@@ -28,4 +36,59 @@
 @code {
     [Parameter, EditorRequired] public KrachtenDemo? Krachten { get; set; }
     [Parameter] public string? Title { get; set; }
+
+    private static string RenderLoadScheme(KrachtenDemo kd)
+    {
+        const double margin = 0.15;
+        double L = 1.0;
+        double H = kd.H / kd.L * L;
+
+        double x1 = margin * L;
+        double x2 = (1.0 - margin) * L;
+
+        double y2 = margin * H;
+        double y1 = (1.0 - margin) * H;
+
+        var distributedLoads = new List<string>
+        {
+            $"{kd.Gk:0.0} ({kd.Lijnlast_qk:0.0})",
+        };
+
+        string pointLoad = $"{kd.Puntlast_Qk:0.0}";
+
+        double padding = 0.3 * L;
+        var elements = TrapSvgGenerator.GenerateSimpleLoadScheme(
+            x1, y1, x2, y2,
+            distributedLoads, pointLoad,
+            profiel: $"",
+            scale: 200);
+
+        var dimLine = new SvgDimLine()
+            {
+                X1 = x1,
+                X2 = x2,
+                Y1 = y1,
+                Y2 = y2,
+                Mode = DimLineMode.Horizontal,
+                Offset = -(1.0-2 *margin) * H,
+                OffsetLines = -2,
+                Text = $"{kd.L.ToString("0.000")}",
+                Scale = 200
+            };
+        elements.Add(dimLine);
+
+        var doc = new SvgDocument(L + 2 * padding, L)
+        {
+            ViewBoxMinX = -padding,
+            ViewBoxMinY = -0.5 * L,
+            ViewBoxWidth = L + 2 * padding,
+            ViewBoxHeight = Math.Max(H,0.25) + 2 * padding,
+            Style = "width:100%;max-width:400px;height:auto;"
+        };
+
+        foreach (var el in elements)
+            doc.Children.Add(el);
+
+        return doc.Render();
+    }
 }

@@ -1,0 +1,38 @@
+@using Eurocode.BetonConstructies
+
+<h3>@Context?.Heading
+    @if (Context?.IsValidated ?? false)
+    {
+        <span> ✅</span>
+    }
+    else
+    {
+        <span> ❌</span>
+    }
+</h3>
+
+<KitInputNumberWithUnit Label="<i>V<sub>Ed</sub></i>" Value="@Context?.Ved" Disabled="true" Units="UnitSets.Kracht" Format="0.0" DefaultUnit="kN" />
+<KitInputNumberWithUnit Label="<i>C<sub>Rd,c</sub></i>" Value="@Context?.Crdc" Disabled="true" Units="UnitSets.Geen" Format="0.00"  />
+<KitInputNumberWithUnit Label="<i>k</i>" Value="@Context?.FactorK" Disabled="true" Units="UnitSets.Geen" Format="0.00" />
+<KitInputNumberWithUnit Label="<i>ρ<sub>l</sub></i>" Value="@Context?.RhoLangs" Disabled="true" Units="UnitSets.Geen" Format="0.000" />
+<KitInputNumberWithUnit Label="<i>V<sub>Rd,c</sub></i>" Value="@Context?.DwarskrachtWeerstandBeton" Disabled="true" Units="UnitSets.Kracht" Format="0.0" DefaultUnit="kN"/>
+@if (Context?.DwarskrachtWeerstandBeton >= Context?.Ved)
+{
+    <span> Geen&nbsp;dwarskrachtwapening&nbsp;nodig</span>
+}
+
+
+    
+
+
+
+
+<EurocodeMeldingenComponent Meldingen="@Context?.Meldingen" />
+
+
+
+
+
+@code {
+    [Parameter, EditorRequired] public DwarskrachtWapContext? Context { get; set; }
+}

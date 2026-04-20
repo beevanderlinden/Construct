@@ -99,13 +99,13 @@ else
 
         <KaskonInputContainer Label="Quasi blijvend q<sub>E,qp,z,loc</sub>">
             <div class="form-control-text">
-                <i>q<sub>z,loc</sub></i> = @( (krachten.qEqp * Math.Pow(_trap2.AantredeMaat / _trap2.SchuineMaat, 2)).ToString("0.00")) kN/m²
+                <i>q<sub>z,loc</sub></i> = @( (krachten.LijnlastQuasiPermanent * Math.Pow(_trap2.AantredeMaat / _trap2.SchuineMaat, 2)).ToString("0.00")) kN/m²
             </div>
         </KaskonInputContainer>
 
         <KaskonInputContainer Label="Frequent q<sub>E,freq,z,loc</sub>">
             <div class="form-control-text">
-                <i>q<sub>z,loc</sub></i> = @( (krachten.qEfr* Math.Pow(_trap2.AantredeMaat / _trap2.SchuineMaat, 2)).ToString("0.00")) kN/m²
+                <i>q<sub>z,loc</sub></i> = @( (krachten.LijnlastFrequent* Math.Pow(_trap2.AantredeMaat / _trap2.SchuineMaat, 2)).ToString("0.00")) kN/m²
                 
             </div>
 

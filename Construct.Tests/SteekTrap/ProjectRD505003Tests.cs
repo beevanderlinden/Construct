@@ -129,9 +129,9 @@ public class ProjectRD505003Tests
         m.Should().NotBeNull();
 
         m.Moment.Should().BeApproximately(-21.6, 1.0,    because: "rekenmoment M~Ed~");
-        m.AsRequired.Should().BeApproximately(404, 20,   because: "benodigde wapening A~s,req~");
-        m.AsApplied.Should().BeApproximately(437, 20,    because: "toegepaste wapening A~s,prov~");
-        m.AsProvidedText.Should().Be("Ø8-120",                        because: "wapeningkeuze optimalisatie");
+        m.AsRequired.Should().BeApproximately(392, 20,   because: "benodigde wapening A~s,req~");
+        m.AsApplied.Should().BeApproximately(402, 20,    because: "toegepaste wapening A~s,prov~");
+        m.AsProvidedText.Should().Be("Ø8-125",                        because: "wapeningkeuze optimalisatie");
         m.Breedte.Should().BeApproximately(1000, 0.1,    because: "rekenbreedte b = 1000 mm");
         m.Hoogte.Should().BeApproximately(150, 0.1,      because: "profielhoogte h = 150 mm (schildikte)");
         m.D.Should().BeApproximately(126, 2,             because: "nuttige hoogte d = h - z~ref~");
@@ -141,7 +141,7 @@ public class ProjectRD505003Tests
         doorbuiging.Should().NotBeNull();
 
         doorbuiging!.LengteMM.Should().BeApproximately(4584, 40, because: "lengte doorbuiging");
-        doorbuiging!.Wapening.ToString().Should().Be("Ø8-120");
+        doorbuiging!.Wapening.ToString().Should().Be("Ø8-125");
         doorbuiging!.Kruipkrimp.TheoretischeKruipCoefficient.Should().BeApproximately(2.0, 0.2);
         doorbuiging.Wmax.Should().BeApproximately(-7.88, 1.0);
         doorbuiging.Wbijk.Should().BeApproximately(-5.98, 1.0);

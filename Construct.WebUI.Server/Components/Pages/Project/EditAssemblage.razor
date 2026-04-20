@@ -273,6 +273,52 @@
                             </FluentTab>
                         }
 
+
+                        @if (Model is SteekTrapEntity tr)
+                        {
+
+                            if (!tr.DragendeTrapBomen)
+                            {
+                                <FluentTab Id="tab-schil" Label="schil">
+                                    <Header>
+                                        <FluentIcon Value="@(new Icons.Regular.Size20.LayerDiagonal())" />
+                                        schil
+                                    </Header>
+                                    <Content>
+                                        <SteekTrapResultaten Krachten="@tr.Krachten" Title="SCHIL" />
+                                        <KitEurocodeContextViewer Context="@(tr.Toetsen.OfType<BendingResults>().FirstOrDefault())"/>
+                                        <KitEurocodeContextViewer Context="@(tr.Toetsen.OfType<DwarskrachtWapContext>().FirstOrDefault())" />
+                                        <KitEurocodeContextViewer Context="@(tr.Toetsen.OfType<ScheurwijdteContext>().FirstOrDefault())" />
+
+                                    </Content>
+                                </FluentTab>
+                            }
+                            else
+                            {
+                                <FluentTab Id="tab-spiegel" Label="spiegel">
+                                    <Header>
+                                        <FluentIcon Value="@(new Icons.Regular.Size20.LayerDiagonal())" />
+                                        spiegel
+                                    </Header>
+                                    <Content>
+                                        <SteekTrapResultaten Krachten="@tr.SpiegelKrachten" Title="SPIEGEL" />
+                                        
+
+
+                                    </Content>
+                                </FluentTab>
+
+                                <FluentTab Id="tab-boom" Label="boom">
+                                    <Header>
+                                        <FluentIcon Value="@(new Icons.Regular.Size20.LayerDiagonal())" />
+                                        boom
+                                    </Header>
+                                    <Content>
+                                        <SteekTrapResultaten Krachten="@tr.BoomKrachten" Title="BOOM" />
+                                    </Content>
+                                </FluentTab>
+                            }
+                        }
                 
 
                         @if (Model.Toetsen != null && Model.Toetsen.Any())
@@ -297,9 +343,7 @@
                                     @if (Model is SteekTrapEntity tr)
                                     {
 
-                                        <SteekTrapResultaten Krachten="@tr.Krachten" Title="SCHIL" />
-                                        <SteekTrapResultaten Krachten="@tr.SpiegelKrachten" Title="SPIEGEL" />
-                                        <SteekTrapResultaten Krachten="@tr.BoomKrachten" Title="BOOM" />
+                                        
 
 
 

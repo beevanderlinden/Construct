@@ -44,12 +44,28 @@ public static class UnitSets
         new("kN/m", 1.0,    "1.0"),
     ];
 
+    public static readonly IReadOnlyList<UnitOption> Spanning =
+   [
+       new("N/mm²",  1.0, "1"),
+        new("kN/m²", 1.0,    "1.0"),
+        new("MPa",  1.0,    "1.0"),
+        new("GPa",  0.001,    "0.001"),
+    ];
+
 
     public static readonly IReadOnlyList<UnitOption> KrachtPerOppervlak =
    [
         new("kN/m²", 1.0,    "0.5"),
         new("kg/m²", 100,    "50"),
 
+    ];
+
+
+    public static readonly IReadOnlyList<UnitOption> OppervlakMM =
+   [
+        new("mm²", 1.0,    "1"),
+        new("cm²", 100.0,    "10"),
+        new("m²",  1000000.0,    "1000"),
     ];
 
 

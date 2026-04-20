@@ -138,6 +138,26 @@ namespace Construct.Domain.Entities
             return krachtenDemo;
         }
 
+        public static void SetKrachten(this SteekTrapEntity tr)
+        {
+            SteekTrapService service = new();
+
+            if (tr.DragendeTrapBomen)
+            {
+                var krachtenBoom = service.GetDemoKrachten(tr, "boom");
+                tr.BoomKrachten = krachtenBoom;
+                var spiegel = service.GetDemoKrachten(tr, "spiegel");
+                tr.SpiegelKrachten = spiegel;
+            }
+            else
+            {
+                tr.Krachten = service.GetDemoKrachten(tr, "schil");
+            }
+
+
+            return;
+        }
+
 
         public static double GetSchuine(this SteekTrapEntity tr)
         {
