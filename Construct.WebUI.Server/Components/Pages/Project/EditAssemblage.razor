@@ -302,6 +302,9 @@
                                     </Header>
                                     <Content>
                                         <SteekTrapResultaten Krachten="@tr.SpiegelKrachten" Title="SPIEGEL" />
+                                        <KitEurocodeContextViewer Context="@(tr.Toetsen.OfType<BendingResults>().FirstOrDefault())" />
+                                        <KitEurocodeContextViewer Context="@(tr.Toetsen.OfType<DwarskrachtWapContext>().FirstOrDefault())" />
+                                        <KitEurocodeContextViewer Context="@(tr.Toetsen.OfType<ScheurwijdteContext>().FirstOrDefault())" />
                                         
 
 
