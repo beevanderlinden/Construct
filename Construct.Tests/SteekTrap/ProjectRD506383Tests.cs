@@ -75,7 +75,7 @@ public class ProjectRD506383Tests
     {
         var (_, _, _, project) = SteekTrapFactory.CreateProject_RD506383();
 
-        project.DefaultGebruiksklasse.Should().Be(GebruiksklasseEnum.A_gemeenschappelijke_trappen);
+        project.DefaultGebruiksklasse.Should().Be(GebruiksklasseEnum.A_gemeenschappelijke_vloeren);
     }
 
     [Fact]

@@ -1476,28 +1476,7 @@ namespace Construct.Domain.Entities
             set => SetProperty(ref _lengteTotaalEigenOpgave, value);
         }
 
-        private bool _gebruikEigenGewicht;
-        public bool GebruikEigenGewicht
-        {
-            get => _gebruikEigenGewicht;
-            set => SetProperty(ref _gebruikEigenGewicht, value);
-        }
-
-        private double? _eigenGewichtPerM2Opgave;
-
-        public override double EigenGewichtPerM2
-        {
-            get
-            {
-                if (GebruikEigenGewicht && _eigenGewichtPerM2Opgave.HasValue)
-                    return _eigenGewichtPerM2Opgave.Value;
-                return this.GetGk();
-            }
-            set
-            {
-                _eigenGewichtPerM2Opgave = value;
-            }
-        }
+        protected override double GetEigenGewichtBerekend() => this.GetGk();
 
 
         [TableColumn("LengteElement", Order = 999, StringFormat = "0 mm" )]

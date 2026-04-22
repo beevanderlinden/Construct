@@ -1627,7 +1627,7 @@ a.bookmark-link:hover {
         border-bottom: 1px dotted #666 !important;
     }
 }
-    }
+    
 
 /* Basis layout: Links | Rechts */
 .kop1,
@@ -1876,4 +1876,11 @@ body[data-theme="dark"] .kit-input-group input[type="number"]:not(:disabled),
 body[data-theme="dark"] .kit-input-group input[type="number"]:not(:disabled)::-webkit-inner-spin-button,
 body[data-theme="dark"] .kit-input-group input[type="number"]:not(:disabled)::-webkit-outer-spin-button {
     background-color: black;
+}
+
+/* Rijlabel voor BOVEN/ONDER e.d. */
+.row-label {
+    display: inline-block;
+    width: 8em;
+    font-weight: bold;
 }

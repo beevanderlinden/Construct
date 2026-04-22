@@ -36,6 +36,8 @@
 
 
         <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Bordes</FluentMenuItem>
+        <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Plaat</FluentMenuItem>
+
         <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Kolom</FluentMenuItem>
         <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Console</FluentMenuItem>
         <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Ligger (beton)</FluentMenuItem>
@@ -198,6 +200,25 @@
         return hoekTrap;
     }
 
+    private PlaatEntity GetPlaat(double lengte, double breedte)
+    {
+        var betonMaterialContext = GetOrAddBetonMaterial();
+        PlaatEntity plaat = new()
+        {
+            Id = Guid.NewGuid(),
+            ProjectInfo = ProjectEntity!.ProjectInfo,
+            Naam = "plaat",
+            Merk = "PL-1",
+            Materiaal = betonMaterialContext,  // ✅ Voeg materiaal toe
+            MateriaalId = betonMaterialContext.Id,  // ✅ En ID
+            Gebruiksklasse = ProjectEntity.DefaultGebruiksklasse,
+            Lengte = lengte,
+            Breedte = breedte,
+        };
+        plaat.Belastingen.GenereerBelastingCombinaties(plaat.Belastingen, plaat.Belastingen.BelastingGevallen, plaat.Belastingen.CombinatiesTypes);
+        return plaat;
+    }
+
     private SteekTrapEntity GetSteekTrap(double lengte, double op, double aan, double schil)
     {
         var steekTrap = GetSteekTrap(5, schil);
@@ -250,6 +271,10 @@
                     CreateAssemblage(hoektrap);
                     break; 
 
+                case "plaat":
+                    var plaat = GetPlaat(6000, 1500);
+                    CreateAssemblage(plaat);
+                    break;
 
                 case "vrijrol":
                     var demoVgm = new VrijRolEntity()

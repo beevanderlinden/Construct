@@ -1,74 +1,55 @@
 @using System.Collections.Generic
 @using Microsoft.AspNetCore.Components
-
-<KitTextField Label="milieuklasse" Value="@Boven?.MilieuklassenUserFriendlyName"/>
-
-<KitTextField Label="dekking nominaal" Value="@Boven?.DekkingNom.ToString("0 mm")" />
-<KitTextField Label="dekking" Value="@Boven?.DekkingToe.ToString("0 mm")" />
+@using Eurocode.BetonConstructies
 
 
+@if (Boven != null && Onder != null)
+{
+    <span class="row-label">BOVEN</span>
+
+    <KitTextField Label="milieuklasse" Value="@Boven?.MilieuklassenUserFriendlyName" />
+    <KitInputNumberWithUnit Label="dekking nominaal" Value="@Boven?.DekkingNom" Units="UnitSets.LengteMM" Format="0" Disabled="true" />
+    <KitInputNumberWithUnit Label="dekking toegepast" @bind-Value="@Boven!.DekkingToe" Units="UnitSets.LengteMM" Format="0"  />
+    <span>
+        <FluentButton Appearance="Appearance.Stealth"
+                      Title="Toon details"
+                      OnClick="@(() => _dekkingBovenDialogHidden = false)"
+                      IconStart="@(new Icons.Regular.Size28.MoreHorizontal())">
+        </FluentButton>
+    </span>
+
+    <br />
+    <span class="row-label">ONDER</span>
+
+    <KitTextField Label="milieuklasse" Value="@Onder?.MilieuklassenUserFriendlyName" />
+    <KitInputNumberWithUnit Label="dekking nominaal" Value="@Onder?.DekkingNom" Units="UnitSets.LengteMM" Format="0" Disabled="true" />
+    <KitInputNumberWithUnit Label="dekking toegepast" @bind-Value="@Onder!.DekkingToe" Units="UnitSets.LengteMM" Format="0" />
+    <span>
+        <FluentButton Appearance="Appearance.Stealth"
+                      Title="Toon details"
+                      OnClick="@(() => _dekkingOnderDialogHidden = false)"
+                      IconStart="@(new Icons.Regular.Size28.MoreHorizontal())">
+        </FluentButton>
+    </span>
+
+}
 
 
-@* Herbruikbaar component voor milieuklasse/dekking en meldingen *@
-<KaskonInputContainer Label="milieuklasse | dekking">
-    @if (
-        Boven?.MilieuklassenUserFriendlyName == Onder?.MilieuklassenUserFriendlyName &&
-        Boven?.DekkingToe == Onder?.DekkingToe &&
-        Boven?.DekkingNom == Onder?.DekkingNom
-    )
-    {
-        <div>
-            <div class="form-control-text">
-                @Boven?.MilieuklassenUserFriendlyName | <i>c<sub>nom</sub></i> = @Boven?.DekkingNom mm, <i>c<sub>prov</sub></i> = <strong>@Boven?.DekkingToe mm</strong>
-                <span>
-                    <FluentButton Appearance="Appearance.Stealth"
-                                  Title="Toon details"
-                                  OnClick="@(() => _dekkingDialogHidden = false)"
-                                  IconStart="@(new Icons.Regular.Size28.MoreHorizontal())">
-                    </FluentButton>
-                </span>
-            </div>
-        </div>
-        
-    }
-    else
-    {
-        <div class="form-control-text">
-            boven: @Boven?.MilieuklassenUserFriendlyName | <i>c<sub>nom</sub></i> = @Boven?.DekkingNom mm, <i>c<sub>prov</sub></i> = @Boven?.DekkingToe mm
-            <span>
-                <FluentButton Appearance="Appearance.Stealth"
-                              Title="Toon details"
-                              OnClick="@(() => _dekkingDialogHidden = false)"
-                              IconStart="@(new Icons.Regular.Size32.MoreHorizontal())">
-                </FluentButton>
-            </span>
-        </div>
-        <div class="form-control-text">
-            onder: @Onder?.MilieuklassenUserFriendlyName | <i>c<sub>nom</sub></i> = @Onder?.DekkingNom mm, <i>c<sub>prov</sub></i> = @Onder?.DekkingToe mm
-            <span>
-                <FluentButton Appearance="Appearance.Stealth"
-                              Title="Toon details"
-                              OnClick="@(() => _dekkingDialogHidden = false)"
-                              IconStart="@(new Icons.Regular.Size32.MoreHorizontal())">
-                </FluentButton>
-            </span>
-        </div>
-    }
 
-   
 
-</KaskonInputContainer>
+
+
 
 @if ((Onder?.Meldingen?.Count ?? 0) > 0 || (Boven?.Meldingen?.Count ?? 0) > 0)
 {
     <KaskonInputContainer Label="meldingen">
-        @foreach (var melding in Boven?.Meldingen ?? new List<dynamic>())
+        @foreach (var melding in Boven?.Meldingen ?? [])
         {
             <div>
                 boven: @((MarkupString)melding.Bericht)
             </div>
         }
-        @foreach (var melding in Onder?.Meldingen ?? new List<dynamic>())
+        @foreach (var melding in Onder?.Meldingen ?? [])
         {
             <div>
                 onder: @((MarkupString)melding.Bericht)
@@ -78,23 +59,43 @@
 }
 
 
-@if (!_dekkingDialogHidden)
+@if (!_dekkingBovenDialogHidden)
 {
-    <div class="modal-backdrop custom-blur" @onclick="@(() => _dekkingDialogHidden = true)">
-        <div class="modal-content-base modal-content-wide" @onclick:stopPropagation="true">
+    <div class="modal-backdrop custom-blur" @onclick="@(() => _dekkingBovenDialogHidden = true)">
+        <div class="modal-content-base modal-content-wide" style="margin-left: 350px;" @onclick:stopPropagation="true">
             <div class="modal-header">
-                <h1>Betondekking - @Merk</h1>
-                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="@(() => _dekkingDialogHidden = true)">
+                <h1>Betondekking boven - @Merk</h1>
+                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="@(() => _dekkingBovenDialogHidden = true)">
                     ×
                 </button>
             </div>
             <div class="modal-body">
-                <BetonDekkingDuoEditor DekkingBoven="@Boven" 
-                                       DekkingOnder="@Onder"
-                                       OnChanged="OnChanged" />
+                <BetonDekkingEditor Dekking="@Boven" OnChanged="OnChanged" />
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary" @onclick="@(() => _dekkingDialogHidden = true)">
+                <button type="button" class="btn btn-primary" @onclick="@(() => _dekkingBovenDialogHidden = true)">
+                    Sluiten
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!_dekkingOnderDialogHidden)
+{
+    <div class="modal-backdrop custom-blur" @onclick="@(() => _dekkingOnderDialogHidden = true)">
+        <div class="modal-content-base modal-content-wide" style="margin-left: 350px;" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h1>Betondekking onder - @Merk</h1>
+                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="@(() => _dekkingOnderDialogHidden = true)">
+                    ×
+                </button>
+            </div>
+            <div class="modal-body">
+                <BetonDekkingEditor Dekking="@Onder" OnChanged="OnChanged" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" @onclick="@(() => _dekkingOnderDialogHidden = true)">
                     Sluiten
                 </button>
             </div>
@@ -103,10 +104,11 @@
 }
 
 @code {
-    [Parameter] public dynamic? Boven { get; set; }
-    [Parameter] public dynamic? Onder { get; set; }
+    [Parameter] public BetonDekkingContext? Boven { get; set; }
+    [Parameter] public BetonDekkingContext? Onder { get; set; }
     [Parameter] public string? Merk { get; set; }
     [Parameter] public EventCallback OnChanged { get; set; }
 
-    private bool _dekkingDialogHidden = true;
+    private bool _dekkingBovenDialogHidden = true;
+    private bool _dekkingOnderDialogHidden = true;
 }

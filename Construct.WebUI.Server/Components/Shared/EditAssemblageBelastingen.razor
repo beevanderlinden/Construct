@@ -8,47 +8,49 @@
 else
 {
 
-    <KaskonInputContainer Label="<b>permanent</b>"/>
 
-
-
-
-    @if (Model is SteekTrapEntity _trap)
+    @if (Model is SteekTrapEntity)
     {
-        <FluentSwitch @bind-Value="_trap.GebruikEigenGewicht" CheckedMessage="e.g. opgave gebruiker" UncheckedMessage="e.g. automatisch"></FluentSwitch><br />
-        <KitInputNumberWithUnit Label="eigen gewicht" @bind-Value="_trap.EigenGewichtPerM2" Units="UnitSets.KrachtPerOppervlak" Disabled="@(!_trap.GebruikEigenGewicht)"></KitInputNumberWithUnit>
-        <KitInputNumberWithUnit Label="afwerking" @bind-Value="_trap.AfwerkingVlaklast" Units="UnitSets.KrachtPerOppervlak"></KitInputNumberWithUnit>
-        <KitInputNumberWithUnit Label="permanent totaal" Value="_trap.PermanenteBelastingPerM2" Units="UnitSets.KrachtPerOppervlak" Disabled=true></KitInputNumberWithUnit>
-        
+        <br />
+        <span class="row-label">permanent</span><br />
+
+        <FluentSwitch @bind-Value="Model.GebruikEigenOpgaveVoorEigenGewicht" CheckedMessage="opgave gebruiker" UncheckedMessage="automatisch"></FluentSwitch>
+        <br />
+
+        <KitInputNumberWithUnit Label="eigen gewicht" @bind-Value="Model.EigenGewichtPerM2" Units="UnitSets.KrachtPerOppervlak" Disabled="@(!Model.GebruikEigenOpgaveVoorEigenGewicht)"></KitInputNumberWithUnit>
+        <KitInputNumberWithUnit Label="afwerking" @bind-Value="Model.AfwerkingVlaklast" Units="UnitSets.KrachtPerOppervlak"></KitInputNumberWithUnit>
+        <KitInputNumberWithUnit Label="permanent totaal" Value="Model.PermanenteBelastingPerM2" Units="UnitSets.KrachtPerOppervlak" Disabled=true></KitInputNumberWithUnit>
     }
     else
     {
-        <KaskonInputContainer Label="eigen gewicht">
-            <KitInputNumber T="double" Value="Model.EigenGewichtPerM2" Unit="kN/m²" Step="0.1" Disabled=true />
-        </KaskonInputContainer>
+        <br />
+        <span class="row-label">permanent</span><br />
+
+        <FluentSwitch @bind-Value="Model.GebruikEigenOpgaveVoorEigenGewicht" CheckedMessage="opgave gebruiker" UncheckedMessage="automatisch"></FluentSwitch>
+        <br />
+
+        <KitInputNumberWithUnit Label="eigen gewicht" @bind-Value="Model.EigenGewichtPerM2" Units="UnitSets.KrachtPerOppervlak" Disabled="@(!Model.GebruikEigenOpgaveVoorEigenGewicht)"></KitInputNumberWithUnit>
+        <KitInputNumberWithUnit Label="afwerking" @bind-Value="Model.AfwerkingVlaklast" Units="UnitSets.KrachtPerOppervlak"></KitInputNumberWithUnit>
+        <KitInputNumberWithUnit Label="permanent totaal" Value="Model.PermanenteBelastingPerM2" Units="UnitSets.KrachtPerOppervlak" Disabled=true></KitInputNumberWithUnit>
     }
 
 
 
       
 
-    <br />
-    <span></span>
-    <br />
-     <FluentDivider />
-     <h2>veranderlijk</h2>
-
+     <br />
+   
          
        
-
+    <br />
+    <span class="row-label">veranderlijk</span><br />
 
     <KitInputEnum TEnum="Eurocode.Belastingen.GebruiksklasseEnum"
                   Label="gebruiksklasse"
                   UseShortName="false"
                   @bind-Value="Model.Gebruiksklasse" />
 
-    <div style="margin-left:10px;">momentaan factoren</div>
-
+    <br />
 
     <KitInputNumberWithUnit 
         Label="<i>ψ<sub>0</sub></i>" 
@@ -67,7 +69,6 @@ else
         Disabled=true></KitInputNumberWithUnit>
 
     <br/>
-    <KaskonInputContainer Label="opgelegde belastingen" />
     <KitInputNumberWithUnit Label="vlaklast <i>q<sub>k</sub></i>" Value="@Model.Belastingen.BelastingGevallen.LastOrDefault()?.OpgelegdeBelastingen.Vlaklast" Units="UnitSets.KrachtPerOppervlak" Disabled=true></KitInputNumberWithUnit>
     <KitInputNumberWithUnit Label="puntlast <i>Q<sub>k</sub></i>" Value="@Model.Belastingen.BelastingGevallen.LastOrDefault()?.OpgelegdeBelastingen.Puntlast" Units="UnitSets.Kracht" DefaultUnit="kN" Disabled=true></KitInputNumberWithUnit>
 
@@ -120,17 +121,15 @@ else
 
     
 
-   
+    <br />
+    <span class="row-label">gevallen en combinaties</span><br/>
 
 
-   
 
-    <KaskonInputContainer Label="gevallen en combinaties">
         <FluentButton Appearance="Appearance.Stealth"
                       OnClick="@(() => _belastingenDialogHidden = false)"
                       IconStart="@(new Icons.Regular.Size32.MoreHorizontal())">
         </FluentButton>
-    </KaskonInputContainer>
 
     @if (!_belastingenDialogHidden)
     {
@@ -148,14 +147,7 @@ else
                 </div>
 
                 <div class="modal-body">
-                    <h3>Opgelegde belastingen</h3>
-                    <KaskonInputContainer Label="<i>q<sub>k</sub></i>">
-                        @Model.Belastingen.BelastingGevallen.FirstOrDefault()?.OpgelegdeBelastingen.Vlaklast kN/m²
-                    </KaskonInputContainer>
-
-                    <KaskonInputContainer Label="<i>Q<sub>k</sub></i>">
-                        @Model.Belastingen.BelastingGevallen.FirstOrDefault()?.OpgelegdeBelastingen.Puntlast kN
-                    </KaskonInputContainer>
+                  
                     
                     <h3>Belastinggevallen</h3>
                     <KitBelastingGevallen Model="@Model.Belastingen"></KitBelastingGevallen>

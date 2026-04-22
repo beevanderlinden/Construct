@@ -1,4 +1,4 @@
-<div class="kit-field kit-field--readonly">
+<div class="@_cssClass" style="@_style">
     @if (!string.IsNullOrEmpty(Label))
     {
         <span class="kit-field-label">@((MarkupString)Label)</span>
@@ -9,5 +9,12 @@
 @code {
     [Parameter] public string? Value { get; set; }
     [Parameter] public string? Label { get; set; }
-    //[Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Width { get; set; }
+    [Parameter] public bool TextOnly { get; set; }
+
+    private string _cssClass => TextOnly
+        ? "kit-field kit-field--readonly kit-field--text-only"
+        : "kit-field kit-field--readonly";
+
+    private string? _style => Width is not null ? $"min-width:{Width}" : null;
 }

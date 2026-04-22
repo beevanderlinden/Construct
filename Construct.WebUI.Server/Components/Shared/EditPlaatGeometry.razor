@@ -1,0 +1,117 @@
+@using System.Globalization
+@inject IProjectStateService ProjectState
+
+
+@if (Plaat != null)
+{
+    <KitInputNumberWithUnit Label="lengte <i>L</i>"
+                            T="double" Min="500" Max="20000" Step="100"
+                            @bind-Value="Plaat.Lengte"
+                            Units="UnitSets.LengteMM" OnValueChanged="OnModelChanged" />
+
+    <KitInputNumberWithUnit Label="breedte <i>B</i>"
+                            T="double" Min="200" Max="10000" Step="100"
+                            @bind-Value="Plaat.Breedte"
+                            Units="UnitSets.LengteMM" OnValueChanged="OnModelChanged" />
+
+    @if (Plaat.MainSlab != null)
+    {
+        <KitInputNumberWithUnit Label="dikte <i>h</i>"
+                                T="double" Min="60" Max="600" Step="10"
+                                @bind-Value="Plaat.MainSlab.Dikte"
+                                Units="UnitSets.LengteMM" OnValueChanged="OnModelChanged" />
+    }
+
+    <br />
+    <p style="margin:8px 0 2px 0; font-weight:500; font-size:0.85rem;">opleggingen</p>
+
+    <KitInputEnum TEnum="PlaatOpleggingPreset"
+                  Label="preset toepassen"
+                  Value="_preset"
+                  ValueChanged="OnPresetChanged"
+                  UseShortName="false" />
+
+    <br />
+
+    @foreach (var (opl, idx) in Plaat.Opleggingen.Select((o, i) => (o, i)))
+    {
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
+
+            <KitTextField Label="nr" Value="@((idx + 1).ToString())" Width="3em" TextOnly="true" />
+            <KitTextField Label="rand" Value="@(opl.Rand.ToString())" Width="4em" TextOnly="true" />
+            <KitTextField Label="type" Value="@(opl.Conditie.ToString())" Width="7em" TextOnly="true" />
+          
+
+            @if (opl is PlaatPuntOplegging punt)
+            {
+                <KitInputNumberWithUnit Label="positie"
+                                        T="double" Min="0" Step="50"
+                                        @bind-Value="punt.PositieOpRand"
+                                        Units="UnitSets.LengteMM" OnValueChanged="OnModelChanged" />
+                <KitInputNumberWithUnit Label="breedte steun"
+                                        T="double" Min="50" Max="1000" Step="50"
+                                        @bind-Value="punt.Breedte"
+                                        Units="UnitSets.LengteMM" OnValueChanged="OnModelChanged" />
+            }
+
+           
+        </div>
+    }
+
+  
+}
+
+
+@code {
+    [Parameter] public PlaatEntity? Plaat { get; set; }
+    [Parameter] public EventCallback<PlaatEntity> PlaatChanged { get; set; }
+    [CascadingParameter] public Action? RequestParentRefresh { get; set; }
+
+    private PlaatOpleggingPreset? _preset;
+
+    void OnModelChanged() => RequestParentRefresh?.Invoke();
+
+    private void OnPresetChanged(PlaatOpleggingPreset? preset)
+    {
+        if (Plaat == null || !preset.HasValue) return;
+        _preset = preset;
+        Plaat.PasOpleggingPresetToe(preset.Value);
+        OnModelChanged();
+    }
+
+    private void OnRandChanged(PlaatOplegging opl, PlaatRand? v)
+    {
+        if (v.HasValue) opl.Rand = v.Value;
+        OnModelChanged();
+    }
+
+    private void OnConditieChanged(PlaatOplegging opl, PlaatOpleggingConditie? v)
+    {
+        if (v.HasValue) opl.Conditie = v.Value;
+        OnModelChanged();
+    }
+
+    private void RemoveOplegging(int idx)
+    {
+        if (Plaat == null || idx < 0 || idx >= Plaat.Opleggingen.Count) return;
+        Plaat.Opleggingen.RemoveAt(idx);
+        OnModelChanged();
+    }
+
+    private void AddRandOplegging()
+    {
+        Plaat?.Opleggingen.Add(new PlaatRandOplegging());
+        OnModelChanged();
+    }
+
+    private void AddPuntOplegging()
+    {
+        if (Plaat == null) return;
+        Plaat.Opleggingen.Add(new PlaatPuntOplegging
+        {
+            PositieOpRand = Plaat.Breedte / 2,
+            Breedte = 200,
+        });
+        OnModelChanged();
+    }
+}

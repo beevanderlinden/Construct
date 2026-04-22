@@ -62,6 +62,10 @@
                                 {
                                     <EditSteektrapGeometry @bind-SteekTrap="steektrap" />
                                 }
+                                else if (Model is PlaatEntity plaat)
+                                {
+                                    <EditPlaatGeometry Plaat="plaat" />
+                                }
                                 else if (Model is LiggerEntity ligger)
                                 {
                                     <Construct.WebUI.Server.Components.Beam.BeemLoadCases Beam="ligger.Beam"/>

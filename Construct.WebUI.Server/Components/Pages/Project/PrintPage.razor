@@ -643,9 +643,9 @@ else
         var w = 180.0 / 6.0;
         var width = $"{w:0.000}mm";
         var h = slab.Dikte.ToString("0");
-        var hReq = slab.GetMinimaleDikteVoorREI(slab.Rei).ToString("0");
+        var hReq = slab.GetMinimaleDikteVoorREI(slab.ReiEis).ToString("0");
         var a = (slab.PlaatWapening?.Onder?.BasisWapening?.ReferentieAfstand ?? 0).ToString("0.#");
-        var aReq = slab.GetAfstandBenodigdVoorREI(slab.Rei).ToString("0");
+        var aReq = slab.GetAfstandBenodigdVoorREI(slab.ReiEis).ToString("0");
 
 
 
@@ -661,7 +661,7 @@ else
 
 
         table.Rows.Add([
-            new() { Markdown = "REI " + slab.Rei.ToString() + " minuten", Width = width },
+            new() { Markdown = "REI " + slab.ReiEis.ToString() + " minuten (eis)", Width = width },
             new() { Markdown = h, Width = width },
             new() { Markdown = hReq, Width = width },
 
@@ -1475,8 +1475,20 @@ else
                             TrapSvgGenerator.GenerateTrapSvgXmlWithPng(ste, boundingBox, svgWidthPixels, 9999, svgStyle);
                         par.Markdown = svgXml;
                         section.Elements.Add(par);
+                    }
+                    if (a is PlaatEntity plaat)
+                    {
+                        par = new ParagraphContent();
+                        Construct.Domain.Entities.BoundingBox boundingBox = new();
 
+                        var svgWidth = 180.0;
+                        var svgWidthPixels = svgWidth * 96.0 / 25.4;
+                        var maxHeightPx = 100.0 * 96.0 / 25.4;
+                        string svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; width: {svgWidthPixels:0}; height: auto; max-height: {maxHeightPx:0}";
 
+                        string svgXml = PlaatSvgGenerator.GenereerBovenaanzichtSvgXml(plaat, boundingBox, svgWidthPixels, 9999, svgStyle);
+                        par.Markdown = svgXml;
+                        section.Elements.Add(par);
                     }
 
 
@@ -1502,7 +1514,7 @@ else
                         {
                             section.Elements.Add(GetTableContentDekkingOpt(betonAssemblage.PlaatDekking));
 
-                            if (betonAssemblage.MainPart is SlabPart slab)
+                            if (betonAssemblage.MainPart is SlabPart slab && slab.ReiEis > 0)
                             {
                                  // ✅ Brandwerendheid
                                 //section.AddParagraph("Brandwerendheid", "Kop 3");
@@ -1613,73 +1625,7 @@ else
 
                     svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; width: {svgWidthPixels:0}; height: 30mm;";
 
-                    foreach (var strook in bordes.Stroken)
-                    {
-                        boundingBox.Reset();
-
-                        string title = $"<span class='titel'>{a.Merk} (vervolg)</span> <span class='subtitel'>{strook.Naam}</span>";
-                        section.AddHeading(title, "Kop 1");
-                        section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
-                        section.AddParagraph(strook.Naam.ToUpperInvariant(), "Kop 3");
-
-
-                        var svgDocs = strook.Beam.ToSvgDocumentsOpt((int)svgWidthPixels, 9999, svgStyle, a.Belastingen.BelastingGevallen, [(Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A | Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B)]);
-
-                        foreach (var svgDoc in svgDocs)
-                        {
-                            svgDoc.AddToSection(section, strook.Beam);
-                        }
-
-                        section.Elements.Add(new ParagraphContent("Dwarskrachtwapening", "Kop 3"));
-                        bool dwarskrachtWapeningBenodigd = false;
-
-
-                        foreach (var vk in strook.DwarskrachtCollectie)
-                        {
-                            if (vk.IsDwarskrachtWapeningBenodigd())
-                                dwarskrachtWapeningBenodigd = true;
-                        }
-
-                        var vResult = strook.DwarskrachtCollectie.OrderByDescending(r => r.Ved).FirstOrDefault();
-                        if (dwarskrachtWapeningBenodigd)
-                        {
-                            if (vResult != null)
-                            {
-                                par = new($"⚠️ Let op *V~Ed~* ({vResult?.Ved:0.#} kN) is groter dan *V~Rd,c~* ({vResult?.DwarskrachtWeerstand:0.#} kN), dwarskrachtwapening benodigd: *A~sw,req~* = {vResult?.AswBerekend:0} mm²/m¹ ");
-                                var benodigdeBreedte = vResult?.Ved / vResult?.DwarskrachtWeerstandBeton * strook.Profiel.BreedteDwarskracht * 1.1; // 110% voor
-
-                                if (benodigdeBreedte <= 500)
-                                {
-                                    par.Markdown += $"\r\n💡 Advies: Pas de strookbreedte aan (benodigd is circa {benodigdeBreedte:0} mm)";
-                                    //strook.BetonV.AddToSection(section);
-                                }
-                                else
-                                {
-                                    par.Markdown += $"\r\n💡 Advies: Pas de plaatdikte aan.";
-
-                                }
-
-                            }
-
-
-                        }
-                        else
-                        {
-                            par = new($"✅ *V~Ed~* ({vResult?.Ved:0.#} kN) is kleiner dan *V~Rd,c~* ({vResult?.DwarskrachtWeerstandBeton:0.#} kN), **geen dwarskrachtwapening nodig**");
-                        }
-                        section.Elements.Add(par);
-
-
-                        if (strook.BendingResults.Count > 0)
-                        {
-                            strook.BendingResults.AddToSection(section, isDraaiTabel: false, title: null, style: "Kop 3");
-                        }
-                        if (strook.ScheurwijdteCollectie.Count > 0)
-                        {
-                            strook.ScheurwijdteCollectie.AddToSection(section, isDraaiTabel: false, title: null, style: "Kop 3");
-                        }
-
-                    }
+                    VoegStrokenToeAanRapport(bordes, section, content);
 
 
                     if (bordes.Tand != null)
@@ -2097,20 +2043,18 @@ else
 
 
                     content.Sections.Add(section);
-
-
-
-
-
-
-
-
                 }
-            
-            
-            
-            
-            
+
+                if (a is PlaatEntity)
+                {
+                    VoegStrokenToeAanRapport(a, section, content);
+                    content.Sections.Add(section);
+                }
+
+
+
+
+
             }
 
 
@@ -2169,6 +2113,57 @@ else
             return document;
         }
     }   
+
+    /// <summary>
+    /// Voegt berekeningsstroken van een assemblage toe aan het rapport.
+    /// Herbruikbaar voor BordesEntity, PlaatEntity en andere assemblages met stroken.
+    /// </summary>
+    private void VoegStrokenToeAanRapport(AssemblageEntity a, SectionContent section, DocumentContent content)
+    {
+        if (!a.Stroken.Any()) return;
+
+        var svgWidthPixels = (int)(180.0 * 96.0 / 25.4);
+        string svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; width: {svgWidthPixels:0}; height: 30mm;";
+
+        foreach (var strook in a.Stroken)
+        {
+            string title = $"<span class='titel'>{a.Merk} (vervolg)</span> <span class='subtitel'>{strook.Naam}</span>";
+            section.AddHeading(title, "Kop 1");
+            section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
+            section.AddParagraph(strook.Naam.ToUpperInvariant(), "Kop 3");
+
+            var svgDocs = strook.Beam.ToSvgDocumentsOpt(svgWidthPixels, 9999, svgStyle, a.Belastingen.BelastingGevallen, [(Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A | Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B)]);
+            foreach (var svgDoc in svgDocs)
+            {
+                svgDoc.AddToSection(section, strook.Beam);
+            }
+
+            section.Elements.Add(new ParagraphContent("Dwarskrachtwapening", "Kop 3"));
+            bool dwarskrachtWapeningBenodigd = strook.DwarskrachtCollectie.Any(vk => vk.IsDwarskrachtWapeningBenodigd());
+            var vResult = strook.DwarskrachtCollectie.OrderByDescending(r => r.Ved).FirstOrDefault();
+
+            ParagraphContent parStrook;
+            if (dwarskrachtWapeningBenodigd && vResult != null)
+            {
+                parStrook = new($"⚠️ Let op *V~Ed~* ({vResult.Ved:0.#} kN) is groter dan *V~Rd,c~* ({vResult.DwarskrachtWeerstand:0.#} kN), dwarskrachtwapening benodigd: *A~sw,req~* = {vResult.AswBerekend:0} mm²/m¹");
+                var benodigdeBreedte = vResult.Ved / vResult.DwarskrachtWeerstandBeton * strook.Profiel.BreedteDwarskracht * 1.1;
+                parStrook.Markdown += benodigdeBreedte <= 500
+                    ? $"\r\n💡 Advies: Pas de strookbreedte aan (benodigd is circa {benodigdeBreedte:0} mm)"
+                    : "\r\n💡 Advies: Pas de plaatdikte aan.";
+            }
+            else
+            {
+                parStrook = new($"✅ *V~Ed~* ({vResult?.Ved:0.#} kN) is kleiner dan *V~Rd,c~* ({vResult?.DwarskrachtWeerstandBeton:0.#} kN), **geen dwarskrachtwapening nodig**");
+            }
+            section.Elements.Add(parStrook);
+
+            if (strook.BendingResults.Count > 0)
+                strook.BendingResults.AddToSection(section, isDraaiTabel: false, title: null, style: "Kop 3");
+
+            if (strook.ScheurwijdteCollectie.Count > 0)
+                strook.ScheurwijdteCollectie.AddToSection(section, isDraaiTabel: false, title: null, style: "Kop 3");
+        }
+    }
 
     /// <summary>
     /// Bepaalt de sorteer-prioriteit op basis van het merk-prefix.

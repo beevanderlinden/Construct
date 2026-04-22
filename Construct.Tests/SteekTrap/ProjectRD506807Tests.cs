@@ -30,7 +30,7 @@ public class ProjectRD506807Tests
     {
         var (_, project) = SteekTrapFactory.CreateProject_RD506807();
 
-        project.DefaultGebruiksklasse.Should().Be(GebruiksklasseEnum.A_gemeenschappelijke_trappen);
+        project.DefaultGebruiksklasse.Should().Be(GebruiksklasseEnum.A_gemeenschappelijke_vloeren);
     }
 
     [Fact]

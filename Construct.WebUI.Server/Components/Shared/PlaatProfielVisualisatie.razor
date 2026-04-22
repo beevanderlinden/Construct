@@ -225,55 +225,90 @@
             textBoven.Content.Title = $"= {wap.As:F0} mm²";
             elements.Add(textBoven);
 
-            // Verdeelwapening boven — omgekeerde U polygon met afgeronde bochten
+            // Verdeelwapening boven — rechte staaf (net als onder)
             if (Wapening.Boven.VerdeelWapening != null)
             {
                 var verdeelWap = Wapening.Boven.VerdeelWapening;
                 var verdeelParsed = ParseWapeningTekst(verdeelWap.Tekst);
                 var verdeelDiameter = verdeelParsed?.diameter ?? verdeelWap.GemiddeldeDiameter;
 
-                var yLijn1 = Marge + wapeningOffset + verdeelWap.ReferentieDekking;
-                var yLijn2 = yLijn1 + verdeelDiameter;
-                var xLinks  = Marge + dekkingLinks;
-                var xRechts = Marge + Breedte - dekkingRechts;
+                double d     = verdeelDiameter;
+                var yTop     = Marge + wapeningOffset + verdeelWap.ReferentieDekking;
+                var xLinks   = Marge + dekkingLinks;
+                var xRechts  = Marge + Breedte - dekkingRechts;
 
-                double d    = verdeelDiameter;
-                double rIn  = d > 12 ? 2.5 * d : 2.0 * d;
-                double rOut = rIn + d;
-
-                // Arc centers (onder de toprand: U opent naar beneden)
-                double cyT = yLijn1 + rOut;
-                double cxL = xLinks  + rOut;
-                double cxR = xRechts - rOut;
-                // Benen gaan omlaag tot op dekkingshoogte van de plaatonderkant
-                var yLeg = Marge + Hoogte + wapeningOffset - dekkingBoven;
-                const int arcN = 8;
-                var pts = new List<(double x, double y)>();
-
-                // — buitenrand: links → linkerbocht (180°→270°) → bovenkant → rechterbocht (270°→360°) → rechts —
-                pts.Add((xLinks, yLeg));
-                pts.Add((xLinks, cyT));
-                for (int i = 0; i <= arcN; i++) { double a = (180.0 + 90.0 * i / arcN) * Math.PI / 180.0; pts.Add((cxL + rOut * Math.Cos(a), cyT + rOut * Math.Sin(a))); }
-                pts.Add((cxR, yLijn1));
-                for (int i = 0; i <= arcN; i++) { double a = (270.0 + 90.0 * i / arcN) * Math.PI / 180.0; pts.Add((cxR + rOut * Math.Cos(a), cyT + rOut * Math.Sin(a))); }
-                pts.Add((xRechts, yLeg));
-
-                // — binnenrand: rechts → rechterbocht (360°→270°) → binnenkant → linkerbocht (270°→180°) → links —
-                pts.Add((xRechts - d, yLeg));
-                pts.Add((xRechts - d, cyT));
-                for (int i = 0; i <= arcN; i++) { double a = (360.0 - 90.0 * i / arcN) * Math.PI / 180.0; pts.Add((cxR + rIn * Math.Cos(a), cyT + rIn * Math.Sin(a))); }
-                pts.Add((cxL, yLijn2));
-                for (int i = 0; i <= arcN; i++) { double a = (270.0 - 90.0 * i / arcN) * Math.PI / 180.0; pts.Add((cxL + rIn * Math.Cos(a), cyT + rIn * Math.Sin(a))); }
-                pts.Add((xLinks + d, yLeg));
-
-                elements.Add(new SvgPolygon
+                elements.Add(new SvgRect
                 {
-                    Points      = string.Join(" ", pts.Select(p => $"{p.x.ToString("F1", CultureInfo.InvariantCulture)},{p.y.ToString("F1", CultureInfo.InvariantCulture)}")),
+                    X           = xLinks,
+                    Y           = yTop,
+                    Width       = xRechts - xLinks,
+                    Height      = d,
                     Fill        = "#4A90E2",
                     Stroke      = "#2E5C8A",
                     StrokeWidth = 0.5,
                     Opacity     = 0.85
                 });
+
+                // C-vormige haarspelden links (⊂) en rechts (⊃)
+                // dekking rand + onder = dekking onderwapening; dekking boven = verdeelWap.ReferentieDekking
+                var cDekkingRand  = Wapening.Onder?.BasisWapening?.ReferentieDekking ?? dekkingBoven;
+                var cYTop         = yTop;
+                var cYBottom      = Marge + Hoogte + wapeningOffset - cDekkingRand;
+                double rIn        = d > 12 ? 2.5 * d : 2.0 * d;
+                double rOut       = rIn + d;
+                double armLen     = cDekkingRand; // arm-lengte voorbij de bocht
+                const int carcN   = 8;
+
+                string CPoints(List<(double x, double y)> p) =>
+                    string.Join(" ", p.Select(q => $"{q.x.ToString("F1", CultureInfo.InvariantCulture)},{q.y.ToString("F1", CultureInfo.InvariantCulture)}"));
+
+                // Linker C (⊂): buitenkant links op x = Marge + cDekkingRand, armen gaan naar rechts
+                {
+                    double xL   = Marge + cDekkingRand;
+                    double xArm = xL + rOut + armLen;
+                    double cxTL = xL + rOut; double cyTL = cYTop    + rOut;
+                    double cxBL = xL + rOut; double cyBL = cYBottom - rOut;
+
+                    var p = new List<(double x, double y)>();
+                    // buitenrand: top arm → linkerbocht boven (270°→180°) → linkerkant → linkerbocht onder (180°→90°) → bottom arm
+                    p.Add((xArm, cYTop));
+                    for (int i = 0; i <= carcN; i++) { double a = (270.0 - 90.0 * i / carcN) * Math.PI / 180.0; p.Add((cxTL + rOut * Math.Cos(a), cyTL + rOut * Math.Sin(a))); }
+                    for (int i = 0; i <= carcN; i++) { double a = (180.0 - 90.0 * i / carcN) * Math.PI / 180.0; p.Add((cxBL + rOut * Math.Cos(a), cyBL + rOut * Math.Sin(a))); }
+                    p.Add((xArm, cYBottom));
+                    // binnenrand: bottom arm → binnenbocht onder (90°→180°) → binnenkant → binnenbocht boven (180°→270°) → top arm
+                    p.Add((xArm, cYBottom - d));
+                    double cxBLi = xL + d + rIn; double cyBLi = cYBottom - d - rIn;
+                    for (int i = 0; i <= carcN; i++) { double a = (90.0 + 90.0 * i / carcN) * Math.PI / 180.0; p.Add((cxBLi + rIn * Math.Cos(a), cyBLi + rIn * Math.Sin(a))); }
+                    double cxTLi = xL + d + rIn; double cyTLi = cYTop + d + rIn;
+                    for (int i = 0; i <= carcN; i++) { double a = (180.0 + 90.0 * i / carcN) * Math.PI / 180.0; p.Add((cxTLi + rIn * Math.Cos(a), cyTLi + rIn * Math.Sin(a))); }
+                    p.Add((xArm, cYTop + d));
+
+                    elements.Add(new SvgPolygon { Points = CPoints(p), Fill = "#4A90E2", Stroke = "#1A3F6A", StrokeWidth = 0.8, Opacity = 0.6 });
+                }
+
+                // Rechter C (⊃): buitenkant rechts op x = Marge + Breedte - cDekkingRand, armen gaan naar links
+                {
+                    double xR   = Marge + Breedte - cDekkingRand;
+                    double xArm = xR - rOut - armLen;
+                    double cxTR = xR - rOut; double cyTR = cYTop    + rOut;
+                    double cxBR = xR - rOut; double cyBR = cYBottom - rOut;
+
+                    var p = new List<(double x, double y)>();
+                    // buitenrand: top arm → rechterbocht boven (270°→360°) → rechterkant → rechterbocht onder (360°→450°) → bottom arm
+                    p.Add((xArm, cYTop));
+                    for (int i = 0; i <= carcN; i++) { double a = (270.0 + 90.0 * i / carcN) * Math.PI / 180.0; p.Add((cxTR + rOut * Math.Cos(a), cyTR + rOut * Math.Sin(a))); }
+                    for (int i = 0; i <= carcN; i++) { double a = (360.0 + 90.0 * i / carcN) * Math.PI / 180.0; p.Add((cxBR + rOut * Math.Cos(a), cyBR + rOut * Math.Sin(a))); }
+                    p.Add((xArm, cYBottom));
+                    // binnenrand: bottom arm → binnenbocht onder (90°→0°) → binnenkant → binnenbocht boven (360°→270°) → top arm
+                    p.Add((xArm, cYBottom - d));
+                    double cxBRi = xR - d - rIn; double cyBRi = cYBottom - d - rIn;
+                    for (int i = 0; i <= carcN; i++) { double a = (90.0 - 90.0 * i / carcN) * Math.PI / 180.0; p.Add((cxBRi + rIn * Math.Cos(a), cyBRi + rIn * Math.Sin(a))); }
+                    double cxTRi = xR - d - rIn; double cyTRi = cYTop + d + rIn;
+                    for (int i = 0; i <= carcN; i++) { double a = (360.0 - 90.0 * i / carcN) * Math.PI / 180.0; p.Add((cxTRi + rIn * Math.Cos(a), cyTRi + rIn * Math.Sin(a))); }
+                    p.Add((xArm, cYTop + d));
+
+                    elements.Add(new SvgPolygon { Points = CPoints(p), Fill = "#4A90E2", Stroke = "#1A3F6A", StrokeWidth = 0.8, Opacity = 0.6 });
+                }
             }
 
             // Maatlijn links: van onderkant profiel tot hart bovenwapening
@@ -368,49 +403,66 @@
                 var verdeelParsed = ParseWapeningTekst(verdeelWap.Tekst);
                 var verdeelDiameter = verdeelParsed?.diameter ?? verdeelWap.GemiddeldeDiameter;
 
-                var yLijn1  = Marge + Hoogte + wapeningOffset - verdeelWap.ReferentieDekking;
-                var yLijn2  = yLijn1 - verdeelDiameter;
-                var xLinks  = Marge + verdeelWap.ReferentieDekking;
-                var xRechts = Marge + Breedte - verdeelWap.ReferentieDekking;
-
-                // U-profiel als 1 polygon met afgeronde bochten
-                // Binnenstraal = 2d (>12mm: 2.5d), buitenstraal = binnenstraal + d
-                var yTop = Marge + dekkingOnder;
-                double d    = verdeelDiameter;
-                double rIn  = d > 12 ? 2.5 * d : 2.0 * d;
-                double rOut = rIn + d;                         // = 3d of 3.5d
-
-                // Bochcentra linkerbocht en rechterbocht (zelfde cy)
-                double cxL = xLinks  + rOut, cyB = yLijn1 - rOut;
-                double cxR = xRechts - rOut;
-                const int arcN = 8;
-
-                var pts = new List<(double x, double y)>();
-
-                // — buitenrand: links-omlaag → linkerbocht (180°→90°) → bodem → rechterbocht (90°→0°) → rechts-omhoog —
-                pts.Add((xLinks, yTop));
-                pts.Add((xLinks, cyB));
-                for (int i = 0; i <= arcN; i++) { double a = (180.0 - 90.0 * i / arcN) * Math.PI / 180.0; pts.Add((cxL + rOut * Math.Cos(a), cyB + rOut * Math.Sin(a))); }
-                pts.Add((cxR, yLijn1));
-                for (int i = 0; i <= arcN; i++) { double a = (90.0  - 90.0 * i / arcN) * Math.PI / 180.0; pts.Add((cxR + rOut * Math.Cos(a), cyB + rOut * Math.Sin(a))); }
-                pts.Add((xRechts, yTop));
-
-                // — binnenrand: rechts-omlaag → rechterbocht (0°→90°) → bodem → linkerbocht (90°→180°) → links-omhoog —
-                pts.Add((xRechts - d, yTop));
-                pts.Add((xRechts - d, cyB));
-                for (int i = 0; i <= arcN; i++) { double a = (0.0   + 90.0 * i / arcN) * Math.PI / 180.0; pts.Add((cxR + rIn  * Math.Cos(a), cyB + rIn  * Math.Sin(a))); }
-                pts.Add((cxL, yLijn2));
-                for (int i = 0; i <= arcN; i++) { double a = (90.0  + 90.0 * i / arcN) * Math.PI / 180.0; pts.Add((cxL + rIn  * Math.Cos(a), cyB + rIn  * Math.Sin(a))); }
-                pts.Add((xLinks + d, yTop));
-
-                elements.Add(new SvgPolygon
+                if (ToonRibben)
                 {
-                    Points      = string.Join(" ", pts.Select(p => $"{p.x.ToString("F1", CultureInfo.InvariantCulture)},{p.y.ToString("F1", CultureInfo.InvariantCulture)}")),
-                    Fill        = "#FF8C42",
-                    Stroke      = "#D4621F",
-                    StrokeWidth = 0.5,
-                    Opacity     = 0.85
-                });
+                    // Bij ribben: U-beugel polygon met afgeronde bochten
+                    var yLijn1  = Marge + Hoogte + wapeningOffset - verdeelWap.ReferentieDekking;
+                    var yLijn2  = yLijn1 - verdeelDiameter;
+                    var xLinks  = Marge + verdeelWap.ReferentieDekking;
+                    var xRechts = Marge + Breedte - verdeelWap.ReferentieDekking;
+
+                    var yTop = Marge + dekkingOnder;
+                    double d    = verdeelDiameter;
+                    double rIn  = d > 12 ? 2.5 * d : 2.0 * d;
+                    double rOut = rIn + d;
+
+                    double cxL = xLinks  + rOut, cyB = yLijn1 - rOut;
+                    double cxR = xRechts - rOut;
+                    const int arcN = 8;
+
+                    var pts = new List<(double x, double y)>();
+                    pts.Add((xLinks, yTop));
+                    pts.Add((xLinks, cyB));
+                    for (int i = 0; i <= arcN; i++) { double a = (180.0 - 90.0 * i / arcN) * Math.PI / 180.0; pts.Add((cxL + rOut * Math.Cos(a), cyB + rOut * Math.Sin(a))); }
+                    pts.Add((cxR, yLijn1));
+                    for (int i = 0; i <= arcN; i++) { double a = (90.0  - 90.0 * i / arcN) * Math.PI / 180.0; pts.Add((cxR + rOut * Math.Cos(a), cyB + rOut * Math.Sin(a))); }
+                    pts.Add((xRechts, yTop));
+                    pts.Add((xRechts - d, yTop));
+                    pts.Add((xRechts - d, cyB));
+                    for (int i = 0; i <= arcN; i++) { double a = (0.0   + 90.0 * i / arcN) * Math.PI / 180.0; pts.Add((cxR + rIn  * Math.Cos(a), cyB + rIn  * Math.Sin(a))); }
+                    pts.Add((cxL, yLijn2));
+                    for (int i = 0; i <= arcN; i++) { double a = (90.0  + 90.0 * i / arcN) * Math.PI / 180.0; pts.Add((cxL + rIn  * Math.Cos(a), cyB + rIn  * Math.Sin(a))); }
+                    pts.Add((xLinks + d, yTop));
+
+                    elements.Add(new SvgPolygon
+                    {
+                        Points      = string.Join(" ", pts.Select(p => $"{p.x.ToString("F1", CultureInfo.InvariantCulture)},{p.y.ToString("F1", CultureInfo.InvariantCulture)}")),
+                        Fill        = "#FF8C42",
+                        Stroke      = "#D4621F",
+                        StrokeWidth = 0.5,
+                        Opacity     = 0.85
+                    });
+                }
+                else
+                {
+                    // Bij platte plaat: verdeelwapening loopt als rechte staaf over de breedte
+                    var r            = verdeelDiameter / 2.0;
+                    var yVerdeelHart = Marge + Hoogte + wapeningOffset - verdeelWap.ReferentieDekking - r;
+                    var xLinks       = Marge + verdeelWap.ReferentieDekking;
+                    var staafBreedte = Breedte - 2 * verdeelWap.ReferentieDekking;
+
+                    elements.Add(new SvgRect
+                    {
+                        X           = xLinks,
+                        Y           = yVerdeelHart - r,
+                        Width       = staafBreedte,
+                        Height      = verdeelDiameter,
+                        Fill        = "#FF8C42",
+                        Stroke      = "#D4621F",
+                        StrokeWidth = 0.5,
+                        Opacity     = 0.75
+                    });
+                }
             }
 
             // Maatlijn rechts: van bovenkant profiel tot hart onderwapening

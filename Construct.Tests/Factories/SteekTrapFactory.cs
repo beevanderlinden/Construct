@@ -80,7 +80,7 @@ public static class SteekTrapFactory
                     HohOndergrensBasis = 100,
                 },
             },
-            DefaultGebruiksklasse = GebruiksklasseEnum.A_gemeenschappelijke_trappen,
+            DefaultGebruiksklasse = GebruiksklasseEnum.A_gemeenschappelijke_vloeren,
         };
 
         project.DefaultDekking.Boven.IsPlaatGeometrie = true;
@@ -260,7 +260,7 @@ public static class SteekTrapFactory
                     OntwerpLevensduur = OntwerpLevensduurEnum.Vijftig,
                 },
             },
-            DefaultGebruiksklasse = GebruiksklasseEnum.A_gemeenschappelijke_trappen,
+            DefaultGebruiksklasse = GebruiksklasseEnum.A_gemeenschappelijke_vloeren,
         };
 
         var beton = project.VoegMateriaalToe(new BetonContext("C45/55"));
@@ -315,7 +315,7 @@ public static class SteekTrapFactory
                     OntwerpLevensduur = OntwerpLevensduurEnum.Vijftig,
                 },
             },
-            DefaultGebruiksklasse = GebruiksklasseEnum.A_gemeenschappelijke_trappen,
+            DefaultGebruiksklasse = GebruiksklasseEnum.A_gemeenschappelijke_vloeren,
         };
 
         var beton = project.VoegMateriaalToe(new BetonContext("C45/55"));
@@ -466,7 +466,7 @@ public static class SteekTrapFactory
                     OntwerpLevensduur = OntwerpLevensduurEnum.Vijftig,
                 },
             },
-            DefaultGebruiksklasse = GebruiksklasseEnum.A_gemeenschappelijke_trappen,
+            DefaultGebruiksklasse = GebruiksklasseEnum.A_gemeenschappelijke_vloeren,
         };
 
         var beton = project.VoegMateriaalToe(new BetonContext("C45/55"));

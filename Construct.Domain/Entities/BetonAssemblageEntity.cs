@@ -50,7 +50,7 @@ namespace Construct.Domain.Entities
         /// Roep deze methode aan na het instellen van Materiaal en ProjectInfo.
         /// NIEUW: Synct ook PlaatDekking naar MainPart indien PlatePart.
         /// </summary>
-        protected void InitializePlaatDekking()
+        protected virtual void InitializePlaatDekking()
         {
             if (ProjectInfo?.Grondslagen == null || Beton == null)
             {

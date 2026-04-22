@@ -92,7 +92,10 @@
         {
             //SvgXml = SvgGenerator.Generate
         }
-
+        else if (Model is PlaatEntity plaat)
+        {
+            SvgXml = PlaatSvgGenerator.GenereerBovenaanzichtSvgXml(plaat, boundingBox, width.Value, height.Value, Style);
+        }
 
 
 

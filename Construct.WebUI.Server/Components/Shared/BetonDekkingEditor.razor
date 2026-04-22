@@ -1,0 +1,257 @@
+@using Eurocode.BetonConstructies
+@using Microsoft.AspNetCore.Components
+
+@if (Dekking != null)
+{
+    @* ── Betonkwaliteit (readonly) ── *@
+    
+    <KitTextField Label="betonsterkteklasse" Value="@Dekking.Beton.UserFriendlyName" />
+    <KitTextField Label="ontwerplevensduur" Value="@Dekking.OntwerpLevensduur.ToString()" />
+    <KitTextField Label="constructieklasse" Value="@Dekking.ConstructieklasseUserFriendlyName" />
+
+    @* ── Milieuklassen ── *@
+    <KitTextField Label="milieuklasse" Value="@Dekking.MilieuklassenUserFriendlyName" />
+
+    <br/>
+
+
+        @* Snelkeuze *@
+       
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
+            <FluentButton Appearance="Appearance.Outline" OnClick="@(() => ApplyPreset("binnen"))">
+                🏠 BINNEN
+            </FluentButton>
+            <FluentButton Appearance="Appearance.Outline" OnClick="@(() => ApplyPreset("buiten"))">
+                🌦 BUITEN
+            </FluentButton>
+            <FluentButton Appearance="Appearance.Outline" OnClick="@(() => ApplyPreset("zwembad"))">
+                🤽 ZWEMBAD
+            </FluentButton>
+            <FluentButton Appearance="Appearance.Outline" OnClick="@(() => ApplyPreset("kust"))">
+                🌊 KUST
+            </FluentButton>
+        </div>
+
+        @* Per groep een rij knoppen; max. 1 keuze per groep *@
+        @foreach (var groep in MilieuGroepen)
+        {
+            var huidig = GetGroepWaarde(groep.Key);
+            <div style="display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.4rem;">
+                <span style="display: inline-block; width: 2.5rem; font-weight: 600; font-size: 0.85em; color: var(--neutral-foreground-hint); flex-shrink: 0;">
+                    @groep.Key
+                </span>
+                @foreach (var mk in groep.Value)
+                {
+                    var mkStr  = mk.ToString();
+                    var isActive = huidig == mkStr;
+                    <FluentButton Appearance="@(isActive ? Appearance.Accent : Appearance.Outline)"
+                                  Style="@($"width: 3.8rem; padding: 0; {(isActive ? "" : "color: var(--neutral-foreground-hint); border-color: var(--neutral-stroke-rest); opacity: 0.6;")}")"
+                                  Title="@MilieuklasseTooltip(mk)"
+                                  OnClick="@(() => SetGroepWaarde(groep.Key, isActive ? string.Empty : mkStr))">
+                        @mkStr
+                    </FluentButton>
+                }
+                @if (huidig != "0")
+                {
+                    <FluentButton Appearance="Appearance.Stealth"
+                                  Style="width: 1.8rem; padding: 0; color: var(--error);"
+                                  Title="@($"Verwijder {groep.Key}-selectie")"
+                                  OnClick="@(() => SetGroepWaarde(groep.Key, string.Empty))">
+                        ❌
+                    </FluentButton>
+                }
+                else
+                {
+                    @* placeholder zodat de rij-hoogte gelijk blijft *@
+                    <span style="width: 1.8rem; display: inline-block;">n.v.t.</span>
+                }
+            </div>
+        }
+
+    @* ── Overige opties ── *@
+    <br />
+        <FluentCheckbox @bind-Value="Dekking.IsKwaliteitsBeheersing"
+                        @bind-Value:after="HandleChanged">
+            Kwaliteitsbeheersing
+        </FluentCheckbox>
+        <br />
+        <FluentCheckbox @bind-Value="Dekking.IsPlaatGeometrie"
+                        @bind-Value:after="HandleChanged">
+            Plaatgeometrie
+        </FluentCheckbox>
+        <br />
+
+    @* ── Dekking ── *@
+    <KitInputNumberWithUnit Label="c<sub>min</sub>" Value="@Dekking.DekkingMin" Disabled="true" Units="UnitSets.LengteMM"/>
+    <KitInputNumberWithUnit Label="c<sub>min,dur</sub>" Value="@Dekking.DekkingMinDuurzaamheid" Disabled="true" Units="UnitSets.LengteMM" />
+    <KitInputNumberWithUnit Label="c<sub>min,b</sub>" Value="@Dekking.DekkingMinAanhechting" Disabled="true" Units="UnitSets.LengteMM" />
+
+
+    @* ── Wapening en korrel ── *@
+        <KitInputNumberWithUnit Label="grootste korreldiameter"
+                                Step="1"
+                                Min="3"
+                                Max="63"
+                                Units="UnitSets.LengteMM"
+                                @bind-Value:after="HandleChanged"
+                                @bind-Value="Dekking.GrootsteKorrelDiameter" />
+        <KitInputNumberWithUnit Label="Ø<sub>k,eq</sub>"
+                                Step="1"
+                                Min="5"
+                                Max="63"
+                                Units="UnitSets.LengteMM"
+                                @bind-Value:after="HandleChanged"
+                                @bind-Value="Dekking.WapeningDiameterGelijkwaardig" />
+
+
+
+    <br />
+    <KitInputNumberWithUnit Label="c<sub>nom</sub>" Value="@Dekking.DekkingNom" Disabled="true" Units="UnitSets.LengteMM" />
+
+    <br />
+    <KitInputNumberWithUnit Label="c<sub>prov</sub>"
+                            Step="5"
+                            Min="@Dekking.DekkingNom"
+                            Max="100"
+                            Units="UnitSets.LengteMM"
+                            @bind-Value:after="HandleChanged"
+                            @bind-Value="Dekking.DekkingToe" />
+
+
+    @if (Dekking.DekkingToe < Dekking.DekkingNom)
+    {
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; background: var(--neutral-layer-2); border-left: 3px solid var(--warning); border-radius: 4px; margin-top: 0.5rem;">
+            <span>⚠️ Toegepaste dekking is kleiner dan nominaal.</span>
+            <FluentButton Appearance="Appearance.Accent" OnClick="FixDekking">
+                Aanpassen
+            </FluentButton>
+        </div>
+    }
+    @if (Dekking.DekkingToe > Dekking.DekkingNom + 5)
+    {
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; background: var(--neutral-layer-2); border-left: 3px solid var(--warning); border-radius: 4px; margin-top: 0.5rem;">
+            <span>💡Toegepaste dekking is groter dan nominaal + 5mm.</span>
+            <FluentButton Appearance="Appearance.Accent" OnClick="FixDekking">
+                Aanpassen
+            </FluentButton>
+        </div>
+    }
+
+
+    @* ── Meldingen ── *@
+    @if (Dekking.Meldingen?.Any() == true)
+    {
+            @foreach (var melding in Dekking.Meldingen)
+            {
+                <div style="padding: 0.4rem 0; border-bottom: 1px solid var(--neutral-stroke-divider);">
+                    @((MarkupString)melding.Bericht)
+                </div>
+            }
+    }
+}
+else
+{
+    <div style="color: var(--error);">Dekking is niet geïnitialiseerd.</div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public BetonDekkingContext? Dekking { get; set; }
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private int _renderKey = 0; // niet meer gebruikt, behouden voor compatibiliteit
+
+    // ── Tooltips per milieuklasse ────────────────────────────────────────────
+    private static string MilieuklasseTooltip(MilieuklasseEnum mk) => mk switch
+    {
+        MilieuklasseEnum.XC1 => "XC1 – Droog of permanent nat (binnenkant gebouwen, permanent ondergedompeld)",
+        MilieuklasseEnum.XC2 => "XC2 – Nat, zelden droog (fundamenten, lang contact met water)",
+        MilieuklasseEnum.XC3 => "XC3 – Matig nat (beschut tegen regen, hoge luchtvochtigheid)",
+        MilieuklasseEnum.XC4 => "XC4 – Cyclisch nat en droog (buitenoppervlakken blootgesteld aan regen)",
+        MilieuklasseEnum.XD1 => "XD1 – Matig nat (oppervlakken blootgesteld aan chloriden uit de lucht)",
+        MilieuklasseEnum.XD2 => "XD2 – Nat, zelden droog (zwembaden, contact met industriële chloriden)",
+        MilieuklasseEnum.XD3 => "XD3 – Cyclisch nat en droog (brugdekken, rijbanen met dooizouten)",
+        MilieuklasseEnum.XS1 => "XS1 – Blootgesteld aan zoutzeelucht, niet direct in contact met zeewater",
+        MilieuklasseEnum.XS2 => "XS2 – Permanent ondergedompeld in zeewater",
+        MilieuklasseEnum.XS3 => "XS3 – Getijdezone, spatzone of nevelzone (zwaarste zeemilieu)",
+        MilieuklasseEnum.XF1 => "XF1 – Matige waterverzadiging, geen dooizouten (verticale buitenvlakken aan regen)",
+        MilieuklasseEnum.XF2 => "XF2 – Matige waterverzadiging met dooizouten (verticale vlakken langs wegen)",
+        MilieuklasseEnum.XF3 => "XF3 – Hoge waterverzadiging, geen dooizouten (horizontale vlakken aan regen)",
+        MilieuklasseEnum.XF4 => "XF4 – Hoge waterverzadiging met dooizouten of zeewater (rijbanen, havenwerken)",
+        MilieuklasseEnum.XA1 => "XA1 – Licht chemisch agressief milieu (grond of grondwater)",
+        MilieuklasseEnum.XA2 => "XA2 – Matig chemisch agressief milieu",
+        MilieuklasseEnum.XA3 => "XA3 – Sterk chemisch agressief milieu",
+        _                    => mk.ToString()
+    };
+    private static readonly Dictionary<string, MilieuklasseEnum[]> MilieuGroepen = new()
+    {
+        ["XC"] = [MilieuklasseEnum.XC1, MilieuklasseEnum.XC2, MilieuklasseEnum.XC3, MilieuklasseEnum.XC4],
+        ["XD"] = [MilieuklasseEnum.XD1, MilieuklasseEnum.XD2, MilieuklasseEnum.XD3],
+        ["XS"] = [MilieuklasseEnum.XS1, MilieuklasseEnum.XS2, MilieuklasseEnum.XS3],
+        ["XF"] = [MilieuklasseEnum.XF1, MilieuklasseEnum.XF2, MilieuklasseEnum.XF3, MilieuklasseEnum.XF4],
+        ["XA"] = [MilieuklasseEnum.XA1, MilieuklasseEnum.XA2, MilieuklasseEnum.XA3],
+    };
+
+    protected override void OnParametersSet()
+    {
+        Dekking?.BerekenEnValideer();
+    }
+
+    // Geeft de geselecteerde waarde voor een groep terug als string ("" = geen)
+    private string GetGroepWaarde(string prefix)
+    {
+        var selected = Dekking?.SelectedMilieuklassen?
+            .FirstOrDefault(mk => mk.ToString().StartsWith(prefix));
+        return selected.HasValue ? selected.Value.ToString() : string.Empty;
+    }
+
+    // Stelt de keuze in voor een groep; verwijdert eventuele andere keuzes uit dezelfde groep
+    private void SetGroepWaarde(string prefix, string? waarde)
+    {
+        if (Dekking == null) return;
+
+        var list = Dekking.SelectedMilieuklassen?.ToList() ?? [];
+
+        // Verwijder huidige groepskeuze
+        list.RemoveAll(mk => mk.ToString().StartsWith(prefix));
+
+        // Voeg nieuwe keuze toe (als niet leeg)
+        if (!string.IsNullOrEmpty(waarde) && Enum.TryParse<MilieuklasseEnum>(waarde, out var parsed))
+            list.Add(parsed);
+
+        Dekking.SelectedMilieuklassen = list;
+        HandleChanged();
+    }
+
+    private void HandleChanged()
+    {
+        Dekking?.BerekenEnValideer();
+        OnChanged.InvokeAsync();
+    }
+
+    private void ApplyPreset(string preset)
+    {
+        if (Dekking == null) return;
+
+        Dekking.SelectedMilieuklassen = preset switch
+        {
+            "binnen"  => [MilieuklasseEnum.XC1],
+            "buiten"  => [MilieuklasseEnum.XC4, MilieuklasseEnum.XD3, MilieuklasseEnum.XF4],
+            "zwembad" => [MilieuklasseEnum.XC4, MilieuklasseEnum.XD3, MilieuklasseEnum.XA2, MilieuklasseEnum.XS1],
+            "kust"    => [MilieuklasseEnum.XC4, MilieuklasseEnum.XD3, MilieuklasseEnum.XF4, MilieuklasseEnum.XS2],
+            _         => Dekking.SelectedMilieuklassen
+        };
+
+        _renderKey++;
+        HandleChanged(); // _renderKey behouden voor evt. toekomstig gebruik
+    }
+
+    private void FixDekking()
+    {
+        if (Dekking == null) return;
+        Dekking.DekkingToe = Math.Max(Dekking.DekkingNom, 20);
+        HandleChanged();
+    }
+}

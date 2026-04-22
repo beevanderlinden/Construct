@@ -266,19 +266,38 @@ namespace Construct.Domain.Entities
             ForceCollection.Add(new(fB, beam.Length));
 
 
-            // GROOTSTE FREQUENTE MOMENT
-            var frequentMoments = beam.ResultCollectionLegacy.Values
-                .Where(x => x.Combination?.Type == BelastingCombinatieTypeEnum.Frequent)
-                .SelectMany(r => r.MomentDiagram)
-                .ToList();
+//            // GROOTSTE FREQUENTE MOMENT
+//            var frequentMoments = beam.ResultCollectionLegacy.Values
+//                .Where(x => x.Combination?.Type == BelastingCombinatieTypeEnum.Frequent)
+//                .SelectMany(r => r.MomentDiagram)
+//                .ToList();
 
-            if (frequentMoments.Count > 0)
+//            if (frequentMoments.Count > 0)
+//            {
+//                var mFreqEdEntry = frequentMoments.Aggregate((a, b) => a.M < b.M ? a : b);
+//                SectionForces fMFr = new(my: mFreqEdEntry.M);
+//                ForceCollectionFrequent.Add(new(fMFr, mFreqEdEntry.x));
+//            }
+//#pragma warning restore CS0618
+
+            var freqMoments = beam.ResultCollection.ForCombinationType(BelastingCombinatieTypeEnum.Frequent);
+            if (freqMoments != null && freqMoments.Any())
             {
-                var mFreqEdEntry = frequentMoments.Aggregate((a, b) => a.M < b.M ? a : b);
-                SectionForces fMFr = new(my: mFreqEdEntry.M);
-                ForceCollectionFrequent.Add(new(fMFr, mFreqEdEntry.x));
+                var freqAllMoments = freqMoments.SelectMany(r => r.MomentDiagram).ToList();
+                if (freqAllMoments.Count > 0)
+                {
+                    var freqMin = freqAllMoments.MinBy(md => md.M);
+                    var freqMax = freqAllMoments.MaxBy(md => md.M);
+
+                    if (Math.Abs(freqMin.M) > 0.001)
+                        ForceCollectionFrequent.Add(new(new SectionForces { My = freqMin.M }, freqMin.x));
+
+                    if (Math.Abs(freqMax.M) > 0.001 && Math.Abs(freqMax.M - freqMin.M) > 0.001)
+                        ForceCollectionFrequent.Add(new(new SectionForces { My = freqMax.M }, freqMax.x));
+                }
             }
-#pragma warning restore CS0618
+
+
         }
         
 

@@ -10,7 +10,7 @@ namespace Construct.Domain.Entities
 
             double eg = steekTrap.GetGk();
             double qG = steekTrap.GetPermanenteBelasting();
-            if (steekTrap.GebruikEigenGewicht)
+            if (steekTrap.GebruikEigenOpgaveVoorEigenGewicht)
             {
                 // gebruik opgave gebruiker
                 qG = steekTrap.EigenGewichtPerM2;

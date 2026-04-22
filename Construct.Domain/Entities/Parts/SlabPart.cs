@@ -67,6 +67,12 @@ namespace Construct.Domain.Entities.Parts
         /// </summary>
         public int Rei => _rei;
 
+        /// <summary>
+        /// Brandwerendheideis in minuten (bijv. 30, 60, 90, 120).
+        /// Waarde 0 = geen eis; de brandwerendheidstabel wordt dan niet opgenomen in het rapport.
+        /// </summary>
+        public int ReiEis { get; set; } = 0;
+
         public void UpdateRei() =>
             _rei = PlaatBrandwerendheid.GetRei(Dikte, PlaatWapening?.Onder?.BasisWapening?.ReferentieAfstand ?? 0);
 

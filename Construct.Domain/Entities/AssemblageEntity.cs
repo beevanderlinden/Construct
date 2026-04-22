@@ -11,21 +11,14 @@ using System.Text.Json.Serialization;
 
 namespace Construct.Domain.Entities
 {
-    //public class PrefabBetonAssemblageEntity : BaseAssemblage
-    //{
-    //    public List<BetonDekkingContext> Dekkingen { get; set; } = [new BetonDekkingContext(), new BetonDekkingContext()];
-    //}
-
     [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
     [JsonDerivedType(typeof(SteekTrapEntity), "steektrap")]
     [JsonDerivedType(typeof(HoekTrapEntity), "hoektrap")]
+    [JsonDerivedType(typeof(PlaatEntity), "plaat")]
     [JsonDerivedType(typeof(BordesEntity), typeDiscriminator: "Bordes")]
     [JsonDerivedType(typeof(KolomEntity), typeDiscriminator: "Kolom")]
     [JsonDerivedType(typeof(LiggerEntity), typeDiscriminator: "Ligger")]
     [JsonDerivedType(typeof(VrijRolEntity), typeDiscriminator: "VrijRol")]
-
-
-
     public abstract class AssemblageEntity : BaseAssemblage
     {
         // JSON opslag
@@ -83,9 +76,38 @@ namespace Construct.Domain.Entities
         public double AfwerkingVlaklast { get; set; }
 
         /// <summary>
-        /// Alleen het gedeelte zonder afwerking in kN/m²
+        /// Wanneer true gebruikt de berekening de door de gebruiker opgegeven waarde voor het
+        /// eigen gewicht in plaats van de automatisch berekende waarde.
         /// </summary>
-        public virtual double EigenGewichtPerM2 { get; set; }
+        private bool _gebruikEigenOpgaveVoorEigenGewicht;
+        public bool GebruikEigenOpgaveVoorEigenGewicht
+        {
+            get => _gebruikEigenOpgaveVoorEigenGewicht;
+            set => SetProperty(ref _gebruikEigenOpgaveVoorEigenGewicht, value);
+        }
+
+        private double? _eigenGewichtPerM2Opgave;
+
+        /// <summary>
+        /// Eigen gewicht in kN/m². Als <see cref="GebruikEigenOpgaveVoorEigenGewicht"/> true is én er
+        /// een opgave beschikbaar is, wordt die teruggegeven; anders de berekende waarde via
+        /// <see cref="GetEigenGewichtBerekend"/>.
+        /// </summary>
+        public virtual double EigenGewichtPerM2
+        {
+            get
+            {
+                if (GebruikEigenOpgaveVoorEigenGewicht && _eigenGewichtPerM2Opgave.HasValue)
+                    return _eigenGewichtPerM2Opgave.Value;
+                return GetEigenGewichtBerekend();
+            }
+            set => _eigenGewichtPerM2Opgave = value;
+        }
+
+        /// <summary>
+        /// Berekend eigen gewicht (zonder gebruikersopgave). Override in afgeleide klassen.
+        /// </summary>
+        protected virtual double GetEigenGewichtBerekend() => 0;
 
         /// <summary>
         /// E.G. + afwerking in kN/m²

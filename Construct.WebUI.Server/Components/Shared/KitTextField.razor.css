@@ -47,6 +47,13 @@
     white-space: nowrap;
 }
 
+/* === Text-only variant: geen rand, transparante achtergrond, zelfde uitlijning === */
+.kit-field.kit-field--text-only {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+}
+
 /* === Read-only value display === */
 .kit-field-value {
     font-size: 1em;
