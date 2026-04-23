@@ -15,6 +15,8 @@ namespace Construct.Domain.Entities
     [JsonDerivedType(typeof(SteekTrapEntity), "steektrap")]
     [JsonDerivedType(typeof(HoekTrapEntity), "hoektrap")]
     [JsonDerivedType(typeof(PlaatEntity), "plaat")]
+    [JsonDerivedType(typeof(DakplaatEntity), "dakplaat")]
+    [JsonDerivedType(typeof(GalerijplaatEntity), "galerijplaat")]
     [JsonDerivedType(typeof(BordesEntity), typeDiscriminator: "Bordes")]
     [JsonDerivedType(typeof(KolomEntity), typeDiscriminator: "Kolom")]
     [JsonDerivedType(typeof(LiggerEntity), typeDiscriminator: "Ligger")]

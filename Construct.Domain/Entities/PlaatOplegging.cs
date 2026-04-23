@@ -68,8 +68,14 @@ namespace Construct.Domain.Entities
     /// </summary>
     public enum PlaatOpleggingPreset
     {
-        [Display(Name = "Vrij opgelegde plaat — rand links + rechts",   ShortName = "Vrij 2 randen")]
+        [Display(Name = "Geen oplegging", ShortName = "Geen")]
+        Geen,
+
+        [Display(Name = "Vrij opgelegde plaat ↔",   ShortName = "Vrij 2 randen")]
         VrijOpgelegd2Randen,
+
+        [Display(Name = "Vrij opgelegde plaat ↕", ShortName = "Vrij breedte")]
+        VrijOpgelegdBreedte,
 
         [Display(Name = "Uitkraging — ingeklemd boven",                 ShortName = "Uitkraging")]
         Uitkraging1Rand,

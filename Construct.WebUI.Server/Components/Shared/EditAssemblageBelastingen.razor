@@ -52,29 +52,57 @@ else
 
     <br />
 
-    <KitInputNumberWithUnit 
-        Label="<i>ψ<sub>0</sub></i>" 
-        Value="Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom0" 
-        Width="3em"
-        Disabled=true></KitInputNumberWithUnit>
-    <KitInputNumberWithUnit 
-        Label="<i>ψ<sub>1</sub></i>" 
-        Value="Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom1" 
-        Width="3em"
-        Disabled=true></KitInputNumberWithUnit>
-    <KitInputNumberWithUnit 
-        Label="<i>ψ<sub>2</sub></i>"
-        Value="Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk)?.MomentaanFactoren.Mom2"
-        Width="3em"
-        Disabled=true></KitInputNumberWithUnit>
+    @if (Model.Gebruiksklasse == GebruiksklasseEnum.EigenOpgave &&
+         Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk) is { } bgVE)
+    {
+        <KitInputNumberWithUnit Label="vlaklast <i>q<sub>k</sub></i>"
+            @bind-Value="bgVE.EigenOpgaveVlaklast"
+            Units="UnitSets.KrachtPerOppervlak"></KitInputNumberWithUnit>
+        <KitInputNumberWithUnit Label="puntlast <i>Q<sub>k</sub></i>"
+            @bind-Value="bgVE.EigenOpgavePuntlast"
+            Units="UnitSets.Kracht" DefaultUnit="kN"></KitInputNumberWithUnit>
+        <br />
+        <KitInputNumberWithUnit Label="<i>ψ<sub>0</sub></i>"
+                                Min="0" Max="1" Step="0.1"
+                                @bind-Value="bgVE.EigenOpgaveMom0"
+                                Width="3em"></KitInputNumberWithUnit>
+        <KitInputNumberWithUnit Label="<i>ψ<sub>1</sub></i>"
+                                Min="0" Max="1" Step="0.1"
+                                @bind-Value="bgVE.EigenOpgaveMom1"
+                                Width="3em"></KitInputNumberWithUnit>
+        <KitInputNumberWithUnit Label="<i>ψ<sub>2</sub></i>"
+                                Min="0" Max="1" Step="0.1"
+                                @bind-Value="bgVE.EigenOpgaveMom2"
+                                Width="3em"></KitInputNumberWithUnit>
+    }
+    else
+    {
+        <KitInputNumberWithUnit Label="vlaklast <i>q<sub>k</sub></i>" Value="@Model.Belastingen.BelastingGevallen.LastOrDefault()?.OpgelegdeBelastingen.Vlaklast" Units="UnitSets.KrachtPerOppervlak" Disabled=true></KitInputNumberWithUnit>
+        <KitInputNumberWithUnit Label="puntlast <i>Q<sub>k</sub></i>" Value="@Model.Belastingen.BelastingGevallen.LastOrDefault()?.OpgelegdeBelastingen.Puntlast" Units="UnitSets.Kracht" DefaultUnit="kN" Disabled=true></KitInputNumberWithUnit>
+        <br />
+        var bgV = Model.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Type == BelastingGeval.BelastingGevalTypeEnum.Veranderlijk);
+        <KitInputNumberWithUnit 
+            Label="<i>ψ<sub>0</sub></i>" 
+            Value="bgV?.MomentaanFactoren.Mom0" 
+            Width="3em"
+            Disabled=true></KitInputNumberWithUnit>
+        <KitInputNumberWithUnit 
+            Label="<i>ψ<sub>1</sub></i>" 
+            Value="bgV?.MomentaanFactoren.Mom1" 
+            Width="3em"
+            Disabled=true></KitInputNumberWithUnit>
+        <KitInputNumberWithUnit 
+            Label="<i>ψ<sub>2</sub></i>"
+            Value="bgV?.MomentaanFactoren.Mom2"
+            Width="3em"
+            Disabled=true></KitInputNumberWithUnit>
 
-    <br/>
-    <KitInputNumberWithUnit Label="vlaklast <i>q<sub>k</sub></i>" Value="@Model.Belastingen.BelastingGevallen.LastOrDefault()?.OpgelegdeBelastingen.Vlaklast" Units="UnitSets.KrachtPerOppervlak" Disabled=true></KitInputNumberWithUnit>
-    <KitInputNumberWithUnit Label="puntlast <i>Q<sub>k</sub></i>" Value="@Model.Belastingen.BelastingGevallen.LastOrDefault()?.OpgelegdeBelastingen.Puntlast" Units="UnitSets.Kracht" DefaultUnit="kN" Disabled=true></KitInputNumberWithUnit>
+       
+    }
 
 
 
-    
+
 
 
 

@@ -1486,7 +1486,7 @@ else
                         var maxHeightPx = 100.0 * 96.0 / 25.4;
                         string svgStyle = $"position:relative; display:block; margin-left:auto; margin-right:auto; width: {svgWidthPixels:0}; height: auto; max-height: {maxHeightPx:0}";
 
-                        string svgXml = PlaatSvgGenerator.GenereerBovenaanzichtSvgXml(plaat, boundingBox, svgWidthPixels, 9999, svgStyle);
+                        string svgXml = PlaatSvgGenerator.GenereerIsometrischSvgXml(plaat, boundingBox, svgWidthPixels, maxHeightPx, toonMomentlijn: false, style: svgStyle);
                         par.Markdown = svgXml;
                         section.Elements.Add(par);
                     }
@@ -1516,15 +1516,15 @@ else
 
                             if (betonAssemblage.MainPart is SlabPart slab && slab.ReiEis > 0)
                             {
-                                 // ✅ Brandwerendheid
+                                // ✅ Brandwerendheid
                                 //section.AddParagraph("Brandwerendheid", "Kop 3");
                                 section.Elements.Add(GetTableFireResistance(slab));
                             }
 
                         }
 
-                       
-                        
+
+
 
                     }
 
@@ -1736,7 +1736,7 @@ else
                         section.AddParagraph(xmlWap);
 
                     } // einde tand
-                        
+
 
                     content.Sections.Add(section);
                 } // einde bordes
@@ -1789,7 +1789,7 @@ else
                     // BELASTINGCOMBINATIES
                     //steekTrap.Belastingen.BelastingCombinaties.AddToSection(section, false, "Belastingcombinaties", "Kop 3");
 
-                   
+
 
 
                     // PAGE BREAK (maak een heading 1, dan gaat het automatisch...)
@@ -1809,7 +1809,7 @@ else
                         new() { CellContent=new("geval/combinatie", MigraDoc.DocumentObjectModel.Unit.FromCentimeter(6))},
                         new() { CellContent = new("*M~y~* [kNm]", "6cm")},
                         new() { CellContent = new("*V~z~* [kN]", "6cm")},
-                    ];
+            ];
 
                     tblSchil.Rows.Add(new() { new("Permanent (BG1)", "6cm"), new($"{steekTrap.Krachten.Mk1:0.0}", "2cm"), new($"{steekTrap.Krachten.Vk1:0.0}", "6cm") });
                     tblSchil.Rows.Add(new() { new("Veranderlijk (BG2)"), new($"{Math.Max(steekTrap.Krachten.Mk2, steekTrap.Krachten.Mk3):0.0}", "6cm"), new($"{steekTrap.Krachten.Vk2:0.0}", "6cm") });
@@ -1827,7 +1827,7 @@ else
                         new(new("reacties", "6cm")),
                         new(new("*R~z,Gk~* [kN/m¹]", "6cm"){Style = new(){Alignment = MigraDoc.DocumentObjectModel.ParagraphAlignment.Center}}),
                         new(new("*R~z,Qk~* [kN/m¹]", "6cm"){Style = new(){Alignment = MigraDoc.DocumentObjectModel.ParagraphAlignment.Center}}),
-                    ];
+            ];
 
                     tblReacties.Rows.Add(new() { new($"onder/boven"), new($"{steekTrap.Krachten.Vk1:0.0}", "6cm"), new($"{Math.Max(steekTrap.Krachten.Vk2, steekTrap.Krachten.Vk3):0.0}", "6cm"), });
                     section.Elements.Add(tblReacties);
@@ -2059,11 +2059,11 @@ else
 
 
 
-           
-           
+
+
             // ✅ STAP 2: Genereer inhoudsopgave als LAATSTE (zodat we alle paginanummers hebben)
             // Deze wordt op positie 0 ingevoegd (voor uitgangspunten)
-            
+
             // ✅ Bookmark voor Inhoudsopgave (VOOR SetInhoudsopgave zodat het in navigatie komt)
             pageBookmarks.Insert(0, new() 
             { 
@@ -2071,7 +2071,7 @@ else
                 Title = "Inhoudsopgave", 
                 PageNumber = 2  // Inhoudsopgave is altijd pagina 2
             });
-            
+
             SetInhoudsopgave(content, pageBookmarks);
 
             stopWatch.Stop();
@@ -2157,11 +2157,15 @@ else
             }
             section.Elements.Add(parStrook);
 
-            if (strook.BendingResults.Count > 0)
-                strook.BendingResults.AddToSection(section, isDraaiTabel: false, title: null, style: "Kop 3");
+            if(strook.BendingResults.Count > 0)
+            {
+                strook.BendingResults.AddToSection(section, isDraaiTabel: false, title: "Momentwapening", style: "Kop 3");
+            }
 
             if (strook.ScheurwijdteCollectie.Count > 0)
-                strook.ScheurwijdteCollectie.AddToSection(section, isDraaiTabel: false, title: null, style: "Kop 3");
+            {
+               strook.ScheurwijdteCollectie.AddToSection(section, isDraaiTabel: false, title:"Scheurwijdte" , style: "Kop 3");
+            }
         }
     }
 

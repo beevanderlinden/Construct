@@ -143,6 +143,15 @@ namespace Construct.Domain.Entities
 
             base.Bijwerken();
 
+            // Herstel BelastingGeval-referenties op lijnlasten vóór BerekenStroken,
+            // zodat de randstroken de juiste BelastingGeval koppeling krijgen.
+            foreach (var ll in Lijnlasten)
+            {
+                ll.BelastingGeval = Belastingen.BelastingGevallen
+                    .FirstOrDefault(bg => bg.Nr == ll.BelastingGevalNr);
+                ll.BerekenPunten(Lengte, Breedte);
+            }
+
             BerekenStroken();
         }
 
@@ -156,6 +165,11 @@ namespace Construct.Domain.Entities
         /// Opleggingen van de plaat. Kan bestaan uit rand- en puntopleggingen.
         /// </summary>
         public List<PlaatOplegging> Opleggingen { get; set; } = [];
+
+        /// <summary>
+        /// Lijnlasten op de plaat (rand- of vrije lijnlasten).
+        /// </summary>
+        public List<PlaatRandLijnlast> Lijnlasten { get; set; } = [];
 
         /// <summary>
         /// Past een opleggingspreset toe. Vervangt alle bestaande opleggingen.
@@ -172,6 +186,12 @@ namespace Construct.Domain.Entities
                     // Vrij opgelegde plaat: spanning over de Lengte-as
                     Opleggingen.Add(new PlaatRandOplegging { Rand = PlaatRand.Links,  Conditie = PlaatOpleggingConditie.VrijInRotatie });
                     Opleggingen.Add(new PlaatRandOplegging { Rand = PlaatRand.Rechts, Conditie = PlaatOpleggingConditie.VrijInRotatie });
+                    break;
+
+                case PlaatOpleggingPreset.VrijOpgelegdBreedte:
+                    // Vrij opgelegde plaat: spanning over de Breedte-as
+                    Opleggingen.Add(new PlaatRandOplegging { Rand = PlaatRand.Boven, Conditie = PlaatOpleggingConditie.VrijInRotatie });
+                    Opleggingen.Add(new PlaatRandOplegging { Rand = PlaatRand.Onder, Conditie = PlaatOpleggingConditie.VrijInRotatie });
                     break;
 
                 case PlaatOpleggingPreset.Uitkraging1Rand:
@@ -208,6 +228,12 @@ namespace Construct.Domain.Entities
         // ----------------------------------------------------------------
 
         /// <summary>
+        /// Standaard breedte (mm) van een randstrook die langs een Boven- of Onderrand
+        /// wordt aangemaakt als er een lijnlast op die rand staat.
+        /// </summary>
+        public double RandStrookBreedteMm { get; set; } = 500.0;
+
+        /// <summary>
         /// Berekeningsstroken afgeleid uit <see cref="Opleggingen"/>.
         /// Wordt elke keer opnieuw opgebouwd via <see cref="BerekenStroken"/>.
         /// Niet geserialiseerd.
@@ -238,6 +264,15 @@ namespace Construct.Domain.Entities
             }
 
             foreach (var ps in PlaatStroken)
+            {
+                AddStrook(ps.Strook);
+                ps.Strook.BerekenStrook();
+            }
+
+            // Extra stroken langs randen met lijnlasten
+            var randStroken = MaakRandStrokenVoorLijnlasten(ref teller);
+            PlaatStroken.AddRange(randStroken);
+            foreach (var ps in randStroken)
             {
                 AddStrook(ps.Strook);
                 ps.Strook.BerekenStrook();
@@ -305,15 +340,123 @@ namespace Construct.Domain.Entities
                 // Vader instellen zodat BerekenStrook() de LoadContext en het Materiaal kan ophalen
                 ps.Strook.Father = this;
 
-                // Voorlopige lijnlasten (BG1 permanent, BG2 veranderlijk) — worden later vervangen door echte belastingen
+                // Profiel: 1000 mm referentiebreedte × plaat dikte
+                double dikte = MainSlab?.Dikte ?? 200;
+                ps.Strook.Profiel = new Profielen.Beton.BetonProfiel(1000, dikte);
+                ps.Strook.Beam.Profiel = ps.Strook.Profiel;
+
+                // PlaatWapening van de plaat doorzetten op de beam (nodig voor buigtoets in BeamResultsHelper)
+                if (MainSlab?.PlaatWapening != null)
+                {
+                    ps.Strook.PlaatWapening = MainSlab.PlaatWapening;
+                    ps.Strook.Beam.PlaatWapening = MainSlab.PlaatWapening;
+                }
+
+                // Lasten per strekkende meter (1 m referentiestrook)
                 ps.Strook.Beam.Loads.Clear();
                 double L = ps.Strook.Beam.Length;
                 var bg1 = Belastingen.BelastingGevallen.ElementAtOrDefault(0);
                 var bg2 = Belastingen.BelastingGevallen.ElementAtOrDefault(1);
-                if (bg1 != null)
-                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg1, "q~Gk~", 0, L, -5.0));
-                if (bg2 != null)
-                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg2, "q~Qk~", 0, L, -3.0));
+                double qGk = PermanenteBelastingPerM2;
+                double qQk = VeranderlijkeBelastingPerM2;
+                if (bg1 != null && Math.Abs(qGk) > 1e-9)
+                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg1, "q~Gk~", 0, L, -qGk));
+                if (bg2 != null && Math.Abs(qQk) > 1e-9)
+                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg2, "q~Qk~", 0, L, -qQk));
+
+                stroken.Add(ps);
+            }
+
+            return stroken;
+        }
+
+        /// <summary>
+        /// Maakt extra berekeningsstroken langs de Boven- en Onderrand aan
+        /// voor elke rand waarop een of meer <see cref="PlaatRandLijnlast">lijnlasten</see> staan.
+        /// Elke strook loopt langs de Lengte-as (LangsLengte) en heeft een breedte van
+        /// <see cref="RandStrookBreedteMm"/> mm (standaard 500 mm).
+        /// </summary>
+        private List<PlaatStrook> MaakRandStrokenVoorLijnlasten(ref int teller)
+        {
+            var stroken = new List<PlaatStrook>();
+
+            var randen = Lijnlasten
+                .Where(ll => ll.Rand == PlaatRand.Boven || ll.Rand == PlaatRand.Onder)
+                .GroupBy(ll => ll.Rand);
+
+            foreach (var groep in randen)
+            {
+                PlaatRand rand = groep.Key;
+
+                // Steunpunten voor de LangsLengte-richting liggen op Links en Rechts
+                var oplLinks  = Opleggingen.FirstOrDefault(o => o.Rand == PlaatRand.Links);
+                var oplRechts = Opleggingen.FirstOrDefault(o => o.Rand == PlaatRand.Rechts);
+
+                if (oplLinks == null && oplRechts == null) continue;
+
+                double positieDwars = rand == PlaatRand.Boven
+                    ? RandStrookBreedteMm / 2.0
+                    : Breedte - RandStrookBreedteMm / 2.0;
+
+                var conditieStart = oplLinks?.Conditie  ?? PlaatOpleggingConditie.VrijInRotatie;
+                var conditieEind  = oplRechts?.Conditie ?? PlaatOpleggingConditie.VrijInRotatie;
+
+                var ps = PlaatStrook.Maak(
+                    naam:              $"S{teller++} ({rand})",
+                    richting:          PlaatStrookRichting.LangsLengte,
+                    positieDwars:      positieDwars,
+                    startMm:           0,
+                    eindMm:            Lengte,
+                    invloedsBreedteMm: RandStrookBreedteMm,
+                    conditieStart:     conditieStart,
+                    conditieEind:      conditieEind);
+
+                double beamL = Lengte / 1000.0;
+                ps.Strook.Beam.Length = beamL;
+                ps.Strook.Beam.Schematisering = (oplLinks == null || oplRechts == null)
+                    ? SchemaType.Uitkraging
+                    : SchemaType.VrijOpgelegd;
+
+                if (conditieStart == PlaatOpleggingConditie.Ingeklemd)
+                    ps.Strook.Beam.StartSupport = SupportType.Fixed;
+                if (conditieEind == PlaatOpleggingConditie.Ingeklemd)
+                    ps.Strook.Beam.EndSupport = SupportType.Fixed;
+                if (oplRechts == null)
+                    ps.Strook.Beam.EndSupport = SupportType.None;
+
+                ps.Strook.Father = this;
+
+                // Profiel: randstrookbreedte × plaat dikte
+                double randDikte = MainSlab?.Dikte ?? 200;
+                ps.Strook.Profiel = new Profielen.Beton.BetonProfiel((int)RandStrookBreedteMm, randDikte);
+                ps.Strook.Beam.Profiel = ps.Strook.Profiel;
+
+                ps.Strook.Beam.Loads.Clear();
+
+                // Basis belastingen: oppervlaktelast × strookbreedte → kN/m op de balk
+                double strookBreedteM = RandStrookBreedteMm / 1000.0;
+                var bg1 = Belastingen.BelastingGevallen.ElementAtOrDefault(0);
+                var bg2 = Belastingen.BelastingGevallen.ElementAtOrDefault(1);
+                double qGk = PermanenteBelastingPerM2 * strookBreedteM;
+                double qQk = VeranderlijkeBelastingPerM2 * strookBreedteM;
+                if (bg1 != null && Math.Abs(qGk) > 1e-9)
+                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg1, "q~Gk~", 0, beamL, -qGk));
+                if (bg2 != null && Math.Abs(qQk) > 1e-9)
+                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg2, "q~Qk~", 0, beamL, -qQk));
+
+                foreach (var ll in groep)
+                {
+                    if (ll.BelastingGeval == null) continue;
+
+                    // Lijnlastpositie (lx in mm) omrekenen naar beampositie (m)
+                    double xStart = Math.Max(0, Math.Min(beamL, ll.S.Lx / 1000.0));
+                    double xEind  = Math.Max(0, Math.Min(beamL, ll.E.Lx / 1000.0));
+                    if (xEind <= xStart) { xStart = 0; xEind = beamL; }
+
+                    ps.Strook.Beam.Loads.Add(new DistributedLoad(
+                        ll.BelastingGeval, ll.Naam,
+                        xStart, xEind, ll.MagnitudeA));
+                }
 
                 stroken.Add(ps);
             }

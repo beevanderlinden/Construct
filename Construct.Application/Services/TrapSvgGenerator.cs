@@ -765,7 +765,17 @@
             if (beam == null || results.Count == 0) 
                 return svgTags;
 
-            
+
+            // Basislijn (identiek aan moment-diagram)
+            svgTags.Add(new SvgLine()
+            {
+                X1 = 0,
+                Y1 = 0,
+                X2 = beam.Length,
+                Y2 = 0,
+                StrokeWidth = 1.0,
+            });
+
             List<Punt> points = [];
             List<List<Punt>> ptsCollection = [];
 
@@ -1022,7 +1032,7 @@
             return svgTags;
         }
         
-        public static List<BaseSvg> GenerateBeamMomentDiagram(double scale, Mechanica.SimpleBeam.SBLigger beam, List<BeamResult> results, string fill, string stroke, bool combineerGrafieken = true)
+        public static List<BaseSvg> GenerateBeamMomentDiagram(double scale, Mechanica.SimpleBeam.SBLigger beam, List<BeamResult> results, string fill, string stroke, bool combineerGrafieken = true, bool toonAccidentalFixity = false)
         {
             List<BaseSvg> svgTags = [];
             if (beam != null)
@@ -1057,16 +1067,19 @@
                     points.Add(new(beam.Length, 0));
                     momentPointsCollection.Add(points);
 
-                    List<Punt> accidental = [new(0, 0)];
-                    if (r != null)
+                    if (toonAccidentalFixity)
                     {
-                        foreach (var (x,MomAcc) in r.MomentDiagramAccidentalFixity)
+                        List<Punt> accidental = [new(0, 0)];
+                        if (r != null)
                         {
-                            accidental.Add(new(x, MomAcc));
+                            foreach (var (x, MomAcc) in r.MomentDiagramAccidentalFixity)
+                            {
+                                accidental.Add(new(x, MomAcc));
+                            }
+                            accidental.Add(new(beam.Length, 0));
                         }
-                        accidental.Add(new(beam.Length, 0));
+                        momentPointsCollection.Add(accidental);
                     }
-                    momentPointsCollection.Add(accidental);
                 }
 
                 var grafiekAmplitude = 100.0 / scale;
@@ -1112,7 +1125,7 @@
                         {
                             allPoints.AddRange(r.MomentDiagram);
                         }
-                        if (r?.MomentDiagramAccidentalFixity != null)
+                        if (toonAccidentalFixity && r?.MomentDiagramAccidentalFixity != null)
                         {
                             allPoints.AddRange(r.MomentDiagramAccidentalFixity);
                         }
@@ -1232,7 +1245,7 @@
             // Groepeer per X om min/max te vinden
             var byX = sortedPoints
                 .GroupBy(p => p.x)
-                .Where(g => g.Count() > 2)
+                .Where(g => g.Count() >= 1)
                 .OrderBy(g => g.Key)
                 .ToList();
 
@@ -1332,8 +1345,13 @@
                     svgTags.AddRange(SvgGenerator.GenerateBeamShearDiagram(scale, beam, results, "lightblue", "darkblue"));
                     break;
                 case DiagramType.BendingMomentMy:
+                    bool toonAccidentalFixity =
+                        diagramContext.Source == Diagrams.DiagramSource.LoadCombinationType
+                        && diagramContext.LoadCombinationType.HasValue
+                        && (diagramContext.LoadCombinationType.Value &
+                            (BelastingCombinatieTypeEnum.Fundamenteel_A | BelastingCombinatieTypeEnum.Fundamenteel_B)) != 0;
                     svgTags.AddRange(AddChartTitle("My", scale: scale));
-                    svgTags.AddRange(SvgGenerator.GenerateBeamMomentDiagram(scale, beam, results, "lightblue", "darkblue"));
+                    svgTags.AddRange(SvgGenerator.GenerateBeamMomentDiagram(scale, beam, results, "lightblue", "darkblue", toonAccidentalFixity: toonAccidentalFixity));
                     break;
                 case DiagramType.DeflectionW:
                     svgTags.AddRange(AddChartTitle("w", scale: scale));

@@ -302,6 +302,7 @@ public static class BeamResultsHelper
             var betonProfiel = profiel as Profielen.Beton.BetonProfiel;
             var wapening = My < 0 ? beam.PlaatWapening?.Onder?.BasisWapening : beam.PlaatWapening?.Boven?.BasisWapening;
 
+            if (betonProfiel is null || wapening is null) continue;
 
             var bending = new BendingResults((BetonContext)materiaal, betonProfiel!, wapening!, new() { My = My });
 

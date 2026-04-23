@@ -1,4 +1,5 @@
 ﻿@using Eurocode.BetonConstructies
+@using Eurocode.Belastingen
 @using Eurocode.HoutConstructies
 @using Eurocode.StaalConstructies
 @using Mechanica.SimpleBeam
@@ -37,6 +38,8 @@
 
         <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Bordes</FluentMenuItem>
         <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Plaat</FluentMenuItem>
+        <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Dakplaat</FluentMenuItem>
+        <FluentMenuItem Disabled="false"> <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Galerijplaat</FluentMenuItem>
 
         <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Kolom</FluentMenuItem>
         <FluentMenuItem Disabled="true">  <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size24.Grid())" Color="Color.Neutral" Slot="start" /></span>Console</FluentMenuItem>
@@ -209,14 +212,52 @@
             ProjectInfo = ProjectEntity!.ProjectInfo,
             Naam = "plaat",
             Merk = "PL-1",
-            Materiaal = betonMaterialContext,  // ✅ Voeg materiaal toe
-            MateriaalId = betonMaterialContext.Id,  // ✅ En ID
+            Materiaal = betonMaterialContext,
+            MateriaalId = betonMaterialContext.Id,
             Gebruiksklasse = ProjectEntity.DefaultGebruiksklasse,
             Lengte = lengte,
             Breedte = breedte,
         };
         plaat.Belastingen.GenereerBelastingCombinaties(plaat.Belastingen, plaat.Belastingen.BelastingGevallen, plaat.Belastingen.CombinatiesTypes);
         return plaat;
+    }
+
+    private GalerijplaatEntity GetGalerijplaat()
+    {
+        var betonMaterialContext = GetOrAddBetonMaterial();
+        GalerijplaatEntity galerijplaat = new()
+        {
+            Id = Guid.NewGuid(),
+            ProjectInfo = ProjectEntity!.ProjectInfo,
+            Naam = "galerijplaat",
+            Merk = "GP-01",
+            Materiaal = betonMaterialContext,
+            MateriaalId = betonMaterialContext.Id,
+            Gebruiksklasse = GebruiksklasseEnum.A_gemeenschappelijke_vloeren,
+        };
+        galerijplaat.Belastingen.GenereerBelastingCombinaties(galerijplaat.Belastingen, galerijplaat.Belastingen.BelastingGevallen, galerijplaat.Belastingen.CombinatiesTypes);
+        galerijplaat.Init(ProjectEntity!.ProjectInfo);
+        galerijplaat.Bijwerken();
+        return galerijplaat;
+    }
+
+    private DakplaatEntity GetDakplaat()
+    {
+        var betonMaterialContext = GetOrAddBetonMaterial();
+        DakplaatEntity dakplaat = new()
+        {
+            Id = Guid.NewGuid(),
+            ProjectInfo = ProjectEntity!.ProjectInfo,
+            Naam = "dakplaat",
+            Merk = "DP-01",
+            Materiaal = betonMaterialContext,
+            MateriaalId = betonMaterialContext.Id,
+            Gebruiksklasse = GebruiksklasseEnum.H_daken_alleen_toegankelijk_voor_onderhoud_0_tot_20_graden,
+        };
+        dakplaat.Belastingen.GenereerBelastingCombinaties(dakplaat.Belastingen, dakplaat.Belastingen.BelastingGevallen, dakplaat.Belastingen.CombinatiesTypes);
+        dakplaat.Init(ProjectEntity!.ProjectInfo);
+        dakplaat.Bijwerken();
+        return dakplaat;
     }
 
     private SteekTrapEntity GetSteekTrap(double lengte, double op, double aan, double schil)
@@ -274,6 +315,16 @@
                 case "plaat":
                     var plaat = GetPlaat(6000, 1500);
                     CreateAssemblage(plaat);
+                    break;
+
+                case "dakplaat":
+                    var dakplaat = GetDakplaat();
+                    CreateAssemblage(dakplaat);
+                    break;
+
+                case "galerijplaat":
+                    var galerijplaat = GetGalerijplaat();
+                    CreateAssemblage(galerijplaat);
                     break;
 
                 case "vrijrol":

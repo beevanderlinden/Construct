@@ -8,8 +8,20 @@
         @((MarkupString)SvgXml)
     </div>
 
-    <div style="margin-left:3.5px;">
+    <div style="margin-left:3.5px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
         <ButtonDownloadSvg SvgXml="@SvgXml" MaxPixels="maxPixels" FileName="@Model.Merk" Visible=@ToonDownloadButtons />
+
+        @if (Model is PlaatEntity)
+        {
+            <div style="display:flex; gap:0; border:1px solid #aaa; border-radius:4px; overflow:hidden; font-size:0.80rem;">
+                <button type="button"
+                        style="padding:2px 10px; border:none; cursor:pointer; background:@(_isometrie ? "transparent" : "var(--accent-fill-rest, #0078d4)"); color:@(_isometrie ? "inherit" : "white");"
+                        @onclick="() => SetWeergave(false)">2D</button>
+                <button type="button"
+                        style="padding:2px 10px; border:none; border-left:1px solid #aaa; cursor:pointer; background:@(_isometrie ? "var(--accent-fill-rest, #0078d4)" : "transparent"); color:@(_isometrie ? "white" : "inherit");"
+                        @onclick="() => SetWeergave(true)">ISO</button>
+            </div>
+        }
     </div>
 }
 
@@ -34,7 +46,14 @@
     private double heightPx { get; set; }
     private int maxPixels => (int)Math.Max(widthPx, heightPx);
 
+    private bool _isometrie = true;
     private DotNetObjectReference<AssemblageSvg>? objRef;
+
+    private async Task SetWeergave(bool isometrie)
+    {
+        _isometrie = isometrie;
+        await UpdateSvgAsync();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -94,7 +113,9 @@
         }
         else if (Model is PlaatEntity plaat)
         {
-            SvgXml = PlaatSvgGenerator.GenereerBovenaanzichtSvgXml(plaat, boundingBox, width.Value, height.Value, Style);
+            SvgXml = _isometrie
+                ? PlaatSvgGenerator.GenereerIsometrischSvgXml(plaat, boundingBox, width.Value, height.Value, style: Style)
+                : PlaatSvgGenerator.GenereerBovenaanzichtSvgXml(plaat, boundingBox, width.Value, height.Value, Style);
         }
 
 

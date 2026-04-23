@@ -40,7 +40,6 @@
             <KitTextField Label="nr" Value="@((idx + 1).ToString())" Width="3em" TextOnly="true" />
             <KitTextField Label="rand" Value="@(opl.Rand.ToString())" Width="4em" TextOnly="true" />
             <KitTextField Label="type" Value="@(opl.Conditie.ToString())" Width="7em" TextOnly="true" />
-          
 
             @if (opl is PlaatPuntOplegging punt)
             {
@@ -54,11 +53,90 @@
                                         Units="UnitSets.LengteMM" OnValueChanged="OnModelChanged" />
             }
 
-           
         </div>
     }
 
-  
+    <br />
+    <p style="margin:8px 0 2px 0; font-weight:500; font-size:0.85rem;">lijnlasten</p>
+
+    @foreach (var (ll, idx) in Plaat.Lijnlasten.Select((l, i) => (l, i)))
+    {
+        var fout = ll.ValideerMagnitudes();
+        <div style="border:1px solid #ccc; border-radius:4px; padding:6px 8px; margin-bottom:6px;">
+
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
+
+                <KitTextField Label="nr" Value="@((idx + 1).ToString())" Width="3em" TextOnly="true" />
+
+                <KitTextBox Label="naam"
+                            @bind-Value="ll.Naam"
+                            OnValueChanged="OnModelChanged" />
+
+                <KitInputEnum TEnum="PlaatRand"
+                              Label="rand"
+                              Value="ll.Rand"
+                              ValueChanged="@(v => { if (v.HasValue) { ll.Rand = v.Value; ll.BerekenPunten(Plaat.Lengte, Plaat.Breedte); OnModelChanged(); } })" />
+
+                <div style="display:flex; align-items:center; gap:4px;">
+                    <label style="font-size:0.78rem; color:var(--neutral-foreground-rest);">belastinggeval</label>
+                    <select style="font-size:0.82rem; padding:2px 4px; border:1px solid #aaa; border-radius:3px;"
+                            value="@ll.BelastingGevalNr"
+                            @onchange="@(e => OnBelastingGevalChanged(ll, e))">
+                        @foreach (var bg in Plaat.Belastingen.BelastingGevallen)
+                        {
+                            <option value="@bg.Nr">@bg.Naam (@bg.Omschrijving)</option>
+                        }
+                    </select>
+                </div>
+
+                <button type="button" style="font-size:0.78rem; color:firebrick; background:none; border:none; cursor:pointer;"
+                        @onclick="() => RemoveLijnlast(idx)">✕</button>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                <KitInputNumberWithUnit Label="begin A"
+                                        T="double" Min="0" Step="100"
+                                        @bind-Value="ll.A"
+                                        Units="UnitSets.LengteMM"
+                                        OnValueChanged="@(() => { ll.BerekenPunten(Plaat.Lengte, Plaat.Breedte); OnModelChanged(); })" />
+
+                <KitInputNumberWithUnit Label="v. einde B"
+                                        T="double" Min="0" Step="100"
+                                        @bind-Value="ll.B"
+                                        Units="UnitSets.LengteMM"
+                                        OnValueChanged="@(() => { ll.BerekenPunten(Plaat.Lengte, Plaat.Breedte); OnModelChanged(); })" />
+
+                <KitInputNumberWithUnit Label="offset"
+                                        T="double" Step="50"
+                                        @bind-Value="ll.Offset"
+                                        Units="UnitSets.LengteMM"
+                                        OnValueChanged="@(() => { ll.BerekenPunten(Plaat.Lengte, Plaat.Breedte); OnModelChanged(); })" />
+
+                <KitInputNumberWithUnit Label="q begin"
+                                        T="double" Step="0.5"
+                                        @bind-Value="ll.MagnitudeA"
+                                        Units="UnitSets.KrachtPerLengte"
+                                        OnValueChanged="OnModelChanged" />
+
+                <KitInputNumberWithUnit Label="q eind"
+                                        T="double" Step="0.5"
+                                        @bind-Value="ll.MagnitudeB"
+                                        Units="UnitSets.KrachtPerLengte"
+                                        OnValueChanged="OnModelChanged" />
+            </div>
+
+            @if (fout != null)
+            {
+                <p style="color:firebrick; font-size:0.78rem; margin:4px 0 0 0;">⚠ @fout</p>
+            }
+
+        </div>
+    }
+
+    <div style="display:flex; gap:6px; margin-top:4px;">
+        <button type="button" class="kit-btn kit-btn--secondary" @onclick="AddLijnlast">+ lijnlast</button>
+    </div>
+
 }
 
 
@@ -112,6 +190,46 @@
             PositieOpRand = Plaat.Breedte / 2,
             Breedte = 200,
         });
+        OnModelChanged();
+    }
+
+    private void AddLijnlast()
+    {
+        if (Plaat == null) return;
+        var bg1 = Plaat.Belastingen.BelastingGevallen.FirstOrDefault();
+        var ll = new PlaatRandLijnlast
+        {
+            Rand             = PlaatRand.Boven,
+            A                = 0,
+            B                = 0,
+            MagnitudeA       = -5.0,
+            MagnitudeB       = -5.0,
+            BelastingGevalNr = bg1?.Nr ?? 1,
+            BelastingGeval   = bg1,
+            Naam = $"q",
+            Omschrijving = "gevel",
+            
+        };
+        ll.BerekenPunten(Plaat.Lengte, Plaat.Breedte);
+        Plaat.Lijnlasten.Add(ll);
+        OnModelChanged();
+    }
+
+    private void RemoveLijnlast(int idx)
+    {
+        if (Plaat == null || idx < 0 || idx >= Plaat.Lijnlasten.Count) return;
+        Plaat.Lijnlasten.RemoveAt(idx);
+        OnModelChanged();
+    }
+
+    private void OnBelastingGevalChanged(PlaatRandLijnlast ll, ChangeEventArgs e)
+    {
+        if (Plaat == null) return;
+        if (int.TryParse(e.Value?.ToString(), out int nr))
+        {
+            ll.BelastingGevalNr = nr;
+            ll.BelastingGeval   = Plaat.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Nr == nr);
+        }
         OnModelChanged();
     }
 }

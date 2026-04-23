@@ -98,6 +98,10 @@
                         <BeamDiagram @bind-Beam="Beam"
                                      Options="@GetLoadCaseDiagramOptions(lc)" />
 
+                        <BeamDiagram @bind-Beam="Beam"
+                                     Options="@GetLoadCaseDemoM(lc)" />
+                        
+
                         <BeemLoadCase @bind-Beam="Beam"
                                       LoadCase="lc" />
            
@@ -255,6 +259,8 @@
     {
         return DIA.OptionsContext.GetFiguur(geval);
     }
+
+    
 
     private DIA.OptionsContext GetLoadCaseDemo(BelastingGeval? geval)
     {

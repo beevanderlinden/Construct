@@ -369,7 +369,7 @@ namespace Construct.Domain.Entities
 
         // stroken
         public double VlaklastG => PermanenteBelastingPerM2;
-        public override double EigenGewichtPerM2 => Dikte * 0.001 * 25;
+        protected override double GetEigenGewichtBerekend() => Math.Round(Dikte * 0.001 * 25.0, 2);
         public double LengteM => Lengte * 1e-3;
 
         // helpers

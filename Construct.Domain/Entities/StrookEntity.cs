@@ -1,4 +1,4 @@
-﻿using CommonLibrary;
+using CommonLibrary;
 using CommonLibrary.Interfaces;
 using Eurocode.Belastingen;
 using Eurocode.BetonConstructies;
@@ -116,6 +116,7 @@ namespace Construct.Domain.Entities
             // bijwerken toetsen
             UpdateForceCollectionOpt(beam: Beam);
 
+            if (ForceCollection.Count == 0) return;
 
             // juiste krachten
             Snedekrachten.Vz = Math.Max(
@@ -222,85 +223,87 @@ namespace Construct.Domain.Entities
             ForceCollection.Clear();
             ForceCollectionFrequent.Clear();
 
-
-#pragma warning disable CS0618
-            // Check if beam has computed results
-            if (beam.ResultCollectionLegacy == null || beam.ResultCollectionLegacy.Values.Count == 0)
+            var fundType = BelastingCombinatieTypeEnum.Fundamenteel_A | BelastingCombinatieTypeEnum.Fundamenteel_B;
+            var fundPunten = GetEnvelopePunten(beam, fundType);
+            if (fundPunten.Count == 0)
                 return;
 
-            var vA = beam.ResultCollectionLegacy.Values.Select(r => Math.Abs(r.LeftReaction)).ToList();
-            var vB = beam.ResultCollectionLegacy.Values.Select(r => Math.Abs(r.RightReaction)).ToList();
+            // Toevallige inklemming: gebaseerd op het min moment uit de envelop
+            var mC = fundPunten.Min(p => p.Forces.My);
+            var mToevBegin = Math.Abs(ToevalligeInklemmingBegin * -mC);
+            var mToevEind  = Math.Abs(ToevalligeInklemmingEind  * -mC);
 
-            // GROOTSTE NEGATIEVE MOMENT + POSITIE
-            var allMoments = beam.ResultCollectionLegacy.Values
-                .SelectMany(r => r.MomentDiagram)
-                .ToList();
-
-            if (allMoments.Count == 0)
-                return;
-
-            var minMomentEntry = allMoments.Aggregate((a, b) => a.M < b.M ? a : b);
-
-            // Punt C (grootste veldmoment)
-            SectionForces fC = new(my: minMomentEntry.M);
-            ForceCollection.Add(new(fC, minMomentEntry.x));
-
-            // Punt A (0)
-            var mA = beam.ResultCollectionLegacy.Values.Select(r => r.MomentDiagram.First().M).Max();
-            var mToevBegin = Math.Abs(ToevalligeInklemmingBegin * -minMomentEntry.M);
+            // Punt A (x=0): corrigeer bij scharnierend begin
+            var puntA = fundPunten.First(p => p.Pos == 0);
             if (beam.StartSupport == SupportType.Pin)
-                mA = Math.Max(mA, mToevBegin);
+                puntA = new(new SectionForces(my: Math.Max(puntA.Forces.My, mToevBegin), vz: puntA.Forces.Vz), 0);
 
-
-            SectionForces fA = new(my: mA, vz: vA.Max());
-            ForceCollection.Add(new(fA, 0));
-
-            // Punt B (lengte)
-            var mB = beam.ResultCollectionLegacy.Values.Select(r => r.MomentDiagram.Last().M).Max();
-            var mToevEind = Math.Abs(ToevalligeInklemmingEind * -minMomentEntry.M);
+            // Punt B (x=L): corrigeer bij scharnierend einde
+            var puntB = fundPunten.First(p => p.Pos == beam.Length);
             if (beam.EndSupport == SupportType.Pin)
-                mB = Math.Max(mB, mToevEind);
+                puntB = new(new SectionForces(my: Math.Max(puntB.Forces.My, mToevEind), vz: puntB.Forces.Vz), beam.Length);
 
-            
-            SectionForces fB = new(my: mB, vz: vB.Max());
-            ForceCollection.Add(new(fB, beam.Length));
+            ForceCollection.Add(puntA);
+            ForceCollection.Add(puntB);
+
+            // Punt C: veldmoment op tussengelegen positie (indien aanwezig in envelop)
+            var puntC = fundPunten.FirstOrDefault(p => p.Pos != 0 && p.Pos != beam.Length);
+            if (puntC != null)
+                ForceCollection.Add(puntC);
+
+            // Frequente combinaties (zonder toevallige inklemming)
+            ForceCollectionFrequent.AddRange(GetEnvelopePunten(beam, BelastingCombinatieTypeEnum.Frequent));
+        }
+
+        /// <summary>
+        /// Haalt de maatgevende snedekrachten op uit de ResultCollection voor het opgegeven combinatietype.
+        /// Geeft altijd punt A (x=0) en punt B (x=L) terug met extreme waarden.
+        /// Geeft ook punt C terug als het minimum moment op een andere positie ligt.
+        /// </summary>
+        private static List<SectionForcesAtPositie> GetEnvelopePunten(SBLigger beam, BelastingCombinatieTypeEnum type)
+        {
+            var punten = new List<SectionForcesAtPositie>();
+            var results = beam.ResultCollection.ForCombinationType(type).ToList();
+
+            if (results.Count == 0)
+                return punten;
 
 
-//            // GROOTSTE FREQUENTE MOMENT
-//            var frequentMoments = beam.ResultCollectionLegacy.Values
-//                .Where(x => x.Combination?.Type == BelastingCombinatieTypeEnum.Frequent)
-//                .SelectMany(r => r.MomentDiagram)
-//                .ToList();
+            var shearColA = results.Select(r => r.ShearDiagram.FirstOrDefault(p => p.x == 0)).ToList();
+            var momColA = results.Select(r => r.MomentDiagram.FirstOrDefault(p => p.x == 0)).ToList();
+            var momColB = results.Select(r => r.MomentDiagram.FirstOrDefault(p => p.x == beam.Length)).ToList();
 
-//            if (frequentMoments.Count > 0)
-//            {
-//                var mFreqEdEntry = frequentMoments.Aggregate((a, b) => a.M < b.M ? a : b);
-//                SectionForces fMFr = new(my: mFreqEdEntry.M);
-//                ForceCollectionFrequent.Add(new(fMFr, mFreqEdEntry.x));
-//            }
-//#pragma warning restore CS0618
 
-            var freqMoments = beam.ResultCollection.ForCombinationType(BelastingCombinatieTypeEnum.Frequent);
-            if (freqMoments != null && freqMoments.Any())
+            // Punt A (x=0): maatgevend moment + dwarskracht aan het begin
+            var mA = momColA.Max(p => p.M);
+            var vzA = results.Max(r => Math.Abs(r.LeftReaction));
+            punten.Add(new(new SectionForces(my: mA, vz: vzA), 0));
+
+            // Punt B (x=L): maatgevend moment + dwarskracht aan het einde
+
+
+            var mB  = momColB.Max(p => p.M);
+            var vzB = results.Max(r => Math.Abs(r.RightReaction));
+            punten.Add(new(new SectionForces(my: mB, vz: vzB), beam.Length));
+
+            // Punt C: minimum moment op een tussengelegen positie
+            var allMoments = results.SelectMany(r => r.MomentDiagram).ToList();
+            if (allMoments.Count == 0)
+                return punten;
+
+            var minEntry = allMoments.MinBy(md => md.M);
+            bool isAtA   = Math.Abs(minEntry.x) < 1e-6;
+            bool isAtB   = Math.Abs(minEntry.x - beam.Length) < 1e-6;
+
+            if (!isAtA && !isAtB && Math.Abs(minEntry.M) > 0.001)
             {
-                var freqAllMoments = freqMoments.SelectMany(r => r.MomentDiagram).ToList();
-                if (freqAllMoments.Count > 0)
-                {
-                    var freqMin = freqAllMoments.MinBy(md => md.M);
-                    var freqMax = freqAllMoments.MaxBy(md => md.M);
-
-                    if (Math.Abs(freqMin.M) > 0.001)
-                        ForceCollectionFrequent.Add(new(new SectionForces { My = freqMin.M }, freqMin.x));
-
-                    if (Math.Abs(freqMax.M) > 0.001 && Math.Abs(freqMax.M - freqMin.M) > 0.001)
-                        ForceCollectionFrequent.Add(new(new SectionForces { My = freqMax.M }, freqMax.x));
-                }
+                var src = results.First(r => r.MomentDiagram.Any(md => Math.Abs(md.x - minEntry.x) < 1e-6));
+                var (vzC, _) = src.ShearAt(minEntry.x);
+                punten.Add(new(new SectionForces(my: minEntry.M, vz: vzC), minEntry.x));
             }
 
-
+            return [.. punten.OrderBy(p=>p.Pos)];
         }
-        
-
 
         public void UpdateBendingResults()
         {
@@ -363,11 +366,22 @@ namespace Construct.Domain.Entities
             ScheurwijdteCollectie.Clear();
             foreach (var fx in ForceCollectionFrequent)
             {
+                if (Math.Abs(fx.Forces.My) < 1e-6)
+                    continue;
+
+                var wap = WapOnder;
+                if (fx.Forces.My > 0)
+                {
+                    wap = WapBoven;
+                }
+               
+
+
                 ScheurwijdteContext sw = new()
                 {
                     Beton = beton ?? new(),
                     #pragma warning disable CS0618
-                                        Wapening = WapOnder,
+                                        Wapening = wap,
                     #pragma warning restore CS0618
                     Snedekrachten = fx.Forces,
                     Profiel = this.Profiel,
