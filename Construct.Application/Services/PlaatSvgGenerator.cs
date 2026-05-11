@@ -100,6 +100,12 @@ namespace Construct.Application.Services
             // Strooklijnen boven op de plaat
             elementen.AddRange(GenereerStrookHartlijnen(plaat));
 
+            // Lijnlasten boven op de plaat
+            elementen.AddRange(GenereerLijnlasten2D(plaat));
+
+            // Puntlasten boven op de plaat
+            elementen.AddRange(GenereerPuntlasten2D(plaat));
+
             return elementen;
         }
 
@@ -235,6 +241,190 @@ namespace Construct.Application.Services
                     pts: 11)
                 {
                     Fill = "var(--accent-foreground-rest, #0078d4)",
+                });
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Genereert SVG-elementen voor lijnlasten in 2D bovenaanzicht.
+        /// </summary>
+        private static List<BaseSvg> GenereerLijnlasten2D(PlaatEntity plaat)
+        {
+            var result = new List<BaseSvg>();
+            if (plaat.Lijnlasten.Count == 0) return result;
+
+            double L = plaat.Lengte;
+            double B = plaat.Breedte;
+
+            double maxMag = plaat.Lijnlasten.Max(ll => ll.MaxAbsMagnitude);
+            if (maxMag < 1e-9) return result;
+
+            // Maximale pijllengte: 12% van de kortste afmeting
+            double maxArrowLen = Math.Min(L, B) * 0.12;
+            double arrowHeadSize = maxArrowLen * 0.15;
+
+            static string LoadColor(int nr) => nr switch
+            {
+                1 => "#E67700",
+                2 => "#C00000",
+                _ => "#7030A0",
+            };
+
+            foreach (var ll in plaat.Lijnlasten)
+            {
+                ll.BerekenPunten(L, B);
+
+                double lenA = Math.Abs(ll.MagnitudeA) / maxMag * maxArrowLen;
+                double lenB = Math.Abs(ll.MagnitudeB) / maxMag * maxArrowLen;
+                bool neerwaarts = ll.IsNeerwaarts;
+                string kleur = LoadColor(ll.BelastingGevalNr);
+
+                double sx = ll.S.Lx, sy = ll.S.By;
+                double ex = ll.E.Lx, ey = ll.E.By;
+
+                // Richting haaks op de lijn (naar binnen de plaat)
+                double dx = ex - sx, dy = ey - sy;
+                double len = Math.Sqrt(dx * dx + dy * dy);
+                if (len < 1e-9) continue;
+
+                double nx = -dy / len, ny = dx / len;  // 90° rotatie
+
+                // Bepaal richting naar binnen plaat
+                double midX = (sx + ex) / 2, midY = (sy + ey) / 2;
+                double centerX = L / 2, centerY = B / 2;
+                if ((midX - centerX) * nx + (midY - centerY) * ny < 0)
+                {
+                    nx = -nx; ny = -ny;
+                }
+
+                // Trapezoid/rechthoek voor het belastingdiagram
+                result.Add(new SvgPolygon
+                {
+                    Points = $"{sx},{sy} {sx + nx * lenA},{sy + ny * lenA} {ex + nx * lenB},{ey + ny * lenB} {ex},{ey}",
+                    Fill = kleur + "30",
+                    Stroke = kleur,
+                    StrokeWidth = 0.75,
+                    VectorEffect = "non-scaling-stroke",
+                });
+
+                // Pijlen
+                double segLen = len;
+                int nPijlen = Math.Max(2, Math.Min(8, (int)(segLen / 400.0) + 2));
+
+                for (int i = 0; i <= nPijlen; i++)
+                {
+                    double t = (double)i / nPijlen;
+                    double px = sx + t * dx;
+                    double py = sy + t * dy;
+                    double pLen = lenA + t * (lenB - lenA);
+                    if (pLen < 1e-9) continue;
+
+                    // Pijl van (px, py) in richting (nx, ny)
+                    double tipX = px + nx * pLen;
+                    double tipY = py + ny * pLen;
+
+                    result.Add(new SvgLine { X1 = px, Y1 = py, X2 = tipX, Y2 = tipY, Stroke = kleur, StrokeWidth = 0.85, VectorEffect = "non-scaling-stroke" });
+
+                    // Pijlpunt
+                    double headX = tipX - nx * arrowHeadSize;
+                    double headY = tipY - ny * arrowHeadSize;
+                    result.Add(new SvgLine { X1 = tipX, Y1 = tipY, X2 = headX - ny * arrowHeadSize * 0.4, Y2 = headY + nx * arrowHeadSize * 0.4, Stroke = kleur, StrokeWidth = 0.85, VectorEffect = "non-scaling-stroke" });
+                    result.Add(new SvgLine { X1 = tipX, Y1 = tipY, X2 = headX + ny * arrowHeadSize * 0.4, Y2 = headY - nx * arrowHeadSize * 0.4, Stroke = kleur, StrokeWidth = 0.85, VectorEffect = "non-scaling-stroke" });
+                }
+
+                // Label
+                double midLen = Math.Max(lenA, lenB);
+                double labX = midX + nx * midLen * 0.5;
+                double labY = midY + ny * midLen * 0.5;
+
+                string qTekst = Math.Abs(ll.MagnitudeA - ll.MagnitudeB) < 1e-9
+                    ? $"q={Math.Abs(ll.MagnitudeA):0.##}"
+                    : $"q={Math.Abs(ll.MagnitudeA):0.##}–{Math.Abs(ll.MagnitudeB):0.##}";
+
+                string labelTekst = string.IsNullOrWhiteSpace(ll.Naam) ? qTekst : $"{ll.Naam}:{qTekst}";
+
+                result.Add(new SvgText(labelTekst, labX, labY, scale: 1)
+                {
+                    Anchor = "middle",
+                    DominantBaseLine = "middle",
+                    Fill = kleur,
+                    Pts = 9,
+                });
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Genereert SVG-elementen voor puntlasten in 2D bovenaanzicht.
+        /// </summary>
+        private static List<BaseSvg> GenereerPuntlasten2D(PlaatEntity plaat)
+        {
+            var result = new List<BaseSvg>();
+            if (plaat.Puntlasten.Count == 0) return result;
+
+            double L = plaat.Lengte;
+            double B = plaat.Breedte;
+
+            double maxMag = plaat.Puntlasten.Max(pl => pl.AbsMagnitude);
+            if (maxMag < 1e-9) return result;
+
+            // Maximale pijllengte: 15% van de kortste afmeting
+            double maxArrowLen = Math.Min(L, B) * 0.15;
+            double arrowHeadSize = maxArrowLen * 0.18;
+            double circlRadius = maxArrowLen * 0.08;
+
+            static string LoadColor(int nr) => nr switch
+            {
+                1 => "#E67700",
+                2 => "#C00000",
+                _ => "#7030A0",
+            };
+
+            foreach (var pl in plaat.Puntlasten)
+            {
+                double pLen = Math.Abs(pl.Magnitude) / maxMag * maxArrowLen;
+                string kleur = LoadColor(pl.BelastingGevalNr);
+
+                double px = pl.PosX;
+                double py = pl.PosY;
+
+                // Pijl wijst naar beneden (y-richting)
+                double tipY = py + pLen;
+
+                // Schacht
+                result.Add(new SvgLine { X1 = px, Y1 = py, X2 = px, Y2 = tipY, Stroke = kleur, StrokeWidth = 1.2, VectorEffect = "non-scaling-stroke" });
+
+                // Pijlpunt (naar beneden)
+                double headY = tipY - arrowHeadSize;
+                result.Add(new SvgLine { X1 = px, Y1 = tipY, X2 = px - arrowHeadSize * 0.4, Y2 = headY, Stroke = kleur, StrokeWidth = 1.2, VectorEffect = "non-scaling-stroke" });
+                result.Add(new SvgLine { X1 = px, Y1 = tipY, X2 = px + arrowHeadSize * 0.4, Y2 = headY, Stroke = kleur, StrokeWidth = 1.2, VectorEffect = "non-scaling-stroke" });
+
+                // Cirkel bij de basis van de pijl
+                result.Add(new SvgCircle
+                {
+                    Cx = px,
+                    Cy = py,
+                    R = circlRadius,
+                    Fill = kleur + "40",
+                    Stroke = kleur,
+                    StrokeWidth = 0.75,
+                    VectorEffect = "non-scaling-stroke",
+                });
+
+                // Label
+                double labY = py - circlRadius - 8;
+                string pTekst = $"P={Math.Abs(pl.Magnitude):0.##}";
+                string labelTekst = string.IsNullOrWhiteSpace(pl.Naam) ? pTekst : $"{pl.Naam}:{pTekst}";
+
+                result.Add(new SvgText(labelTekst, px, labY, scale: 1)
+                {
+                    Anchor = "middle",
+                    DominantBaseLine = "auto",
+                    Fill = kleur,
+                    Pts = 9,
                 });
             }
 
@@ -546,7 +736,10 @@ namespace Construct.Application.Services
             // ── 5. Lijnlasten ──
             elements.AddRange(GenereerLijnlastenIso(plaat, drawZ));
 
-            // ── 6. Momentlijn per strook ──
+            // ── 6. Puntlasten ──
+            elements.AddRange(GenereerPuntlastenIso(plaat, drawZ));
+
+            // ── 7. Momentlijn per strook ──
             if (toonMomentlijn)
                 elements.AddRange(GenereerMomentlijnIso(plaat, drawZ));
 
@@ -656,6 +849,89 @@ namespace Construct.Application.Services
                 string labelTekst = string.IsNullOrWhiteSpace(ll.Naam)
                     ? qTekst
                     : $"{ll.Naam}: {qTekst}";
+
+                elements.Add(new SvgText(labelTekst, labX, labY, scale: 1)
+                {
+                    Anchor          = "middle",
+                    DominantBaseLine = "auto",
+                    Fill            = kleur,
+                    Pts             = 9,
+                    DY              = -5,
+                });
+            }
+
+            return elements;
+        }
+
+        /// <summary>
+        /// Genereert SVG-elementen voor alle <see cref="PlaatPuntlast"/>-objecten in isometrische weergave.
+        /// Pijlen worden relatief geschaald aan de grootste magnitude in de lijst.
+        /// </summary>
+        private static List<BaseSvg> GenereerPuntlastenIso(PlaatEntity plaat, double drawZ)
+        {
+            var elements = new List<BaseSvg>();
+            if (plaat.Puntlasten.Count == 0) return elements;
+
+            double L = plaat.Lengte;
+            double B = plaat.Breedte;
+
+            double maxMag = plaat.Puntlasten.Max(pl => pl.AbsMagnitude);
+            if (maxMag < 1e-9) return elements;
+
+            // Maximale pijlhoogte: 20 % van de kortste plaatafmeting
+            double maxArrowHeight = Math.Min(L, B) * 0.20;
+            double arrowHeadSize  = maxArrowHeight * 0.12;
+
+            // Vaste kleuren per belastinggevalnummer (BG1=oranje, BG2=rood, rest=paars)
+            static string LoadColor(int nr) => nr switch
+            {
+                1 => "#E67700",
+                2 => "#C00000",
+                _ => "#7030A0",
+            };
+
+            foreach (var pl in plaat.Puntlasten)
+            {
+                double h = Math.Abs(pl.Magnitude) / maxMag * maxArrowHeight;
+                bool neerwaarts = pl.IsNeerwaarts;
+                string kleur = LoadColor(pl.BelastingGevalNr);
+
+                double pLx = pl.PosX;
+                double pBy = pl.PosY;
+
+                double zTail = neerwaarts ? drawZ + h : drawZ;
+                double zTip  = neerwaarts ? drawZ : drawZ + h;
+
+                // Schacht: tail → tip
+                elements.Add(IsoLine(pLx, pBy, zTail, pLx, pBy, zTip, kleur, 1.2));
+
+                // Pijlpunt (driehoek)
+                var (tipX, tipY) = Iso(pLx, pBy, zTip);
+                double wingDy = arrowHeadSize * Iso_Sin30 * 2;
+                double wingDx = arrowHeadSize * Iso_Cos30 * 0.5;
+
+                if (!neerwaarts)
+                {
+                    // Opwaarts: tip is boven, vleugels gaan omlaag in screen
+                    var (tipXup, tipYup) = Iso(pLx, pBy, zTail);
+                    elements.Add(new SvgLine { X1 = tipXup, Y1 = tipYup, X2 = tipXup - wingDx, Y2 = tipYup + wingDy, Stroke = kleur, StrokeWidth = 1.2 });
+                    elements.Add(new SvgLine { X1 = tipXup, Y1 = tipYup, X2 = tipXup + wingDx, Y2 = tipYup + wingDy, Stroke = kleur, StrokeWidth = 1.2 });
+                }
+                else
+                {
+                    // Neerwaarts: tip is beneden, vleugels gaan omhoog in screen
+                    elements.Add(new SvgLine { X1 = tipX, Y1 = tipY, X2 = tipX - wingDx, Y2 = tipY - wingDy, Stroke = kleur, StrokeWidth = 1.2 });
+                    elements.Add(new SvgLine { X1 = tipX, Y1 = tipY, X2 = tipX + wingDx, Y2 = tipY - wingDy, Stroke = kleur, StrokeWidth = 1.2 });
+                }
+
+                // ── Label ──
+                double topH = neerwaarts ? h : h;
+                var (labX, labY) = Iso(pLx, pBy, drawZ + topH);
+
+                string pTekst = $"P = {Math.Abs(pl.Magnitude):0.##} kN";
+                string labelTekst = string.IsNullOrWhiteSpace(pl.Naam)
+                    ? pTekst
+                    : $"{pl.Naam}: {pTekst}";
 
                 elements.Add(new SvgText(labelTekst, labX, labY, scale: 1)
                 {

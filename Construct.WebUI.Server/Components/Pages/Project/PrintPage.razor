@@ -1106,7 +1106,7 @@ else
             var linkHtml = $@"<div style='display: flex; align-items: flex-end; margin-bottom: 2mm;'>
 <a href='#{bookmark.Id}' onclick=""scrollToBookmark('{bookmark.Id}'); return false;"" class='bookmark-link'>{bookmark.Title}</a>
 <span style='flex: 1; border-bottom: 1px dotted rgba(0,0,0,0.22); margin: 0 6px 3px;'></span>
-<span style='white-space: nowrap;'>pag. {bookmark.PageNumber}</span>
+<span style='white-space: nowrap;'> {bookmark.PageNumber}</span>
 </div>";
             section.Elements.Add(new ParagraphContent(linkHtml));
         }
@@ -1427,16 +1427,17 @@ else
                     section = new SectionContent();
                     // Voeg een unieke ID toe aan de heading voor bookmarks
                     var merkId = $"assemblage-{a.Id}";
+                    var textForBookmark = $"{a.Merk} - {a.Naam}";
 
                     // ✅ Voeg bookmark toe aan lijst
                     pageBookmarks.Add(new() 
                     { 
                         Id = merkId, 
-                        Title = $"{a.Merk} - {a.Naam}", 
+                        Title = textForBookmark, 
                         PageNumber = PageNr 
                     });
 
-                    string title = $"<span id='{merkId}' class='titel'>{a.Merk}</span> <span class='subtitel'>{a.Naam}</span>";
+                    string title = $"<span id='{merkId}' class='titel'>{textForBookmark}</span> <span class='subtitel'>{a.Naam}</span>";
                     section.Elements.Add(new HeadingContent(title, 1));
                     section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
 
@@ -1809,7 +1810,7 @@ else
                         new() { CellContent=new("geval/combinatie", MigraDoc.DocumentObjectModel.Unit.FromCentimeter(6))},
                         new() { CellContent = new("*M~y~* [kNm]", "6cm")},
                         new() { CellContent = new("*V~z~* [kN]", "6cm")},
-            ];
+        ];
 
                     tblSchil.Rows.Add(new() { new("Permanent (BG1)", "6cm"), new($"{steekTrap.Krachten.Mk1:0.0}", "2cm"), new($"{steekTrap.Krachten.Vk1:0.0}", "6cm") });
                     tblSchil.Rows.Add(new() { new("Veranderlijk (BG2)"), new($"{Math.Max(steekTrap.Krachten.Mk2, steekTrap.Krachten.Mk3):0.0}", "6cm"), new($"{steekTrap.Krachten.Vk2:0.0}", "6cm") });
@@ -1827,7 +1828,7 @@ else
                         new(new("reacties", "6cm")),
                         new(new("*R~z,Gk~* [kN/m¹]", "6cm"){Style = new(){Alignment = MigraDoc.DocumentObjectModel.ParagraphAlignment.Center}}),
                         new(new("*R~z,Qk~* [kN/m¹]", "6cm"){Style = new(){Alignment = MigraDoc.DocumentObjectModel.ParagraphAlignment.Center}}),
-            ];
+        ];
 
                     tblReacties.Rows.Add(new() { new($"onder/boven"), new($"{steekTrap.Krachten.Vk1:0.0}", "6cm"), new($"{Math.Max(steekTrap.Krachten.Vk2, steekTrap.Krachten.Vk3):0.0}", "6cm"), });
                     section.Elements.Add(tblReacties);
@@ -2128,9 +2129,10 @@ else
         foreach (var strook in a.Stroken)
         {
             string title = $"<span class='titel'>{a.Merk} (vervolg)</span> <span class='subtitel'>{strook.Naam}</span>";
+            string strookHeader = $"Strook {strook.Naam.ToUpperInvariant()}";
             section.AddHeading(title, "Kop 1");
             section.Elements.Add(new HeadingContent(GetHeaderHtml(content.PageHeader, PageNr++), 3));
-            section.AddParagraph(strook.Naam.ToUpperInvariant(), "Kop 3");
+            section.AddParagraph(strookHeader, "Kop 3");
 
             var svgDocs = strook.Beam.ToSvgDocumentsOpt(svgWidthPixels, 9999, svgStyle, a.Belastingen.BelastingGevallen, [(Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_A | Eurocode.Belastingen.BelastingCombinatieTypeEnum.Fundamenteel_B)]);
             foreach (var svgDoc in svgDocs)

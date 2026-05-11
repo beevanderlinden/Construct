@@ -106,12 +106,6 @@ namespace Construct.Domain.Entities
             Beam.ComputeReactions();
             Beam.Compute();
 
-            // haal de absolute Vz op
-            //var v1Max = Beam.ResultCollectionLegacy.Values.Max(x => Math.Abs(x.LeftReaction));
-            //var v2Max = Beam.ResultCollectionLegacy.Values.Max(x => Math.Abs(x.RightReaction));
-            //var mMin = Beam.ResultCollectionLegacy.Values.Min(x => x.MomentDiagram.Min(p => p.M));
-
-           
 
             // bijwerken toetsen
             UpdateForceCollectionOpt(beam: Beam);
@@ -127,10 +121,41 @@ namespace Construct.Domain.Entities
 
             UpdateWapeningOpt();
             UpdateBendingResults(); // testfase
-
-
             UpdateScheurwijdteCollectie();
             UpdateDwarskrachtCollectie();
+
+            // TODO : Generieke aanpak bedenken voor het bijwerken van de wapening in zowel stroken als platen,
+            // gebaseerd op de resultaten van de berekeningen en de vereisten van de wapening.
+            // Idee: 
+            // - Gebruik dezelfde PlaatWapening class voor zowel stroken als platen,
+            // zodat we een uniforme structuur hebben voor het opslaan van wapeninginformatie.
+            // - Bijvooorbeeld:
+            //   - Plaat met 3 stroken (parallel):
+            //      - elke strook heeft dezelfde PlaatWapening.
+            //      - elke strook heeft een WapeningContext specifiek voor die strook.
+            //          - strook 1: (basisstrook)
+            //          - strook 2: (basisstrook + bijleg)
+            //          - strook 3: (basisstrook + bijleg)
+            //      
+
+            // Maak een methode UpdateWapening() die zowel in StrookEntity als in PlaatEntity kan worden gebruikt.
+
+
+            // DEBUG:
+            // Hoe werkt het nu in BordesEntity:
+            // - Basisstrook.Wapening wordt in de stroken gestopt.
+            // - Ergens in bordes wordt de wapening bijgewerkt..
+            // - uitzoeken hoe dit voor alle platen kan werken met in strook en plaat.
+            // - virtual methode? die eventueel override heeft in concrete class zoals bijvoorbeeld Galerij/Balkon??
+
+            // Stappenplan -> laat CP uitzoeken hoe nu werkt, wat beter kan en implementeer dit.
+
+            // Daarna laat CP uizoeken hoe we BordesEnitity kunnen laten afstammen van PlaatEntity. 
+            // Idee: Maak BordesplaatEntity (nieuw) 
+
+
+
+
 
             //ApplyBijlegWapening();
 
@@ -201,6 +226,14 @@ namespace Construct.Domain.Entities
             PlaatWapening.Boven ??= new();
             PlaatWapening.Onder ??= new();
             
+
+            // Hoe dit werkt
+            // this.Father is bijvoorbeeld een BetonAssemblage
+            // this.PlaatWapening is bekend
+                // NB. Mogelijk een reference (dus wijzigt ook de Father) of clone (geen wijziging)
+
+
+            // 
 
             //PlaatWapening.Boven.DekkingBuitensteLaag = Father.PlaatDekking.Boven;
             //PlaatWapening.Boven.BasisWapening.Tekst = "r6-150";
@@ -431,6 +464,7 @@ namespace Construct.Domain.Entities
     public class DekkingContext : BaseEurocodeContext
     {
         public override string Heading { get; set; } = "Dekking/Duurzaamheid";
+        public bool IsInitialized { get; set; } = false;
         #pragma warning disable CS0067
                 public event Action? OnChanged;
         #pragma warning restore CS0067

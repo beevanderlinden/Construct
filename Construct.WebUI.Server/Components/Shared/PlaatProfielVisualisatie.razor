@@ -55,7 +55,12 @@
     [Parameter] public bool ToonRibben { get; set; } = !true;
     [Parameter] public double RibAfschuining { get; set; } = 10; // in graden
     [Parameter] public double Breedte { get; set; } = 1000;
+
     [Parameter] public double Hoogte { get; set; } = 200;
+    [Parameter] public double Hoogte2 { get; set; } = 200;
+
+
+
     [Parameter] public double MaxDisplayHeight { get; set; } = 300;
 
     private int RibAantalBoven => 1;
@@ -80,16 +85,70 @@
         // Betonprofiel
         if (!ToonRibben)
         {
-            elements.Add(new SvgRect
+            if (Hoogte2 != Hoogte)
             {
-                X = Marge,
-                Y = Marge,
-                Width = Breedte,
-                Height = Hoogte,
-                Fill = $"url(#concrete-{_instanceId})",
-                Stroke = "#999",
-                StrokeWidth = 1
-            });
+                // Ribben niet tonen, maar Hoogte2 is anders → trapeziumvormige plaat tekenen
+                double m = Marge;
+                double b = Breedte;
+                double h1 = Hoogte;
+                double h2 = Hoogte2;
+                string P(double x, double y) =>
+                    $"{(m + x).ToString("F2", CultureInfo.InvariantCulture)},{(m + y).ToString("F2", CultureInfo.InvariantCulture)}";
+                var points = string.Join(" ",
+                    P(0, h1-h2),
+                    P(0, h1),
+                    P(b, h1),
+                    P(b, 0)
+                    );
+                elements.Add(new SvgPolygon
+                {
+                    Points = points,
+                    Fill = $"none",
+                    Stroke = "#999",
+                    StrokeWidth = 1
+                });
+
+
+                // hier een offset stippellijn tekenen met lijn 1,2,3 met een offset van dekking.Onder.BasisWapening.ReferentieDekking.
+                // en lijn 4 met een offset van dekking.Boven.BasisWapening.ReferentieDekking.
+                // ...na het tekenen van de trapeziumvorm...
+                // if (Wapening?.Onder?.BasisWapening != null && Wapening?.Boven?.BasisWapening != null)
+                // {
+                //     double dekOnder = Wapening.Onder.VerdeelWapening.ReferentieDekking;
+                //     double dekBoven = Wapening.Boven.VerdeelWapening.ReferentieDekking;
+
+                //     var offsetPoints = string.Join(" ",
+                //         P(0 + dekOnder, h1 - h2 + dekBoven),
+                //         P(0 + dekOnder, h1 - dekOnder),
+                //         P(b - dekOnder, h1 - dekOnder),
+                //         P(b - dekBoven, 0 + dekBoven)
+                //     );
+
+                //     elements.Add(new SvgPolygon
+                //     {
+                //         Points = offsetPoints,
+                //         Fill = "none",
+                //         Stroke = "red",
+                //         StrokeWidth = 0.1,
+                //     });
+                //}
+
+            }
+            else
+            {
+                elements.Add(new SvgRect
+                {
+                    X = Marge,
+                    Y = Marge,
+                    Width = Breedte,
+                    Height = Hoogte,
+                    Fill = $"none",
+                    //Fill = $"url(#concrete-{_instanceId})",
+
+                    Stroke = "#999",
+                    StrokeWidth = 1
+                });
+            }
         }
         else
         {
@@ -163,6 +222,7 @@
 
 
         double wapeningOffset = ToonRibben ? (RibHoogte - Hoogte) : 0;
+        double alphaDeg = Math.Atan2(Hoogte - Hoogte2, Breedte) * 180.0 / Math.PI;
 
         // Bovenwapening (blauwige kleur)
         if (Wapening?.Boven?.BasisWapening != null)
@@ -172,8 +232,9 @@
             var dekkingLinks = dekkingToe;
             var dekkingRechts = dekkingToe;
             var dekkingBoven = dekkingToe;
+            var dh = Hoogte - Hoogte2;
 
-            var yPosHart = Marge + wapeningOffset + dekkingBoven + (wap.GemiddeldeDiameter / 2.0);
+            var yPosHart = Marge + wapeningOffset + dh + dekkingBoven + (wap.GemiddeldeDiameter / 2.0);
             var yPos = yPosHart - (wap.GemiddeldeDiameter / 2.0);
 
             // Parse wapening tekst om hoh-maat te krijgen (bijv. "r8-150" → diameter=8, hoh=150)
@@ -188,16 +249,16 @@
             var totaleAfstand = aantalAfstanden * hoh;
             var extraRuimte = beschikbareBreedte - totaleAfstand;
             var startX = Marge + dekkingLinks + extraRuimte / 2.0;
-            
+
             // Teken individuele wapeningsstaven als cirkels
             for (int i = 0; i < aantalStaven; i++)
             {
                 var xPos = startX + (i * hoh);
-                
+
                 // Stop als we buiten de plaat komen
                 if (xPos > Marge + Breedte - dekkingRechts)
                     break;
-                
+
                 elements.Add(new SvgCircle
                 {
                     Cx = xPos,
@@ -206,10 +267,11 @@
                     Fill = "#4A90E2",
                     Stroke = "#2E5C8A",
                     StrokeWidth = 0.8,
-                    Opacity = 0.9
+                    Opacity = 0.9,
+                    Transform = $"rotate({-alphaDeg}, {100.0},{0.0})" // kleine rotatie voor visuele duidelijkheid
                 });
             }
-            
+
             // Label bovenwapening (in het midden, over de wapening)
             var textBoven = new SvgText
             {
@@ -220,7 +282,7 @@
                 DominantBaseLine = "middle",
                 Pts = 20,
                 Scale = Scale,
-                Fill = "#2E5C8A"
+                Fill = "#2E5C8A",
             };
             textBoven.Content.Title = $"= {wap.As:F0} mm²";
             elements.Add(textBoven);
@@ -234,19 +296,24 @@
 
                 double d     = verdeelDiameter;
                 var yTop     = Marge + wapeningOffset + verdeelWap.ReferentieDekking;
+                var yTop2    = yTop + (Hoogte - Hoogte2);
                 var xLinks   = Marge + dekkingLinks;
                 var xRechts  = Marge + Breedte - dekkingRechts;
+                var rotateDeg = 0.0; // geen rotatie, want we tekenen een horizontale staaf
+                rotateDeg = -2.0; // kleine rotatie voor visuele duidelijkheid
+                rotateDeg = -alphaDeg; // rotatie evenwijdig aan de schuine plaatkant
 
                 elements.Add(new SvgRect
                 {
                     X           = xLinks,
-                    Y           = yTop,
+                    Y           = yTop2,
                     Width       = xRechts - xLinks,
                     Height      = d,
-                    Fill        = "#4A90E2",
+                    Fill        = "none",
                     Stroke      = "#2E5C8A",
                     StrokeWidth = 0.5,
-                    Opacity     = 0.85
+                    Opacity     = 0.85,
+                    Transform = $"rotate({rotateDeg}, {xLinks},{yTop2})" // verschuif omhoog naar de bovenkant van de plaat
                 });
 
                 // C-vormige haarspelden links (⊂) en rechts (⊃)
@@ -283,7 +350,7 @@
                     for (int i = 0; i <= carcN; i++) { double a = (180.0 + 90.0 * i / carcN) * Math.PI / 180.0; p.Add((cxTLi + rIn * Math.Cos(a), cyTLi + rIn * Math.Sin(a))); }
                     p.Add((xArm, cYTop + d));
 
-                    elements.Add(new SvgPolygon { Points = CPoints(p), Fill = "#4A90E2", Stroke = "#1A3F6A", StrokeWidth = 0.8, Opacity = 0.6 });
+                    //elements.Add(new SvgPolygon { Points = CPoints(p), Fill = "#4A90E2", Stroke = "#1A3F6A", StrokeWidth = 0.8, Opacity = 0.6 });
                 }
 
                 // Rechter C (⊃): buitenkant rechts op x = Marge + Breedte - cDekkingRand, armen gaan naar links
@@ -307,7 +374,7 @@
                     for (int i = 0; i <= carcN; i++) { double a = (360.0 - 90.0 * i / carcN) * Math.PI / 180.0; p.Add((cxTRi + rIn * Math.Cos(a), cyTRi + rIn * Math.Sin(a))); }
                     p.Add((xArm, cYTop + d));
 
-                    elements.Add(new SvgPolygon { Points = CPoints(p), Fill = "#4A90E2", Stroke = "#1A3F6A", StrokeWidth = 0.8, Opacity = 0.6 });
+                    //elements.Add(new SvgPolygon { Points = CPoints(p), Fill = "#4A90E2", Stroke = "#1A3F6A", StrokeWidth = 0.8, Opacity = 0.6 });
                 }
             }
 
@@ -315,9 +382,9 @@
             var dimLineLinksTotaal = new SvgDimLine
             {
                 X1 = Marge,
-                Y1 = Marge + Hoogte + wapeningOffset,
+                Y1 = Marge + Hoogte,
                 X2 = Marge,
-                Y2 = yPosHart,
+                Y2 = Marge + (Hoogte-Hoogte2),
                 Offset = 40,
                 Mode = DimLineMode.Vertical,
                 ShowExtensionLines = true,
@@ -457,7 +524,7 @@
                         Y           = yVerdeelHart - r,
                         Width       = staafBreedte,
                         Height      = verdeelDiameter,
-                        Fill        = "#FF8C42",
+                        Fill        = "none",
                         Stroke      = "#D4621F",
                         StrokeWidth = 0.5,
                         Opacity     = 0.75
@@ -481,7 +548,7 @@
                 MarkerStart = $"arrowhead-{_instanceId}",
                 MarkerEnd = $"arrowhead-{_instanceId}"
             };
-            elements.Add(dimLineRechtsTotaal);
+            //elements.Add(dimLineRechtsTotaal);
 
             // Maatlijn rechts: van hart onderwapening tot onderkant profiel
             var dimRechtsDeelOnder = new SvgDimLine
@@ -512,7 +579,7 @@
             Y1 = Marge + Hoogte + wapeningOffset,
             X2 = Marge + Breedte,
             Y2 = Marge + wapeningOffset,
-            Offset = -Marge,
+            Offset = -40,
             Mode = DimLineMode.Vertical,
             ShowExtensionLines = true,
             StrokeColor = "#333",

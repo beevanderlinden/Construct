@@ -40,11 +40,59 @@ namespace Construct.Domain.Entities
         /// </summary>
         public double B { get; set; } = 0;
 
+        /// <summary>
+        /// True = trapeziumvorm (MagnitudeA en MagnitudeB mogen verschillen). False = rechthoek (MagnitudeB = MagnitudeA).
+        /// </summary>
+        public bool IsTrapezium
+        {
+            get => _isTrapezium;
+            set
+            {
+                if (_isTrapezium != value)
+                {
+                    _isTrapezium = value;
+                    if (!_isTrapezium)
+                    {
+                        _magnitudeB = _magnitudeA;
+                    }
+                }
+            }
+        }
+        private bool _isTrapezium = false;
+
+        private double _magnitudeA = -5.0;
+        private double _magnitudeB = -5.0;
+
         /// <summary>Magnitude aan het startpunt in kN/m. Negatief = neerwaarts.</summary>
-        public double MagnitudeA { get; set; } = -5.0;
+        public double MagnitudeA
+        {
+            get => _magnitudeA;
+            set
+            {
+                _magnitudeA = value;
+                if (!IsTrapezium)
+                {
+                    _magnitudeB = value;
+                }
+            }
+        }
 
         /// <summary>Magnitude aan het eindpunt in kN/m. Negatief = neerwaarts.</summary>
-        public double MagnitudeB { get; set; } = -5.0;
+        public double MagnitudeB
+        {
+            get => IsTrapezium ? _magnitudeB : _magnitudeA;
+            set
+            {
+                if (IsTrapezium)
+                {
+                    _magnitudeB = value;
+                }
+                else
+                {
+                    _magnitudeB = _magnitudeA;
+                }
+            }
+        }
 
         /// <summary>Belastinggeval waaraan deze lijnlast is gekoppeld (bv. BG1 of BG2).</summary>
         [JsonIgnore]
@@ -130,6 +178,53 @@ namespace Construct.Domain.Entities
             PlaatRand.Links or PlaatRand.Rechts => breedte,
             _                                    => lengte,
         };
+    }
+
+    /// <summary>
+    /// Een puntlast op een plaat met een positie (PosX, PosY) in 2D plaatvlak-coördinaten (mm),
+    /// een magnitude in kN en een koppeling aan een belastinggeval.
+    /// Negatieve magnitude is neerwaarts; positieve is opwaarts.
+    /// </summary>
+    public class PlaatPuntlast
+    {
+        /// <summary>Omschrijving / naam van de puntlast, bv. "kolom".</summary>
+        public string Naam { get; set; } = string.Empty;
+        public string Omschrijving { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Positie X in het plaatvlak (mm). Coördinaat: lx = 0..Lengte.
+        /// </summary>
+        public double PosX { get; set; }
+
+        /// <summary>
+        /// Positie Y in het plaatvlak (mm). Coördinaat: by = 0..Breedte.
+        /// </summary>
+        public double PosY { get; set; }
+
+        /// <summary>Magnitude in kN. Negatief = neerwaarts.</summary>
+        public double Magnitude { get; set; } = -20.0;
+
+        /// <summary>Belastinggeval waaraan deze puntlast is gekoppeld (bv. BG1 of BG2).</summary>
+        [JsonIgnore]
+        public BelastingGeval? BelastingGeval { get; set; }
+
+        /// <summary>
+        /// Nr van het belastinggeval, voor serialisatie.
+        /// Wordt via <see cref="PlaatEntity.Bijwerken"/> hersteld.
+        /// </summary>
+        public int BelastingGevalNr { get; set; } = 1;
+
+        // ----------------------------------------------------------------
+        //  Computed helpers
+        // ----------------------------------------------------------------
+
+        /// <summary>True als de last neerwaarts werkt (magnitude negatief).</summary>
+        [JsonIgnore]
+        public bool IsNeerwaarts => Magnitude < 0;
+
+        /// <summary>Absolute magnitude.</summary>
+        [JsonIgnore]
+        public double AbsMagnitude => Math.Abs(Magnitude);
     }
 
     /// <summary>

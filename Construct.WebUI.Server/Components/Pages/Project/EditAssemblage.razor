@@ -89,7 +89,6 @@
                                  <FluentTab Id="tab-slab" Label="plaat">
                                     <Header><FluentIcon Value="@(new Icons.Regular.Size20.PanelRightContract())" />plaat</Header>
                                     <Content>
-                                        <div>Het hoofdonderdeel is een betonnen plaat. Dit zijn de eigenschappen van de plaatwapening.</div>
 
                                         @if (slab.PlaatDekking != null)
                                         {
@@ -99,6 +98,12 @@
 
                                             <KaskonSlabFireResistance Slab="slab" />
                                         }
+                                        else
+                                        {
+                                            <div>LET OP! geen plaatdekking gedefinieerd.</div>
+                                        }
+
+
                                        
                                         @if (slab.PlaatWapening != null)
                                         {
@@ -117,11 +122,21 @@
                                                                           RibBreedte="steekTrapEntity.TrapBoomBreedte"
                                                                           MaxDisplayHeight="300" />
                                             }
+                                            else if (betonAssemblage is GalerijplaatEntity gp)
+                                            {
+                                                <PlaatProfielVisualisatie Wapening="@slab.PlaatWapening"
+                                                                          Breedte="gp.Breedte"
+                                                                          Hoogte="@slab.Dikte"
+                                                                          Hoogte2="@gp.Hoogte2"
+                                                                          ToonRibben="false"
+                                                                          MaxDisplayHeight="300" />
+                                            }
                                             else
                                             {
                                                 <PlaatProfielVisualisatie Wapening="@slab.PlaatWapening"
                                                                           Breedte="1000"
                                                                           Hoogte="@slab.Dikte"
+                                                                          Hoogte2="@slab.Dikte"
                                                                           MaxDisplayHeight="300" />
                                             }
 

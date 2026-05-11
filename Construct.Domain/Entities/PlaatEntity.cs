@@ -32,6 +32,9 @@ namespace Construct.Domain.Entities
             };
         }
 
+      
+
+
         /// <summary>
         /// Eigen gewicht berekend op basis van plaat dikte en betongewicht (25 kN/m³).
         /// </summary>
@@ -63,6 +66,9 @@ namespace Construct.Domain.Entities
                 if (PlaatDekking.Onder.DekkingToe <= 20)
                     PlaatDekking.Onder.DekkingToe = 25;
             }
+
+            // geef door dat initialisatie is gedaan
+            PlaatDekking.IsInitialized = true;
         }
 
         public override void Bijwerken()
@@ -122,9 +128,18 @@ namespace Construct.Domain.Entities
             }
 
             // Initialiseer PlaatDekking (roept de override aan die ook milieuklassen/DekkingToe instelt)
-            bool bovenWasNull = PlaatDekking.Boven == null;
-            bool onderWasNull = PlaatDekking.Onder == null;
-            InitializePlaatDekking();
+            if (!PlaatDekking.IsInitialized)
+            {
+                InitializePlaatDekking();
+            }
+
+
+            //bool bovenWasNull = PlaatDekking.Boven == null;
+            //bool onderWasNull = PlaatDekking.Onder == null;
+            //if (bovenWasNull || onderWasNull) 
+            //{ 
+            //    InitializePlaatDekking();
+            //}
 
             // Zorg dat IsPlaatGeometrie / IsKwaliteitsBeheersing altijd gezet zijn
             if (PlaatDekking.Boven != null)
@@ -152,6 +167,13 @@ namespace Construct.Domain.Entities
                 ll.BerekenPunten(Lengte, Breedte);
             }
 
+            // Herstel BelastingGeval-referenties op puntlasten
+            foreach (var pl in Puntlasten)
+            {
+                pl.BelastingGeval = Belastingen.BelastingGevallen
+                    .FirstOrDefault(bg => bg.Nr == pl.BelastingGevalNr);
+            }
+
             BerekenStroken();
         }
 
@@ -170,6 +192,11 @@ namespace Construct.Domain.Entities
         /// Lijnlasten op de plaat (rand- of vrije lijnlasten).
         /// </summary>
         public List<PlaatRandLijnlast> Lijnlasten { get; set; } = [];
+
+        /// <summary>
+        /// Puntlasten op de plaat.
+        /// </summary>
+        public List<PlaatPuntlast> Puntlasten { get; set; } = [];
 
         /// <summary>
         /// Past een opleggingspreset toe. Vervangt alle bestaande opleggingen.
@@ -358,11 +385,18 @@ namespace Construct.Domain.Entities
                 var bg1 = Belastingen.BelastingGevallen.ElementAtOrDefault(0);
                 var bg2 = Belastingen.BelastingGevallen.ElementAtOrDefault(1);
                 double qGk = PermanenteBelastingPerM2;
+                string qGkOmschrijving = $"permanent";
+
                 double qQk = VeranderlijkeBelastingPerM2;
+                string qQkOmschrijving = $"veranderlijk";
+
                 if (bg1 != null && Math.Abs(qGk) > 1e-9)
-                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg1, "q~Gk~", 0, L, -qGk));
+                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg1, "q~Gk~", 0, L, -qGk) { Description = qGkOmschrijving});
+                
+                
+                
                 if (bg2 != null && Math.Abs(qQk) > 1e-9)
-                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg2, "q~Qk~", 0, L, -qQk));
+                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg2, "q~Qk~", 0, L, -qQk) { Description = qQkOmschrijving});
 
                 stroken.Add(ps);
             }

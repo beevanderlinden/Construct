@@ -1,4 +1,5 @@
-﻿@using Eurocode.BetonConstructies
+﻿@using Construct.Domain.Entities.Parts
+@using Eurocode.BetonConstructies
 @using Eurocode.Belastingen
 @using Eurocode.HoutConstructies
 @using Eurocode.StaalConstructies
@@ -256,7 +257,46 @@
         };
         dakplaat.Belastingen.GenereerBelastingCombinaties(dakplaat.Belastingen, dakplaat.Belastingen.BelastingGevallen, dakplaat.Belastingen.CombinatiesTypes);
         dakplaat.Init(ProjectEntity!.ProjectInfo);
+
+        
+
+
+
         dakplaat.Bijwerken();
+
+        // pas de default dekking aan voor dakplaat (speficiek voor dakplaten)
+        if (dakplaat.MainSlab?.PlaatDekking is DekkingContext dekking)
+        {
+            dekking.Onder.SelectedMilieuklassen = new List<MilieuklasseEnum> { MilieuklasseEnum.XC1 };
+            dekking.Onder.DekkingToe = 20;
+            dekking.Boven.SelectedMilieuklassen = new List<MilieuklasseEnum> { MilieuklasseEnum.XC1 };
+            dekking.Boven.DekkingToe = 20;
+        }
+
+        // pas de default wapening aan voor dakplaat (speficiek voor dakplaten)
+        if (dakplaat.MainSlab?.PlaatWapening is PlaatWapening pw)
+        {
+            if (pw.Onder != null)
+            {
+                pw.Onder.BasisWapening.Tekst = "r8-150";
+                if (pw.Onder.VerdeelWapening != null)
+                {
+                    pw.Onder.VerdeelWapening.Tekst = "r8-150";
+                }
+            } 
+            if (pw.Boven != null)
+            {
+                pw.Boven.BasisWapening.Tekst = "r8-150";
+                if (pw.Boven.VerdeelWapening != null)
+                {
+                    pw.Boven.VerdeelWapening.Tekst = "r8-150";
+                }
+            }
+
+        }
+
+
+
         return dakplaat;
     }
 
