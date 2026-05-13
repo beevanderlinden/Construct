@@ -32,171 +32,42 @@
     }
 
     <br />
-    <p style="margin:8px 0 2px 0; font-weight:500; font-size:0.85rem;">opleggingen</p>
 
-    @if (Plaat.Opleggingen.Count == 0)
-    {
-        <p style="font-style:italic; color:var(--neutral-foreground-rest); margin:4px 0;">geen opleggingen</p>
-        <KitInputEnum TEnum="PlaatOpleggingPreset"
-                      Label="preset toepassen"
-                      Value="_preset"
-                      ValueChanged="OnPresetChanged"
-                      UseShortName="false" />
-    }
+    <TreeViewSection Title="Opleggingen" 
+                     Badge="@(Plaat.Opleggingen.Count > 0 ? Plaat.Opleggingen.Count.ToString() : null)"
+                     @bind-IsExpanded="_opleggingenExpanded">
+        <PlaatOpleggingenDetails Opleggingen="Plaat.Opleggingen"
+                                 Preset="_preset"
+                                 OnModelChanged="OnModelChanged"
+                                 OnPresetChanged="OnPresetChanged"
+                                 OnAddRandOplegging="AddRandOplegging"
+                                 OnAddPuntOplegging="AddPuntOplegging"
+                                 OnRemoveOplegging="RemoveOplegging" />
+    </TreeViewSection>
 
-   
+    <TreeViewSection Title="Lijnlasten" 
+                     Badge="@(Plaat.Lijnlasten.Count > 0 ? Plaat.Lijnlasten.Count.ToString() : null)"
+                     @bind-IsExpanded="_lijnlastenExpanded">
+        <PlaatLijnlastenDetails Lijnlasten="Plaat.Lijnlasten"
+                                PlaatLengte="Plaat.Lengte"
+                                PlaatBreedte="Plaat.Breedte"
+                                BelastingGevallen="Plaat.Belastingen.BelastingGevallen"
+                                OnModelChanged="OnModelChanged"
+                                OnAddLijnlast="AddLijnlast"
+                                OnRemoveLijnlast="RemoveLijnlast" />
+    </TreeViewSection>
 
-    <br />
-
-    @foreach (var (opl, idx) in Plaat.Opleggingen.Select((o, i) => (o, i)))
-    {
-        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
-
-            <KitTextField Label="nr" Value="@((idx + 1).ToString())" Width="3em" TextOnly="true" />
-            <KitTextField Label="rand" Value="@(opl.Rand.ToString())" Width="4em" TextOnly="true" />
-            <KitTextField Label="type" Value="@(opl.Conditie.ToString())" Width="7em" TextOnly="true" />
-
-            @if (opl is PlaatPuntOplegging punt)
-            {
-                <KitInputNumberWithUnit Label="positie"
-                                        T="double" Min="0" Step="50"
-                                        @bind-Value="punt.PositieOpRand"
-                                        Units="UnitSets.LengteMM" OnValueChanged="OnModelChanged" />
-                <KitInputNumberWithUnit Label="breedte steun"
-                                        T="double" Min="50" Max="1000" Step="50"
-                                        @bind-Value="punt.Breedte"
-                                        Units="UnitSets.LengteMM" OnValueChanged="OnModelChanged" />
-            }
-
-        </div>
-    }
-
-    <br />
-    <p style="margin:8px 0 2px 0; font-weight:500; font-size:0.85rem;">lijnlasten</p>
-
-    @foreach (var (ll, idx) in Plaat.Lijnlasten.Select((l, i) => (l, i)))
-    {
-        var fout = ll.ValideerMagnitudes();
-        <div style="border:1px solid #ccc; border-radius:4px; padding:6px 8px; margin-bottom:6px;">
-
-            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
-
-                <KitTextField Label="nr" Value="@((idx + 1).ToString())" Width="3em" TextOnly="true" />
-
-                <KitTextBox Label="naam"
-                            @bind-Value="ll.Naam"
-                            OnValueChanged="OnModelChanged" />
-
-                <KitTextBox Label="omschrijving"
-                            @bind-Value="ll.Omschrijving"
-                            OnValueChanged="OnModelChanged" />
-
-                <KitInputEnum TEnum="PlaatRand"
-                              Label="rand"
-                              Value="ll.Rand"
-                              ValueChanged="@(v => { if (v.HasValue) { ll.Rand = v.Value; ll.BerekenPunten(Plaat.Lengte, Plaat.Breedte); OnModelChanged(); } })" />
-
-
-
-
-                <div style="display:flex; align-items:center; gap:4px;">
-                    <label style="font-size:0.78rem; color:var(--neutral-foreground-rest);">belastinggeval</label>
-                    <select style="font-size:0.82rem; padding:2px 4px; border:1px solid #aaa; border-radius:3px;"
-                            value="@ll.BelastingGevalNr"
-                            @onchange="@(e => OnBelastingGevalChanged(ll, e))">
-                        @foreach (var bg in Plaat.Belastingen.BelastingGevallen)
-                        {
-                            <option value="@bg.Nr">@bg.Naam (@bg.Omschrijving)</option>
-                        }
-                    </select>
-                </div>
-
-                <button type="button" style="font-size:0.78rem; color:firebrick; background:none; border:none; cursor:pointer;"
-                        @onclick="() => RemoveLijnlast(idx)">✕</button>
-            </div>
-
-            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                <KitInputNumberWithUnit Label="begin A"
-                                        T="double" Min="0" Step="100"
-                                        @bind-Value="ll.A"
-                                        Units="UnitSets.LengteMM"
-                                        OnValueChanged="@(() => { ll.BerekenPunten(Plaat.Lengte, Plaat.Breedte); OnModelChanged(); })" />
-
-                <KitInputNumberWithUnit Label="v. einde B"
-                                        T="double" Min="0" Step="100"
-                                        @bind-Value="ll.B"
-                                        Units="UnitSets.LengteMM"
-                                        OnValueChanged="@(() => { ll.BerekenPunten(Plaat.Lengte, Plaat.Breedte); OnModelChanged(); })" />
-
-                <KitInputNumberWithUnit Label="offset"
-                                        T="double" Step="50"
-                                        @bind-Value="ll.Offset"
-                                        Units="UnitSets.LengteMM"
-                                        OnValueChanged="@(() => { ll.BerekenPunten(Plaat.Lengte, Plaat.Breedte); OnModelChanged(); })" />
-
-                <KitInputNumberWithUnit Label="q begin"
-                                        T="double" Step="0.5"
-                                        @bind-Value="ll.MagnitudeA"
-                                        Units="UnitSets.KrachtPerLengte"
-                                        OnValueChanged="OnModelChanged" />
-
-                <KitInputNumberWithUnit Label="q eind"
-                                        T="double" Step="0.5"
-                                        @bind-Value="ll.MagnitudeB"
-                                        Disabled="!ll.IsTrapezium"
-                                        Units="UnitSets.KrachtPerLengte"
-                                        OnValueChanged="OnModelChanged" />
-
-
-                <FluentCheckbox @bind-Value="ll.IsTrapezium" Label="◿?"/>
-            </div>
-
-            @if (fout != null)
-            {
-                <p style="color:firebrick; font-size:0.78rem; margin:4px 0 0 0;">⚠ @fout</p>
-            }
-
-        </div>
-    }
-
-    @foreach (var (pl, idx) in Plaat.Puntlasten.Select((p, i) => (p, i)))
-    {
-        <div style="border:1px solid #ccc; border-radius:4px; padding:6px 8px; margin-bottom:6px;">
-            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
-                <KitTextField Label="nr" Value="@((idx + 1).ToString())" Width="3em" TextOnly="true" />
-                <KitTextField Label="naam"
-                            Value="@pl.Naam" />
-
-                <KitTextBox Label="omschrijving"
-                            @bind-Value="@pl.Omschrijving"
-                            OnValueChanged="OnModelChanged" />
-                
-                <button type="button" style="font-size:0.78rem; color:firebrick; background:none; border:none; cursor:pointer;"
-                        @onclick="() => Plaat.Puntlasten.RemoveAt(idx)">✕</button>
-            </div>
-            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                <KitInputNumberWithUnit Label="positie X"
-                                        T="double" Min="0" Step="100" Max="Plaat.Lengte"
-                                        @bind-Value="pl.PosX"
-                                        Units="UnitSets.LengteMM" OnValueChanged="OnModelChanged" />
-                <KitInputNumberWithUnit Label="positie Y"
-                                        T="double" Min="0" Step="100" Max="Plaat.Breedte"
-                                        @bind-Value="pl.PosY"
-                                        Units="UnitSets.LengteMM" OnValueChanged="OnModelChanged" />
-                <KitInputNumberWithUnit Label="magnitude"
-                                        T="double" Step="0.5"
-                                        @bind-Value="pl.Magnitude"
-                                        Units="UnitSets.Kracht" OnValueChanged="OnModelChanged" />
-            </div>
-        </div>
-    }
-
-
-    <div style="display:flex; gap:6px; margin-top:4px;">
-        <button type="button" class="kit-btn kit-btn--secondary" @onclick="AddLijnlast">+ lijnlast</button>
-        <button type="button" class="kit-btn kit-btn--secondary" @onclick="AddPuntlast">+ puntlast</button>
-    </div>
-
+    <TreeViewSection Title="Puntlasten" 
+                     Badge="@(Plaat.Puntlasten.Count > 0 ? Plaat.Puntlasten.Count.ToString() : null)"
+                     @bind-IsExpanded="_puntlastenExpanded">
+        <PlaatPuntlastenDetails Puntlasten="Plaat.Puntlasten"
+                                PlaatLengte="Plaat.Lengte"
+                                PlaatBreedte="Plaat.Breedte"
+                                BelastingGevallen="Plaat.Belastingen.BelastingGevallen"
+                                OnModelChanged="OnModelChanged"
+                                OnAddPuntlast="AddPuntlast"
+                                OnRemovePuntlast="RemovePuntlast" />
+    </TreeViewSection>
 
 }
 
@@ -207,6 +78,9 @@
     [CascadingParameter] public Action? RequestParentRefresh { get; set; }
 
     private PlaatOpleggingPreset? _preset;
+    private bool _opleggingenExpanded = true;
+    private bool _lijnlastenExpanded = true;
+    private bool _puntlastenExpanded = true;
 
     void OnModelChanged() => RequestParentRefresh?.Invoke();
 
@@ -215,18 +89,6 @@
         if (Plaat == null || !preset.HasValue) return;
         _preset = preset;
         Plaat.PasOpleggingPresetToe(preset.Value);
-        OnModelChanged();
-    }
-
-    private void OnRandChanged(PlaatOplegging opl, PlaatRand? v)
-    {
-        if (v.HasValue) opl.Rand = v.Value;
-        OnModelChanged();
-    }
-
-    private void OnConditieChanged(PlaatOplegging opl, PlaatOpleggingConditie? v)
-    {
-        if (v.HasValue) opl.Conditie = v.Value;
         OnModelChanged();
     }
 
@@ -269,7 +131,7 @@
             BelastingGeval   = bg1,
             Naam = $"q",
             Omschrijving = "gevel",
-            
+
         };
         ll.BerekenPunten(Plaat.Lengte, Plaat.Breedte);
         Plaat.Lijnlasten.Add(ll);
@@ -283,14 +145,10 @@
         OnModelChanged();
     }
 
-    private void OnBelastingGevalChanged(PlaatRandLijnlast ll, ChangeEventArgs e)
+    private void RemovePuntlast(int idx)
     {
-        if (Plaat == null) return;
-        if (int.TryParse(e.Value?.ToString(), out int nr))
-        {
-            ll.BelastingGevalNr = nr;
-            ll.BelastingGeval   = Plaat.Belastingen.BelastingGevallen.FirstOrDefault(bg => bg.Nr == nr);
-        }
+        if (Plaat == null || idx < 0 || idx >= Plaat.Puntlasten.Count) return;
+        Plaat.Puntlasten.RemoveAt(idx);
         OnModelChanged();
     }
 

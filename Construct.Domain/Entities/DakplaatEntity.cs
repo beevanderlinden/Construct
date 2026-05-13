@@ -12,14 +12,19 @@ namespace Construct.Domain.Entities
         public override double Lengte { get; set; } = 3000;
         public override double Breedte { get; set; } = 2000;
 
-        public DakplaatRichting Richting { get; set; } = DakplaatRichting.BovenOnder;
+        public DakplaatRichting Richting { get; set; } = DakplaatRichting.Beide;
 
         public override void Bijwerken()
         {
             // Stel oplegging in op basis van gekozen richting
-            PasOpleggingPresetToe(Richting == DakplaatRichting.LinksRechts
-                ? PlaatOpleggingPreset.VrijOpgelegd2Randen
-                : PlaatOpleggingPreset.VrijOpgelegdBreedte);
+
+            var preset = PlaatOpleggingPreset.Rondom;
+
+            if (Richting == DakplaatRichting.Beide)
+                preset = PlaatOpleggingPreset.Rondom;
+           
+
+            PasOpleggingPresetToe(preset);
 
             base.Bijwerken();
         }
@@ -43,5 +48,7 @@ namespace Construct.Domain.Entities
 
         /// <summary>Vrij opgelegd op Links en Rechts (spanning langs Lengte-as).</summary>
         LinksRechts,
+
+        Beide,
     }
 }

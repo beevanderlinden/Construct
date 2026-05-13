@@ -682,9 +682,6 @@
             
             foreach (var combinatieType in belastingCombinatieTypes)
             {
-
-
-
                 BoundingBox boundingBox = new();
                 var xml = SvgGenerator.GenerateBeamDiagramSvgContent(
                         beam: beam,
@@ -796,14 +793,15 @@
 
             var verticalExtents = points.ToVerticalExtents();
 
+            var grafiekAmplitude = 100.0 / scale;
 
+            // ✅ Consistent met moment diagram: gebruik range (min tot max) i.p.v. absolute max
+            var orderedShear = points.OrderBy(p => p.Y).ToList();
+            var minShear = orderedShear.FirstOrDefault().Y;
+            var maxShear = orderedShear.LastOrDefault().Y;
+            var deltaShear = Math.Abs(minShear) + Math.Abs(maxShear);
 
-            var grafiekAmplitude = 50.0 / scale;
-            var scaleY = grafiekAmplitude /
-                   points
-                   .Select(p => Math.Abs(p.Y))
-                   .DefaultIfEmpty(1)
-                   .Max();
+            var scaleY = grafiekAmplitude / Math.Max(deltaShear, 1.0);
 
             // Keuze: individueel of gecombineerd (envelope)
             if (!combineerGrafieken)

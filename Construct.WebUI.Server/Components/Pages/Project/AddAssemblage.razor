@@ -239,6 +239,27 @@
         galerijplaat.Belastingen.GenereerBelastingCombinaties(galerijplaat.Belastingen, galerijplaat.Belastingen.BelastingGevallen, galerijplaat.Belastingen.CombinatiesTypes);
         galerijplaat.Init(ProjectEntity!.ProjectInfo);
         galerijplaat.Bijwerken();
+
+        // standaard met hekwerk/balustrade en gevel
+
+        galerijplaat.Lijnlasten.Add(new PlaatRandLijnlast()
+        {
+            Naam = "LG2",
+            Omschrijving = "gevel",
+            Rand = PlaatRand.Boven,
+            MagnitudeA = -3.0,
+            BelastingGevalNr = galerijplaat.Belastingen.BelastingGevallen.FirstOrDefault()?.Nr ?? 1,
+        });
+        galerijplaat.Lijnlasten.Add(new PlaatRandLijnlast()
+        {
+            Naam = "LG3",
+            Omschrijving = "hekwerk/borstwering",
+            Rand = PlaatRand.Onder,
+            MagnitudeA = -1.0,
+            BelastingGevalNr = galerijplaat.Belastingen.BelastingGevallen.FirstOrDefault()?.Nr ?? 1,
+        });
+
+
         return galerijplaat;
     }
 
@@ -295,6 +316,16 @@
 
         }
 
+        // standaard met afwerking en hijsoog voor liftonderhoud/montage
+        dakplaat.Puntlasten.Add(new PlaatPuntlast()
+        {
+            Naam = "PQ1",
+            Omschrijving = "hijsoog voor montage/liftonderhoud",
+            PosX = 1500,
+            PosY = 1000,
+            Magnitude = -20.0,
+            BelastingGevalNr = dakplaat.Belastingen.BelastingGevallen.LastOrDefault()?.Nr ?? 2,
+        });
 
 
         return dakplaat;

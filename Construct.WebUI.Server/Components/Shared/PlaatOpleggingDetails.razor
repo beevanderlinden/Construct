@@ -1,0 +1,31 @@
+@using Construct.Domain.Entities
+
+<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
+
+    <KitTextField Label="nr" Value="@((Index + 1).ToString())" Width="3em" TextOnly="true" />
+    <KitTextField Label="rand" Value="@(Oplegging.Rand.ToString())" Width="4em" TextOnly="true" />
+    <KitTextField Label="type" Value="@(Oplegging.Conditie.ToString())" Width="7em" TextOnly="true" />
+
+    @if (Oplegging is PlaatPuntOplegging punt)
+    {
+        <KitInputNumberWithUnit Label="positie"
+                                T="double" Min="0" Step="50"
+                                @bind-Value="punt.PositieOpRand"
+                                Units="UnitSets.LengteMM" OnValueChanged="@(() => OnModelChanged.InvokeAsync())" />
+        <KitInputNumberWithUnit Label="breedte steun"
+                                T="double" Min="50" Max="1000" Step="50"
+                                @bind-Value="punt.Breedte"
+                                Units="UnitSets.LengteMM" OnValueChanged="@(() => OnModelChanged.InvokeAsync())" />
+    }
+
+    <button type="button" style="font-size:0.78rem; color:firebrick; background:none; border:none; cursor:pointer;"
+            @onclick="OnRemove">✕</button>
+
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PlaatOplegging Oplegging { get; set; } = null!;
+    [Parameter, EditorRequired] public int Index { get; set; }
+    [Parameter] public EventCallback OnModelChanged { get; set; }
+    [Parameter] public EventCallback OnRemove { get; set; }
+}

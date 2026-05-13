@@ -209,6 +209,18 @@ namespace Construct.Domain.Entities
 
             switch (preset)
             {
+                case PlaatOpleggingPreset.Geen:
+                    // Geen opleggingen
+                    break;
+                case PlaatOpleggingPreset.Rondom:
+                    // Rondom opgelegde plaat: spanning over beide assen
+                    Opleggingen.Add(new PlaatRandOplegging { Rand = PlaatRand.Links,  Conditie = PlaatOpleggingConditie.VrijInRotatie });
+                    Opleggingen.Add(new PlaatRandOplegging { Rand = PlaatRand.Rechts, Conditie = PlaatOpleggingConditie.VrijInRotatie });
+                    Opleggingen.Add(new PlaatRandOplegging { Rand = PlaatRand.Boven,  Conditie = PlaatOpleggingConditie.VrijInRotatie });
+                    Opleggingen.Add(new PlaatRandOplegging { Rand = PlaatRand.Onder,  Conditie = PlaatOpleggingConditie.VrijInRotatie });
+                    break;
+
+
                 case PlaatOpleggingPreset.VrijOpgelegd2Randen:
                     // Vrij opgelegde plaat: spanning over de Lengte-as
                     Opleggingen.Add(new PlaatRandOplegging { Rand = PlaatRand.Links,  Conditie = PlaatOpleggingConditie.VrijInRotatie });
@@ -304,6 +316,16 @@ namespace Construct.Domain.Entities
                 AddStrook(ps.Strook);
                 ps.Strook.BerekenStrook();
             }
+
+            // Extra stroken tpv van puntlasten (optioneel, afhankelijk van ontwerpkeuze)
+            var puntStroken = MaakStrokenVoorPuntlasten(ref teller);
+            PlaatStroken.AddRange(puntStroken);
+            foreach (var ps in puntStroken)
+            {
+                AddStrook(ps.Strook);
+                ps.Strook.BerekenStrook();
+            }
+
         }
 
         private List<PlaatStrook> MaakStrokenVoorPaar(
@@ -391,12 +413,12 @@ namespace Construct.Domain.Entities
                 string qQkOmschrijving = $"veranderlijk";
 
                 if (bg1 != null && Math.Abs(qGk) > 1e-9)
-                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg1, "q~Gk~", 0, L, -qGk) { Description = qGkOmschrijving});
+                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg1, "LG1", 0, L, -qGk) { Description = qGkOmschrijving});
                 
                 
                 
                 if (bg2 != null && Math.Abs(qQk) > 1e-9)
-                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg2, "q~Qk~", 0, L, -qQk) { Description = qQkOmschrijving});
+                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg2, "LQ1", 0, L, -qQk) { Description = qQkOmschrijving});
 
                 stroken.Add(ps);
             }
@@ -474,9 +496,9 @@ namespace Construct.Domain.Entities
                 double qGk = PermanenteBelastingPerM2 * strookBreedteM;
                 double qQk = VeranderlijkeBelastingPerM2 * strookBreedteM;
                 if (bg1 != null && Math.Abs(qGk) > 1e-9)
-                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg1, "q~Gk~", 0, beamL, -qGk));
+                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg1, "LG1", 0, beamL, -qGk) { Description = "e.g. + afw."});
                 if (bg2 != null && Math.Abs(qQk) > 1e-9)
-                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg2, "q~Qk~", 0, beamL, -qQk));
+                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg2, "LQ1", 0, beamL, -qQk) { Description = "opgelegde belasting"});
 
                 foreach (var ll in groep)
                 {
@@ -489,13 +511,186 @@ namespace Construct.Domain.Entities
 
                     ps.Strook.Beam.Loads.Add(new DistributedLoad(
                         ll.BelastingGeval, ll.Naam,
-                        xStart, xEind, ll.MagnitudeA));
+                        xStart, xEind, ll.MagnitudeA)
+                    { Description = ll.Omschrijving});
                 }
 
                 stroken.Add(ps);
             }
 
             return stroken;
+        }
+
+        /// <summary>
+        /// Maakt extra berekeningsstroken aan voor elke <see cref="PlaatPuntlast"/>.
+        /// De strook loopt door de puntlast en wordt gekoppeld aan de dichtstbijzijnde opleggingen.
+        /// Richting wordt bepaald op basis van de dichtste opleggingsparen.
+        /// </summary>
+        private List<PlaatStrook> MaakStrokenVoorPuntlasten(ref int teller)
+        {
+            var stroken = new List<PlaatStrook>();
+
+            foreach (var pl in Puntlasten)
+            {
+                // Bepaal beste richting: kies de richting met de kortste overspanning
+                var (richting, positieDwars, spanMax, dwarsMax) = BepaalBesteRichtingVoorPuntlast(pl);
+
+                // Zoek opleggingen aan beide kanten in de gekozen richting
+                var (randStart, randEind) = richting == PlaatStrookRichting.LangsLengte
+                    ? (PlaatRand.Links, PlaatRand.Rechts)
+                    : (PlaatRand.Boven, PlaatRand.Onder);
+
+                var oplStart = Opleggingen.Where(o => o.Rand == randStart).ToList();
+                var oplEind = Opleggingen.Where(o => o.Rand == randEind).ToList();
+
+                if (oplStart.Count == 0 && oplEind.Count == 0) continue;
+
+                var conditieStart = ZoekNabijeOplegging(oplStart, positieDwars, dwarsMax)?.Conditie
+                    ?? PlaatOpleggingConditie.VrijInRotatie;
+                var conditieEind = ZoekNabijeOplegging(oplEind, positieDwars, dwarsMax)?.Conditie
+                    ?? PlaatOpleggingConditie.VrijInRotatie;
+
+                // Invloedbreedte: standaard 500mm of helft afstand tot naburige puntlasten
+                double invlBreedte = BerekenInvloedsBreedteVoorPuntlast(pl, richting);
+
+                var ps = PlaatStrook.Maak(
+                    naam:              $"S{teller++} (P:{pl.Naam})",
+                    richting:          richting,
+                    positieDwars:      positieDwars,
+                    startMm:           0,
+                    eindMm:            spanMax,
+                    invloedsBreedteMm: invlBreedte,
+                    conditieStart:     conditieStart,
+                    conditieEind:      conditieEind);
+
+                double beamL = spanMax / 1000.0;
+                ps.Strook.Beam.Length = beamL;
+                ps.Strook.Beam.Schematisering = (oplStart.Count == 0 || oplEind.Count == 0)
+                    ? SchemaType.Uitkraging
+                    : SchemaType.VrijOpgelegd;
+
+                if (conditieStart == PlaatOpleggingConditie.Ingeklemd)
+                    ps.Strook.Beam.StartSupport = SupportType.Fixed;
+                if (conditieEind == PlaatOpleggingConditie.Ingeklemd)
+                    ps.Strook.Beam.EndSupport = SupportType.Fixed;
+                if (oplEind.Count == 0)
+                    ps.Strook.Beam.EndSupport = SupportType.None;
+
+                ps.Strook.Father = this;
+
+                // Profiel: invloedbreedte × plaat dikte
+                double dikte = MainSlab?.Dikte ?? 200;
+                ps.Strook.Profiel = new Profielen.Beton.BetonProfiel((int)invlBreedte, dikte);
+                ps.Strook.Beam.Profiel = ps.Strook.Profiel;
+
+                // PlaatWapening doorzetten
+                if (MainSlab?.PlaatWapening != null)
+                {
+                    ps.Strook.PlaatWapening = MainSlab.PlaatWapening;
+                    ps.Strook.Beam.PlaatWapening = MainSlab.PlaatWapening;
+                }
+
+                ps.Strook.Beam.Loads.Clear();
+
+                // Basis belastingen: oppervlaktelast × strookbreedte → kN/m
+                double strookBreedteM = invlBreedte / 1000.0;
+                var bg1 = Belastingen.BelastingGevallen.ElementAtOrDefault(0);
+                var bg2 = Belastingen.BelastingGevallen.ElementAtOrDefault(1);
+                double qGk = PermanenteBelastingPerM2 * strookBreedteM;
+                double qQk = VeranderlijkeBelastingPerM2 * strookBreedteM;
+
+                if (bg1 != null && Math.Abs(qGk) > 1e-9)
+                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg1, "LG1", 0, beamL, -qGk) { Description= "e.g. + afw."});
+                if (bg2 != null && Math.Abs(qQk) > 1e-9)
+                    ps.Strook.Beam.Loads.Add(new DistributedLoad(bg2, "LQ1", 0, beamL, -qQk) { Description= "opgelegde belasting"});
+
+                // Puntlast toevoegen
+                if (pl.BelastingGeval != null)
+                {
+                    // Positie van puntlast langs de strook (in meters)
+                    double xPos = richting == PlaatStrookRichting.LangsLengte
+                        ? pl.PosX / 1000.0
+                        : pl.PosY / 1000.0;
+
+                    xPos = Math.Max(0, Math.Min(beamL, xPos));
+
+                    ps.Strook.Beam.Loads.Add(new PointLoad(pl.Magnitude, pl.BelastingGeval)
+                    {
+                        Position = xPos,
+                        Name = pl.Naam,
+                        Description = pl.Omschrijving
+                    });
+                }
+
+                stroken.Add(ps);
+            }
+
+            return stroken;
+        }
+
+        /// <summary>
+        /// Bepaalt de beste richting voor een strook door een puntlast,
+        /// op basis van de dichtstbijzijnde opleggingen.
+        /// </summary>
+        private (PlaatStrookRichting richting, double positieDwars, double spanMax, double dwarsMax) 
+            BepaalBesteRichtingVoorPuntlast(PlaatPuntlast pl)
+        {
+            // Controleer beide richtingen en kies de richting met de kortste overspanning
+            var oplLinks  = Opleggingen.Any(o => o.Rand == PlaatRand.Links);
+            var oplRechts = Opleggingen.Any(o => o.Rand == PlaatRand.Rechts);
+            var oplBoven  = Opleggingen.Any(o => o.Rand == PlaatRand.Boven);
+            var oplOnder  = Opleggingen.Any(o => o.Rand == PlaatRand.Onder);
+
+            bool heeftLengte  = oplLinks && oplRechts;
+            bool heeftBreedte = oplBoven && oplOnder;
+
+            // Default: LangsLengte
+            if (heeftLengte && !heeftBreedte)
+                return (PlaatStrookRichting.LangsLengte, pl.PosY, Lengte, Breedte);
+
+            if (heeftBreedte && !heeftLengte)
+                return (PlaatStrookRichting.LangsBreedte, pl.PosX, Breedte, Lengte);
+
+            // Beide richtingen mogelijk: kies de kortste overspanning
+            if (heeftLengte && heeftBreedte)
+            {
+                return Lengte <= Breedte
+                    ? (PlaatStrookRichting.LangsLengte, pl.PosY, Lengte, Breedte)
+                    : (PlaatStrookRichting.LangsBreedte, pl.PosX, Breedte, Lengte);
+            }
+
+            // Fallback: LangsLengte
+            return (PlaatStrookRichting.LangsLengte, pl.PosY, Lengte, Breedte);
+        }
+
+        /// <summary>
+        /// Berekent de invloedbreedte voor een puntlast-strook.
+        /// Standaard 500mm, of kleiner indien er dichtbij andere puntlasten zijn.
+        /// </summary>
+        private double BerekenInvloedsBreedteVoorPuntlast(PlaatPuntlast pl, PlaatStrookRichting richting)
+        {
+            const double standaardBreedte = 500.0; // mm
+
+            // Vind afstand tot dichtstbijzijnde puntlast in dwarsrichting
+            var anderePuntlasten = Puntlasten.Where(p => p != pl).ToList();
+            if (anderePuntlasten.Count == 0)
+                return standaardBreedte;
+
+            double minAfstand = anderePuntlasten
+                .Select(p =>
+                {
+                    double dx = p.PosX - pl.PosX;
+                    double dy = p.PosY - pl.PosY;
+                    // Bereken afstand haaks op de strookrichting
+                    return richting == PlaatStrookRichting.LangsLengte
+                        ? Math.Abs(dy)  // dwarsrichting is Y
+                        : Math.Abs(dx); // dwarsrichting is X
+                })
+                .Min();
+
+            // Invloedbreedte = helft van afstand tot naburige puntlast, maar minimaal 200mm en maximaal standaardBreedte
+            double breedte = Math.Min(standaardBreedte, minAfstand);
+            return Math.Max(200, breedte);
         }
 
         private List<double> GetDwarsPosities(List<PlaatOplegging> opleggingen, double dwarsMax)

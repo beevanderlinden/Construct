@@ -1,0 +1,26 @@
+@using Construct.Domain.Entities
+
+@foreach (var (ll, idx) in Lijnlasten.Select((l, i) => (l, i)))
+{
+    <PlaatLijnlastDetails Lijnlast="ll"
+                          Index="idx"
+                          PlaatLengte="PlaatLengte"
+                          PlaatBreedte="PlaatBreedte"
+                          BelastingGevallen="BelastingGevallen"
+                          OnModelChanged="OnModelChanged"
+                          OnRemove="@(() => OnRemoveLijnlast.InvokeAsync(idx))" />
+}
+
+<div style="display:flex; gap:6px; margin-top:8px;">
+    <button type="button" class="kit-btn kit-btn--secondary" @onclick="@(() => OnAddLijnlast.InvokeAsync())">+ lijnlast</button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public List<PlaatRandLijnlast> Lijnlasten { get; set; } = [];
+    [Parameter, EditorRequired] public double PlaatLengte { get; set; }
+    [Parameter, EditorRequired] public double PlaatBreedte { get; set; }
+    [Parameter, EditorRequired] public List<Eurocode.Belastingen.BelastingGeval> BelastingGevallen { get; set; } = [];
+    [Parameter] public EventCallback OnModelChanged { get; set; }
+    [Parameter] public EventCallback OnAddLijnlast { get; set; }
+    [Parameter] public EventCallback<int> OnRemoveLijnlast { get; set; }
+}

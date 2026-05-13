@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Reflection.Metadata.Ecma335;
 using System.Text.Json.Serialization;
 
 namespace Construct.Domain.Entities
@@ -70,6 +71,9 @@ namespace Construct.Domain.Entities
     {
         [Display(Name = "Geen oplegging", ShortName = "Geen")]
         Geen,
+
+        [Display(Name = "Rondom opgelegde plaat", ShortName = "Rondom")]
+        Rondom,
 
         [Display(Name = "Vrij opgelegde plaat ↔",   ShortName = "Vrij 2 randen")]
         VrijOpgelegd2Randen,

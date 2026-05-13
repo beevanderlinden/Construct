@@ -1,0 +1,100 @@
+@using Construct.Domain.Entities
+
+<div style="border:1px solid #ccc; border-radius:4px; padding:6px 8px; margin-bottom:6px;">
+
+    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
+
+        <KitTextField Label="nr" Value="@((Index + 1).ToString())" Width="3em" TextOnly="true" />
+
+        <KitTextBox Label="naam"
+                    @bind-Value="Lijnlast.Naam"
+                    OnValueChanged="@(() => OnModelChanged.InvokeAsync())" />
+
+        <KitTextBox Label="omschrijving"
+                    @bind-Value="Lijnlast.Omschrijving"
+                    OnValueChanged="@(() => OnModelChanged.InvokeAsync())" />
+
+        <KitInputEnum TEnum="PlaatRand"
+                      Label="rand"
+                      Value="Lijnlast.Rand"
+                      ValueChanged="@(v => { if (v.HasValue) { Lijnlast.Rand = v.Value; Lijnlast.BerekenPunten(PlaatLengte, PlaatBreedte); OnModelChanged.InvokeAsync(); } })" />
+
+        <div style="display:flex; align-items:center; gap:4px;">
+            <label style="font-size:0.78rem; color:var(--neutral-foreground-rest);">belastinggeval</label>
+            <select style="font-size:0.82rem; padding:2px 4px; border:1px solid #aaa; border-radius:3px;"
+                    value="@Lijnlast.BelastingGevalNr"
+                    @onchange="@(e => OnBelastingGevalChanged(e))">
+                @foreach (var bg in BelastingGevallen)
+                {
+                    <option value="@bg.Nr">@bg.Naam (@bg.Omschrijving)</option>
+                }
+            </select>
+        </div>
+
+        <button type="button" style="font-size:0.78rem; color:firebrick; background:none; border:none; cursor:pointer;"
+                @onclick="OnRemove">✕</button>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+        <KitInputNumberWithUnit Label="begin A"
+                                T="double" Min="0" Step="100"
+                                @bind-Value="Lijnlast.A"
+                                Units="UnitSets.LengteMM"
+                                OnValueChanged="@(() => { Lijnlast.BerekenPunten(PlaatLengte, PlaatBreedte); OnModelChanged.InvokeAsync(); })" />
+
+        <KitInputNumberWithUnit Label="v. einde B"
+                                T="double" Min="0" Step="100"
+                                @bind-Value="Lijnlast.B"
+                                Units="UnitSets.LengteMM"
+                                OnValueChanged="@(() => { Lijnlast.BerekenPunten(PlaatLengte, PlaatBreedte); OnModelChanged.InvokeAsync(); })" />
+
+        <KitInputNumberWithUnit Label="offset"
+                                T="double" Step="50"
+                                @bind-Value="Lijnlast.Offset"
+                                Units="UnitSets.LengteMM"
+                                OnValueChanged="@(() => { Lijnlast.BerekenPunten(PlaatLengte, PlaatBreedte); OnModelChanged.InvokeAsync(); })" />
+
+        <KitInputNumberWithUnit Label="q begin"
+                                T="double" Step="0.5"
+                                @bind-Value="Lijnlast.MagnitudeA"
+                                Units="UnitSets.KrachtPerLengte"
+                                OnValueChanged="@(() => OnModelChanged.InvokeAsync())" />
+
+        <KitInputNumberWithUnit Label="q eind"
+                                T="double" Step="0.5"
+                                @bind-Value="Lijnlast.MagnitudeB"
+                                Disabled="!Lijnlast.IsTrapezium"
+                                Units="UnitSets.KrachtPerLengte"
+                                OnValueChanged="@(() => OnModelChanged.InvokeAsync())" />
+
+        <FluentCheckbox @bind-Value="Lijnlast.IsTrapezium" Label="◿?"/>
+    </div>
+
+    @if (Fout != null)
+    {
+        <p style="color:firebrick; font-size:0.78rem; margin:4px 0 0 0;">⚠ @Fout</p>
+    }
+
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PlaatRandLijnlast Lijnlast { get; set; } = null!;
+    [Parameter, EditorRequired] public int Index { get; set; }
+    [Parameter, EditorRequired] public double PlaatLengte { get; set; }
+    [Parameter, EditorRequired] public double PlaatBreedte { get; set; }
+    [Parameter, EditorRequired] public List<Eurocode.Belastingen.BelastingGeval> BelastingGevallen { get; set; } = [];
+    [Parameter] public EventCallback OnModelChanged { get; set; }
+    [Parameter] public EventCallback OnRemove { get; set; }
+
+    private string? Fout => Lijnlast.ValideerMagnitudes();
+
+    private void OnBelastingGevalChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int nr))
+        {
+            Lijnlast.BelastingGevalNr = nr;
+            Lijnlast.BelastingGeval = BelastingGevallen.FirstOrDefault(bg => bg.Nr == nr);
+        }
+        OnModelChanged.InvokeAsync();
+    }
+}

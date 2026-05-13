@@ -1,0 +1,41 @@
+@* TreeView sectie met collapse/expand functionaliteit *@
+
+<div style="margin-bottom: 12px; border: 1px solid var(--neutral-stroke-rest, #ccc); border-radius: 4px; overflow: hidden;">
+    
+    <div @onclick="ToggleExpanded" 
+         style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--neutral-fill-rest, #f5f5f5); cursor: pointer; user-select: none;">
+        
+        <span style="font-size: 0.9rem; transition: transform 0.2s; transform: rotate(@(IsExpanded ? "90deg" : "0deg"));">▶</span>
+        
+        <span style="font-weight: 500; font-size: 0.9rem; flex: 1;">@Title</span>
+        
+        @if (!string.IsNullOrEmpty(Badge))
+        {
+            <span style="background: var(--accent-fill-rest, #0078d4); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                @Badge
+            </span>
+        }
+    </div>
+
+    @if (IsExpanded)
+    {
+        <div style="padding: 12px;">
+            @ChildContent
+        </div>
+    }
+
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Badge { get; set; }
+    [Parameter] public bool IsExpanded { get; set; } = true;
+    [Parameter] public EventCallback<bool> IsExpandedChanged { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private async Task ToggleExpanded()
+    {
+        IsExpanded = !IsExpanded;
+        await IsExpandedChanged.InvokeAsync(IsExpanded);
+    }
+}

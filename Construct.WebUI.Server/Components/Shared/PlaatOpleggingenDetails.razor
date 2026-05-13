@@ -1,0 +1,36 @@
+@using Construct.Domain.Entities
+
+@if (Opleggingen.Count == 0)
+{
+    <p style="font-style:italic; color:var(--neutral-foreground-rest); margin:4px 0;">geen opleggingen</p>
+    <KitInputEnum TEnum="PlaatOpleggingPreset"
+                  Label="preset toepassen"
+                  Value="@Preset"
+                  ValueChanged="@(v => OnPresetChanged.InvokeAsync(v))"
+                  UseShortName="false" />
+}
+else
+{
+    @foreach (var (opl, idx) in Opleggingen.Select((o, i) => (o, i)))
+    {
+        <PlaatOpleggingDetails Oplegging="opl"
+                               Index="idx"
+                               OnModelChanged="OnModelChanged"
+                               OnRemove="@(() => OnRemoveOplegging.InvokeAsync(idx))" />
+    }
+}
+
+<div style="display:flex; gap:6px; margin-top:8px;">
+    <button type="button" class="kit-btn kit-btn--secondary" @onclick="@(() => OnAddRandOplegging.InvokeAsync())">+ rand oplegging</button>
+    <button type="button" class="kit-btn kit-btn--secondary" @onclick="@(() => OnAddPuntOplegging.InvokeAsync())">+ punt oplegging</button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public List<PlaatOplegging> Opleggingen { get; set; } = [];
+    [Parameter] public PlaatOpleggingPreset? Preset { get; set; }
+    [Parameter] public EventCallback OnModelChanged { get; set; }
+    [Parameter] public EventCallback<PlaatOpleggingPreset?> OnPresetChanged { get; set; }
+    [Parameter] public EventCallback OnAddRandOplegging { get; set; }
+    [Parameter] public EventCallback OnAddPuntOplegging { get; set; }
+    [Parameter] public EventCallback<int> OnRemoveOplegging { get; set; }
+}
